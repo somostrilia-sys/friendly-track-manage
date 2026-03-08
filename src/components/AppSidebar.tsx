@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Users, Package, ShoppingCart, Sim, ListTodo,
+  LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown,
 } from "lucide-react";
