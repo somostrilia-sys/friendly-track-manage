@@ -1,18 +1,18 @@
 import { ShoppingCart, Wifi, WifiOff, DollarSign, Users, Brain, TrendingUp, AlertTriangle } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
-import { clientes, pedidos, linhasSIM, faturamentoMensal, tarefas, manutencoes } from "@/data/mock-data";
+import { clientesIniciais, pedidosIniciais, linhasSIMIniciais, faturamentoMensal, tarefasIniciais, manutencoesIniciais } from "@/data/mock-data";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const Dashboard = () => {
-  const pendentes = pedidos.filter(p => p.status === "pendente").length;
-  const online = linhasSIM.filter(l => l.status === "online").length;
-  const offline = linhasSIM.filter(l => l.status === "offline").length;
-  const clientesAtivos = clientes.filter(c => c.status === "ativo").length;
+  const pendentes = pedidosIniciais.filter(p => p.status === "pendente").length;
+  const online = linhasSIMIniciais.filter(l => l.status === "online").length;
+  const offline = linhasSIMIniciais.filter(l => l.status === "offline").length;
+  const clientesAtivos = clientesIniciais.filter(c => c.status === "ativo").length;
   const faturamento = "R$ 58.000";
 
-  const urgentes = tarefas.filter(t => t.prioridade === "urgente" && t.status !== "concluida");
-  const manutencoesAbertas = manutencoes.filter(m => m.status === "aberto");
+  const urgentes = tarefasIniciais.filter(t => t.prioridade === "urgente" && t.status !== "concluida");
+  const manutencoesAbertas = manutencoesIniciais.filter(m => m.status === "aberto");
 
   const pieData = [
     { name: "Online", value: online, fill: "hsl(152, 60%, 42%)" },
@@ -39,7 +39,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Faturamento chart */}
         <Card className="lg:col-span-2 p-6 card-shadow">
           <h3 className="font-semibold mb-4">Faturamento Mensal</h3>
           <ResponsiveContainer width="100%" height={280}>
@@ -53,22 +52,19 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </Card>
 
-        {/* Linhas SIM pie */}
         <Card className="p-6 card-shadow">
           <h3 className="font-semibold mb-4">Linhas SIM</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                {pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
+                {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-4 text-xs mt-2">
-            <span className="flex items-center gap-1.5"><span className="status-dot bg-success" /> Online ({online})</span>
-            <span className="flex items-center gap-1.5"><span className="status-dot bg-offline" /> Offline ({offline})</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-success" /> Online ({online})</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-muted-foreground" /> Offline ({offline})</span>
           </div>
         </Card>
       </div>

@@ -16,6 +16,8 @@ import Manutencoes from "@/pages/objetivo/Manutencoes";
 import FinanceiroPage from "@/pages/objetivo/Financeiro";
 import BuscarTecnicos from "@/pages/objetivo/BuscarTecnicos";
 import Relatorios from "@/pages/Relatorios";
+import TecnicoLink from "@/pages/servico/TecnicoLink";
+import ClienteLink from "@/pages/servico/ClienteLink";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,9 @@ const App = () => (
             <Route path="/objetivo/buscar-tecnicos" element={<BuscarTecnicos />} />
             <Route path="/relatorios" element={<Relatorios />} />
           </Route>
+          {/* Public service links */}
+          <Route path="/servico/tecnico/:id" element={<TecnicoLink />} />
+          <Route path="/servico/cliente/:id" element={<ClienteLink />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
