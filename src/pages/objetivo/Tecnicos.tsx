@@ -20,7 +20,7 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   indisponivel: { label: "Indisponível", variant: "outline" },
 };
 
-const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", valorServico: 200, periodoPagamento: "quinzenal" as const, chavePix: "", banco: "" };
+const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", valorServico: 200, periodoPagamento: "quinzenal" as "quinzenal" | "mensal", chavePix: "", banco: "" };
 
 const Tecnicos = () => {
   const [tecnicos, setTecnicos] = useState(tecnicosIniciais);
