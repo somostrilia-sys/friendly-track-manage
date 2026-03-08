@@ -17,7 +17,7 @@ const trackitItems = [
   { title: "Clientes", url: "/trackit/clientes", icon: Users },
   { title: "Estoque", url: "/trackit/estoque", icon: Package },
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
-  { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Sim },
+  { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },
   { title: "Tarefas", url: "/trackit/tarefas", icon: ListTodo },
 ];
 
