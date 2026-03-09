@@ -136,7 +136,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-4 my-2 border-t border-sidebar-border/30" />
+
 
         {/* Navigation Sections */}
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
