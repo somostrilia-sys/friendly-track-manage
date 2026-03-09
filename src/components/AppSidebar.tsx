@@ -99,25 +99,19 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
       <SidebarContent className="py-4 flex flex-col">
         {/* Logo */}
-        <div className="px-5 mb-6">
+        <div className="px-4 mb-6">
           {!collapsed ? (
-            <div className="flex items-center gap-3 py-2">
-              <div className="w-8 h-8 rounded-lg bg-sidebar-primary/15 flex items-center justify-center shrink-0">
-                <Satellite className="w-4 h-4 text-sidebar-primary" />
-              </div>
-              <div className="leading-none min-w-0">
-                <h1 className="text-sm font-extrabold tracking-[0.08em] text-sidebar-foreground">
-                  TRACK<span className="text-sidebar-primary">IT</span>
-                </h1>
-                <p className="text-[9px] text-sidebar-foreground/40 mt-0.5 tracking-wide">
-                  Soluções em Rastreamento e IoT
-                </p>
-              </div>
+            <div className="py-3 flex justify-center">
+              <img
+                src={logoTrackit}
+                alt="Trackit - Soluções em Rastreamento e IoT"
+                className="h-14 w-auto object-contain brightness-0 invert opacity-85"
+              />
             </div>
           ) : (
-            <div className="flex justify-center py-2">
-              <div className="w-8 h-8 rounded-lg bg-sidebar-primary/15 flex items-center justify-center">
-                <Satellite className="w-4 h-4 text-sidebar-primary" />
+            <div className="flex justify-center py-3">
+              <div className="w-7 h-7 rounded-md bg-sidebar-primary/15 flex items-center justify-center">
+                <span className="text-[11px] font-black text-sidebar-primary">T</span>
               </div>
             </div>
           )}
