@@ -58,20 +58,12 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="px-4 mb-8">
           {!collapsed ? (
-            <div className="flex items-center gap-2.5 py-3">
-              <Crosshair className="w-7 h-7 text-sidebar-primary shrink-0" strokeWidth={1.8} />
-              <div className="leading-none">
-                <h1 className="text-[15px] font-black tracking-[0.15em] text-sidebar-foreground">
-                  TRACK<span className="text-sidebar-primary">IT</span>
-                </h1>
-                <p className="text-[9px] text-sidebar-foreground/50 tracking-wide mt-1 italic">
-                  Inovações ao seu alcance!
-                </p>
-              </div>
+            <div className="py-3">
+              <img src={logoSidebar} alt="Trackit" className="h-8 w-auto object-contain" />
             </div>
           ) : (
             <div className="flex justify-center py-3">
-              <Crosshair className="w-5 h-5 text-sidebar-primary" strokeWidth={1.8} />
+              <span className="text-sm font-black tracking-widest text-sidebar-primary">T</span>
             </div>
           )}
         </div>
