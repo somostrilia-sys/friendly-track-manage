@@ -18,6 +18,11 @@ import BuscarTecnicos from "@/pages/objetivo/BuscarTecnicos";
 import Relatorios from "@/pages/Relatorios";
 import TecnicoLink from "@/pages/servico/TecnicoLink";
 import ClienteLink from "@/pages/servico/ClienteLink";
+import AcompanhamentoInstalacoes from "@/pages/AcompanhamentoInstalacoes";
+import ControleKMPage from "@/pages/ControleKM";
+import FechamentoTecnicosPage from "@/pages/FechamentoTecnicos";
+import FilaSuporte from "@/pages/FilaSuporte";
+import Agendamentos from "@/pages/Agendamentos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,9 +46,13 @@ const App = () => (
             <Route path="/objetivo/manutencoes" element={<Manutencoes />} />
             <Route path="/objetivo/financeiro" element={<FinanceiroPage />} />
             <Route path="/objetivo/buscar-tecnicos" element={<BuscarTecnicos />} />
+            <Route path="/instalacoes" element={<AcompanhamentoInstalacoes />} />
+            <Route path="/controle-km" element={<ControleKMPage />} />
+            <Route path="/fechamento-tecnicos" element={<FechamentoTecnicosPage />} />
+            <Route path="/suporte" element={<FilaSuporte />} />
+            <Route path="/agendamentos" element={<Agendamentos />} />
             <Route path="/relatorios" element={<Relatorios />} />
           </Route>
-          {/* Public service links */}
           <Route path="/servico/tecnico/:id" element={<TecnicoLink />} />
           <Route path="/servico/cliente/:id" element={<ClienteLink />} />
           <Route path="*" element={<NotFound />} />

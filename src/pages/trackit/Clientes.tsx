@@ -12,9 +12,16 @@ import { clientesIniciais, Cliente } from "@/data/mock-data";
 import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+const statusAcessoMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+  pendente: { label: "Pendente", variant: "outline" },
+  credenciais_enviadas: { label: "Credenciais Enviadas", variant: "secondary" },
+  ativo: { label: "Ativo", variant: "default" },
+};
+
 const emptyCliente: Omit<Cliente, "id"> = {
   nome: "", razaoSocial: "", tipo: "empresa", cnpj: "", email: "", telefone: "",
   responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculosAtivos: 0, status: "ativo",
+  statusAcesso: "pendente", cpfAssociado: "", emailAssociado: "", filial: "", historicoContatos: [],
 };
 
 const Clientes = () => {
@@ -26,6 +33,7 @@ const Clientes = () => {
   const [editando, setEditando] = useState<Cliente | null>(null);
   const [detalhe, setDetalhe] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyCliente);
+  const [novoContato, setNovoContato] = useState({ tipo: "", descricao: "" });
 
   const filtrado = clientes.filter(c => {
     const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase()) || c.cnpj.includes(busca);
@@ -54,6 +62,15 @@ const Clientes = () => {
     toast.success("Cliente removido!");
   };
 
+  const adicionarContato = () => {
+    if (!detalhe || !novoContato.descricao) return;
+    const updated = { ...detalhe, historicoContatos: [{ data: new Date().toISOString().split("T")[0], ...novoContato }, ...detalhe.historicoContatos] };
+    setClientes(prev => prev.map(c => c.id === detalhe.id ? updated : c));
+    setDetalhe(updated);
+    setNovoContato({ tipo: "", descricao: "" });
+    toast.success("Contato registrado!");
+  };
+
   const setField = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
 
   return (
@@ -72,7 +89,7 @@ const Clientes = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome ou CNPJ..." className="pl-9" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {(["all", "ativo", "inativo"] as const).map(f => (
               <button key={f} onClick={() => setFiltroStatus(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filtroStatus === f ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
                 {f === "all" ? "Todos" : f === "ativo" ? "Ativos" : "Inativos"}
@@ -91,7 +108,8 @@ const Clientes = () => {
               <TableHead>Nome</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>CNPJ</TableHead>
-              <TableHead>Cidade/UF</TableHead>
+              <TableHead>Filial</TableHead>
+              <TableHead>Acesso</TableHead>
               <TableHead>Veículos</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Ações</TableHead>
@@ -103,11 +121,10 @@ const Clientes = () => {
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell><Badge variant="secondary">{c.tipo === "empresa" ? "Empresa" : "Associação"}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{c.cnpj}</TableCell>
-                <TableCell>{c.cidade}/{c.estado}</TableCell>
+                <TableCell className="text-sm">{c.filial || "—"}</TableCell>
+                <TableCell><Badge variant={statusAcessoMap[c.statusAcesso]?.variant}>{statusAcessoMap[c.statusAcesso]?.label}</Badge></TableCell>
                 <TableCell>{c.veiculosAtivos}</TableCell>
-                <TableCell>
-                  <Badge variant={c.status === "ativo" ? "default" : "secondary"}>{c.status === "ativo" ? "Ativo" : "Inativo"}</Badge>
-                </TableCell>
+                <TableCell><Badge variant={c.status === "ativo" ? "default" : "secondary"}>{c.status === "ativo" ? "Ativo" : "Inativo"}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button size="icon" variant="ghost" onClick={() => setDetalhe(c)}><Eye className="w-4 h-4" /></Button>
@@ -121,12 +138,9 @@ const Clientes = () => {
         </Table>
       </Card>
 
-      {/* Modal Criar/Editar */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editando ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editando ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><Label>Nome Fantasia</Label><Input value={form.nome} onChange={e => setField("nome", e.target.value)} /></div>
             <div className="col-span-2"><Label>Razão Social</Label><Input value={form.razaoSocial} onChange={e => setField("razaoSocial", e.target.value)} /></div>
@@ -134,22 +148,29 @@ const Clientes = () => {
             <div><Label>Tipo</Label>
               <Select value={form.tipo} onValueChange={v => setField("tipo", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="empresa">Empresa</SelectItem>
-                  <SelectItem value="associacao">Associação</SelectItem>
-                </SelectContent>
+                <SelectContent><SelectItem value="empresa">Empresa</SelectItem><SelectItem value="associacao">Associação</SelectItem></SelectContent>
               </Select>
             </div>
             <div><Label>Responsável</Label><Input value={form.responsavel} onChange={e => setField("responsavel", e.target.value)} /></div>
             <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setField("telefone", e.target.value)} /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={e => setField("email", e.target.value)} /></div>
+            <div><Label>CPF Associado</Label><Input value={form.cpfAssociado} onChange={e => setField("cpfAssociado", e.target.value)} /></div>
+            <div><Label>Email Associado</Label><Input value={form.emailAssociado} onChange={e => setField("emailAssociado", e.target.value)} /></div>
+            <div><Label>Filial</Label><Input value={form.filial} onChange={e => setField("filial", e.target.value)} /></div>
+            <div><Label>Status Acesso</Label>
+              <Select value={form.statusAcesso} onValueChange={v => setField("statusAcesso", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="credenciais_enviadas">Credenciais Enviadas</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Status</Label>
               <Select value={form.status} onValueChange={v => setField("status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                </SelectContent>
+                <SelectContent><SelectItem value="ativo">Ativo</SelectItem><SelectItem value="inativo">Inativo</SelectItem></SelectContent>
               </Select>
             </div>
             <div className="col-span-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setField("endereco", e.target.value)} /></div>
@@ -164,9 +185,8 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Detalhe Sheet */}
       <Sheet open={!!detalhe} onOpenChange={() => setDetalhe(null)}>
-        <SheetContent className="w-[480px] overflow-y-auto">
+        <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
               <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
@@ -176,6 +196,10 @@ const Clientes = () => {
                   <div><span className="text-muted-foreground">CNPJ</span><p className="font-medium">{detalhe.cnpj}</p></div>
                   <div><span className="text-muted-foreground">Tipo</span><p><Badge variant="secondary">{detalhe.tipo === "empresa" ? "Empresa" : "Associação"}</Badge></p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={detalhe.status === "ativo" ? "default" : "secondary"}>{detalhe.status}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Status Acesso</span><p><Badge variant={statusAcessoMap[detalhe.statusAcesso]?.variant}>{statusAcessoMap[detalhe.statusAcesso]?.label}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Filial</span><p className="font-medium">{detalhe.filial || "—"}</p></div>
+                  <div><span className="text-muted-foreground">CPF Associado</span><p className="font-medium">{detalhe.cpfAssociado || "—"}</p></div>
+                  <div><span className="text-muted-foreground">Email Associado</span><p className="font-medium">{detalhe.emailAssociado || "—"}</p></div>
                   <div><span className="text-muted-foreground">Responsável</span><p className="font-medium">{detalhe.responsavel}</p></div>
                   <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone}</p></div>
                   <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email}</p></div>
@@ -183,6 +207,28 @@ const Clientes = () => {
                   <div className="col-span-2"><span className="text-muted-foreground">Endereço</span><p className="font-medium">{detalhe.endereco}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">CEP</span><p className="font-medium">{detalhe.cep}</p></div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Histórico de Contatos</h4>
+                  <div className="flex gap-2 mb-3">
+                    <Input placeholder="Tipo (Telefone, Email...)" value={novoContato.tipo} onChange={e => setNovoContato(p => ({ ...p, tipo: e.target.value }))} className="w-32" />
+                    <Input placeholder="Descrição do contato" value={novoContato.descricao} onChange={e => setNovoContato(p => ({ ...p, descricao: e.target.value }))} className="flex-1" />
+                    <Button size="sm" onClick={adicionarContato}>Adicionar</Button>
+                  </div>
+                  {detalhe.historicoContatos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum contato registrado.</p> : (
+                    <div className="space-y-2">
+                      {detalhe.historicoContatos.map((h, i) => (
+                        <div key={i} className="p-2 rounded-lg bg-muted/50 text-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">{h.tipo}</Badge>
+                            <span className="text-xs text-muted-foreground">{h.data}</span>
+                          </div>
+                          <p>{h.descricao}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </>

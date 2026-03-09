@@ -15,15 +15,20 @@ export interface Cliente {
   cep: string;
   veiculosAtivos: number;
   status: "ativo" | "inativo";
+  statusAcesso: "pendente" | "credenciais_enviadas" | "ativo";
+  cpfAssociado: string;
+  emailAssociado: string;
+  filial: string;
+  historicoContatos: { data: string; tipo: string; descricao: string }[];
 }
 
 export const clientesIniciais: Cliente[] = [
-  { id: "1", nome: "Transportadora Rápida Ltda", razaoSocial: "Transportadora Rápida Ltda ME", tipo: "empresa", cnpj: "12.345.678/0001-90", email: "contato@rapida.com.br", telefone: "(11) 98765-4321", responsavel: "João Martins", endereco: "Rua das Palmeiras, 450 - Vila Mariana", cidade: "São Paulo", estado: "SP", cep: "04012-000", veiculosAtivos: 45, status: "ativo" },
-  { id: "2", nome: "Associação Caminhoneiros do Sul", razaoSocial: "Associação dos Caminhoneiros do Sul do Brasil", tipo: "associacao", cnpj: "23.456.789/0001-01", email: "contato@acamsul.org.br", telefone: "(51) 99876-5432", responsavel: "Maria Souza", endereco: "Av. Ipiranga, 6800", cidade: "Porto Alegre", estado: "RS", cep: "90610-000", veiculosAtivos: 120, status: "ativo" },
-  { id: "3", nome: "LogBrasil Transportes", razaoSocial: "LogBrasil Transportes e Logística Ltda", tipo: "empresa", cnpj: "34.567.890/0001-12", email: "adm@logbrasil.com.br", telefone: "(21) 97654-3210", responsavel: "Carlos Silva", endereco: "Av. Brasil, 1200 - Centro", cidade: "Rio de Janeiro", estado: "RJ", cep: "20040-020", veiculosAtivos: 32, status: "ativo" },
-  { id: "4", nome: "Frota Segura ME", razaoSocial: "Frota Segura Serviços ME", tipo: "empresa", cnpj: "45.678.901/0001-23", email: "frota@segura.com.br", telefone: "(41) 98765-1234", responsavel: "Pedro Alves", endereco: "Rua XV de Novembro, 300", cidade: "Curitiba", estado: "PR", cep: "80020-310", veiculosAtivos: 18, status: "inativo" },
-  { id: "5", nome: "Associação Rastreamento Nacional", razaoSocial: "Associação Brasileira de Rastreamento Nacional", tipo: "associacao", cnpj: "56.789.012/0001-34", email: "arn@rastreamento.org.br", telefone: "(31) 99988-7766", responsavel: "Ana Beatriz", endereco: "Av. Afonso Pena, 1500", cidade: "Belo Horizonte", estado: "MG", cep: "30130-004", veiculosAtivos: 200, status: "ativo" },
-  { id: "6", nome: "TransNorte Logística", razaoSocial: "TransNorte Logística e Transportes Ltda", tipo: "empresa", cnpj: "67.890.123/0001-45", email: "ops@transnorte.com.br", telefone: "(92) 98877-6655", responsavel: "Roberto Lima", endereco: "Distrito Industrial, Rua A, 100", cidade: "Manaus", estado: "AM", cep: "69075-000", veiculosAtivos: 15, status: "ativo" },
+  { id: "1", nome: "Transportadora Rápida Ltda", razaoSocial: "Transportadora Rápida Ltda ME", tipo: "empresa", cnpj: "12.345.678/0001-90", email: "contato@rapida.com.br", telefone: "(11) 98765-4321", responsavel: "João Martins", endereco: "Rua das Palmeiras, 450 - Vila Mariana", cidade: "São Paulo", estado: "SP", cep: "04012-000", veiculosAtivos: 45, status: "ativo", statusAcesso: "ativo", cpfAssociado: "123.456.789-00", emailAssociado: "joao@rapida.com.br", filial: "São Paulo", historicoContatos: [{ data: "2024-03-01", tipo: "Telefone", descricao: "Solicitou instalação de 10 rastreadores" }, { data: "2024-02-15", tipo: "Email", descricao: "Enviadas credenciais de acesso" }] },
+  { id: "2", nome: "Associação Caminhoneiros do Sul", razaoSocial: "Associação dos Caminhoneiros do Sul do Brasil", tipo: "associacao", cnpj: "23.456.789/0001-01", email: "contato@acamsul.org.br", telefone: "(51) 99876-5432", responsavel: "Maria Souza", endereco: "Av. Ipiranga, 6800", cidade: "Porto Alegre", estado: "RS", cep: "90610-000", veiculosAtivos: 120, status: "ativo", statusAcesso: "ativo", cpfAssociado: "234.567.890-11", emailAssociado: "maria@acamsul.org.br", filial: "Porto Alegre", historicoContatos: [{ data: "2024-02-28", tipo: "WhatsApp", descricao: "Pedido de 25 rastreadores GV300" }] },
+  { id: "3", nome: "LogBrasil Transportes", razaoSocial: "LogBrasil Transportes e Logística Ltda", tipo: "empresa", cnpj: "34.567.890/0001-12", email: "adm@logbrasil.com.br", telefone: "(21) 97654-3210", responsavel: "Carlos Silva", endereco: "Av. Brasil, 1200 - Centro", cidade: "Rio de Janeiro", estado: "RJ", cep: "20040-020", veiculosAtivos: 32, status: "ativo", statusAcesso: "credenciais_enviadas", cpfAssociado: "345.678.901-22", emailAssociado: "carlos@logbrasil.com.br", filial: "Rio de Janeiro", historicoContatos: [{ data: "2024-03-05", tipo: "Email", descricao: "Credenciais enviadas, aguardando ativação" }] },
+  { id: "4", nome: "Frota Segura ME", razaoSocial: "Frota Segura Serviços ME", tipo: "empresa", cnpj: "45.678.901/0001-23", email: "frota@segura.com.br", telefone: "(41) 98765-1234", responsavel: "Pedro Alves", endereco: "Rua XV de Novembro, 300", cidade: "Curitiba", estado: "PR", cep: "80020-310", veiculosAtivos: 18, status: "inativo", statusAcesso: "pendente", cpfAssociado: "456.789.012-33", emailAssociado: "pedro@segura.com.br", filial: "Curitiba", historicoContatos: [] },
+  { id: "5", nome: "Associação Rastreamento Nacional", razaoSocial: "Associação Brasileira de Rastreamento Nacional", tipo: "associacao", cnpj: "56.789.012/0001-34", email: "arn@rastreamento.org.br", telefone: "(31) 99988-7766", responsavel: "Ana Beatriz", endereco: "Av. Afonso Pena, 1500", cidade: "Belo Horizonte", estado: "MG", cep: "30130-004", veiculosAtivos: 200, status: "ativo", statusAcesso: "ativo", cpfAssociado: "567.890.123-44", emailAssociado: "ana@rastreamento.org.br", filial: "Belo Horizonte", historicoContatos: [{ data: "2024-03-02", tipo: "Reunião", descricao: "Apresentação de novos produtos" }] },
+  { id: "6", nome: "TransNorte Logística", razaoSocial: "TransNorte Logística e Transportes Ltda", tipo: "empresa", cnpj: "67.890.123/0001-45", email: "ops@transnorte.com.br", telefone: "(92) 98877-6655", responsavel: "Roberto Lima", endereco: "Distrito Industrial, Rua A, 100", cidade: "Manaus", estado: "AM", cep: "69075-000", veiculosAtivos: 15, status: "ativo", statusAcesso: "credenciais_enviadas", cpfAssociado: "678.901.234-55", emailAssociado: "roberto@transnorte.com.br", filial: "Manaus", historicoContatos: [] },
 ];
 
 export interface Equipamento {
@@ -32,6 +37,7 @@ export interface Equipamento {
   modelo: string;
   marca: string;
   serial: string;
+  imei?: string;
   custo: number;
   preco: number;
   quantidade: number;
@@ -39,17 +45,28 @@ export interface Equipamento {
   localizacao: string;
   clienteId?: string;
   movimentacoes: { data: string; tipo: string; descricao: string }[];
+  comodatos: Comodato[];
+}
+
+export interface Comodato {
+  id: string;
+  destinoTipo: "tecnico" | "filial";
+  destinoNome: string;
+  quantidade: number;
+  dataEnvio: string;
+  codigoRastreio?: string;
+  status: "enviado" | "recebido" | "devolvido";
 }
 
 export const equipamentosIniciais: Equipamento[] = [
-  { id: "1", tipo: "rastreador", modelo: "ST4955", marca: "Suntech", serial: "ST-2024-001", custo: 180, preco: 350, quantidade: 15, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [{ data: "2024-02-10", tipo: "entrada", descricao: "Recebimento lote 25 unidades" }, { data: "2024-02-20", tipo: "saida", descricao: "Enviado 10 para técnico Marcos" }] },
-  { id: "2", tipo: "rastreador", modelo: "GV300", marca: "Queclink", serial: "QC-2024-002", custo: 220, preco: 420, quantidade: 8, status: "instalado", localizacao: "Veículo ABC-1234", clienteId: "1", movimentacoes: [{ data: "2024-02-15", tipo: "instalacao", descricao: "Instalado veículo ABC-1234" }] },
-  { id: "3", tipo: "sensor", modelo: "Sensor Porta RS200", marca: "GenericSens", serial: "SP-2024-003", custo: 45, preco: 90, quantidade: 30, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [] },
-  { id: "4", tipo: "camera", modelo: "Câmera Veicular CV100", marca: "HikVision", serial: "CV-2024-004", custo: 320, preco: 550, quantidade: 2, status: "manutencao", localizacao: "Assistência Técnica", movimentacoes: [{ data: "2024-03-01", tipo: "manutencao", descricao: "Enviado para reparo" }] },
-  { id: "5", tipo: "bloqueador", modelo: "BK500", marca: "BlockTech", serial: "BK-2024-005", custo: 80, preco: 160, quantidade: 20, status: "instalado", localizacao: "Veículo DEF-5678", clienteId: "2", movimentacoes: [] },
-  { id: "6", tipo: "rastreador", modelo: "ST4955", marca: "Suntech", serial: "ST-2024-006", custo: 180, preco: 350, quantidade: 1, status: "defeito", localizacao: "Estoque Central SP", movimentacoes: [{ data: "2024-03-03", tipo: "defeito", descricao: "Falha na placa principal" }] },
-  { id: "7", tipo: "rastreador", modelo: "GV300", marca: "Queclink", serial: "QC-2024-007", custo: 220, preco: 420, quantidade: 5, status: "disponivel", localizacao: "Estoque Filial RJ", movimentacoes: [] },
-  { id: "8", tipo: "sensor", modelo: "Sensor Temperatura TM300", marca: "GenericSens", serial: "TM-2024-008", custo: 55, preco: 110, quantidade: 12, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [] },
+  { id: "1", tipo: "rastreador", modelo: "ST4955", marca: "Suntech", serial: "ST-2024-001", imei: "351756051523999", custo: 180, preco: 350, quantidade: 15, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [{ data: "2024-02-10", tipo: "entrada", descricao: "Recebimento lote 25 unidades" }, { data: "2024-02-20", tipo: "saida", descricao: "Enviado 10 para técnico Marcos" }], comodatos: [{ id: "COM-001", destinoTipo: "tecnico", destinoNome: "Marcos Oliveira", quantidade: 5, dataEnvio: "2024-02-20", codigoRastreio: "BR987654321SP", status: "recebido" }] },
+  { id: "2", tipo: "rastreador", modelo: "GV300", marca: "Queclink", serial: "QC-2024-002", imei: "351756051524001", custo: 220, preco: 420, quantidade: 8, status: "instalado", localizacao: "Veículo ABC-1234", clienteId: "1", movimentacoes: [{ data: "2024-02-15", tipo: "instalacao", descricao: "Instalado veículo ABC-1234" }], comodatos: [] },
+  { id: "3", tipo: "sensor", modelo: "Sensor Porta RS200", marca: "GenericSens", serial: "SP-2024-003", custo: 45, preco: 90, quantidade: 30, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [], comodatos: [] },
+  { id: "4", tipo: "camera", modelo: "Câmera Veicular CV100", marca: "HikVision", serial: "CV-2024-004", imei: "351756051524003", custo: 320, preco: 550, quantidade: 2, status: "manutencao", localizacao: "Assistência Técnica", movimentacoes: [{ data: "2024-03-01", tipo: "manutencao", descricao: "Enviado para reparo" }], comodatos: [] },
+  { id: "5", tipo: "bloqueador", modelo: "BK500", marca: "BlockTech", serial: "BK-2024-005", custo: 80, preco: 160, quantidade: 20, status: "instalado", localizacao: "Veículo DEF-5678", clienteId: "2", movimentacoes: [], comodatos: [{ id: "COM-002", destinoTipo: "filial", destinoNome: "Filial RJ", quantidade: 8, dataEnvio: "2024-02-25", codigoRastreio: "BR123456789RJ", status: "enviado" }] },
+  { id: "6", tipo: "rastreador", modelo: "ST4955", marca: "Suntech", serial: "ST-2024-006", imei: "351756051524005", custo: 180, preco: 350, quantidade: 1, status: "defeito", localizacao: "Estoque Central SP", movimentacoes: [{ data: "2024-03-03", tipo: "defeito", descricao: "Falha na placa principal" }], comodatos: [] },
+  { id: "7", tipo: "rastreador", modelo: "GV300", marca: "Queclink", serial: "QC-2024-007", imei: "351756051524007", custo: 220, preco: 420, quantidade: 5, status: "disponivel", localizacao: "Estoque Filial RJ", movimentacoes: [], comodatos: [] },
+  { id: "8", tipo: "sensor", modelo: "Sensor Temperatura TM300", marca: "GenericSens", serial: "TM-2024-008", custo: 55, preco: 110, quantidade: 12, status: "disponivel", localizacao: "Estoque Central SP", movimentacoes: [], comodatos: [] },
 ];
 
 export interface Parcela {
@@ -140,15 +157,19 @@ export interface Tecnico {
   saldoAberto: number;
   status: "disponivel" | "em_servico" | "indisponivel";
   estoque: { item: string; quantidade: number }[];
+  tipoTecnico: "avulso" | "parceiro" | "proprio";
+  valorInstalacao: number;
+  adicionalKm: number;
+  prazoPagamento: string;
 }
 
 export const tecnicosIniciais: Tecnico[] = [
-  { id: "1", nome: "Marcos Oliveira", cpf: "123.456.789-00", telefone: "(11) 98765-0001", email: "marcos@tecnico.com", cidade: "São Paulo", estado: "SP", especialidade: "Rastreadores e bloqueadores", valorServico: 200, periodoPagamento: "quinzenal", chavePix: "marcos@tecnico.com", banco: "Nubank", avaliacao: 4.8, instalacoesMes: 22, equipamentosEmEstoque: 8, saldoAberto: 3200, status: "disponivel", estoque: [{ item: "Rastreador ST4955", quantidade: 5 }, { item: "Bloqueador BK500", quantidade: 3 }] },
-  { id: "2", nome: "Fernando Silva", cpf: "234.567.890-11", telefone: "(21) 98765-0002", email: "fernando@tecnico.com", cidade: "Rio de Janeiro", estado: "RJ", especialidade: "Câmeras e sensores", valorServico: 150, periodoPagamento: "mensal", chavePix: "23456789011", banco: "Bradesco", avaliacao: 4.5, instalacoesMes: 15, equipamentosEmEstoque: 5, saldoAberto: 2100, status: "em_servico", estoque: [{ item: "Câmera CV100", quantidade: 3 }, { item: "Sensor RS200", quantidade: 2 }] },
-  { id: "3", nome: "Ricardo Santos", cpf: "345.678.901-22", telefone: "(41) 98765-0003", email: "ricardo@tecnico.com", cidade: "Curitiba", estado: "PR", especialidade: "Rastreadores", valorServico: 200, periodoPagamento: "quinzenal", chavePix: "(41) 98765-0003", banco: "Itaú", avaliacao: 4.9, instalacoesMes: 28, equipamentosEmEstoque: 12, saldoAberto: 4500, status: "disponivel", estoque: [{ item: "Rastreador GV300", quantidade: 8 }, { item: "Rastreador ST4955", quantidade: 4 }] },
-  { id: "4", nome: "André Costa", cpf: "456.789.012-33", telefone: "(31) 98765-0004", email: "andre@tecnico.com", cidade: "Belo Horizonte", estado: "MG", especialidade: "Instalação completa", valorServico: 180, periodoPagamento: "mensal", chavePix: "andre@tecnico.com", banco: "Inter", avaliacao: 4.3, instalacoesMes: 10, equipamentosEmEstoque: 3, saldoAberto: 1800, status: "indisponivel", estoque: [{ item: "Rastreador ST4955", quantidade: 3 }] },
-  { id: "5", nome: "Lucas Pereira", cpf: "567.890.123-44", telefone: "(51) 98765-0005", email: "lucas@tecnico.com", cidade: "Porto Alegre", estado: "RS", especialidade: "Rastreadores e câmeras", valorServico: 190, periodoPagamento: "quinzenal", chavePix: "56789012344", banco: "Banco do Brasil", avaliacao: 4.7, instalacoesMes: 19, equipamentosEmEstoque: 7, saldoAberto: 2800, status: "disponivel", estoque: [{ item: "Rastreador GV300", quantidade: 4 }, { item: "Câmera CV100", quantidade: 3 }] },
-  { id: "6", nome: "Thiago Almeida", cpf: "678.901.234-55", telefone: "(85) 98765-0006", email: "thiago@tecnico.com", cidade: "Fortaleza", estado: "CE", especialidade: "Bloqueadores", valorServico: 170, periodoPagamento: "mensal", chavePix: "thiago@tecnico.com", banco: "Caixa", avaliacao: 4.1, instalacoesMes: 8, equipamentosEmEstoque: 4, saldoAberto: 1200, status: "em_servico", estoque: [{ item: "Bloqueador BK500", quantidade: 4 }] },
+  { id: "1", nome: "Marcos Oliveira", cpf: "123.456.789-00", telefone: "(11) 98765-0001", email: "marcos@tecnico.com", cidade: "São Paulo", estado: "SP", especialidade: "Rastreadores e bloqueadores", valorServico: 200, periodoPagamento: "quinzenal", chavePix: "marcos@tecnico.com", banco: "Nubank", avaliacao: 4.8, instalacoesMes: 22, equipamentosEmEstoque: 8, saldoAberto: 3200, status: "disponivel", estoque: [{ item: "Rastreador ST4955", quantidade: 5 }, { item: "Bloqueador BK500", quantidade: 3 }], tipoTecnico: "parceiro", valorInstalacao: 200, adicionalKm: 1.5, prazoPagamento: "5 dias úteis" },
+  { id: "2", nome: "Fernando Silva", cpf: "234.567.890-11", telefone: "(21) 98765-0002", email: "fernando@tecnico.com", cidade: "Rio de Janeiro", estado: "RJ", especialidade: "Câmeras e sensores", valorServico: 150, periodoPagamento: "mensal", chavePix: "23456789011", banco: "Bradesco", avaliacao: 4.5, instalacoesMes: 15, equipamentosEmEstoque: 5, saldoAberto: 2100, status: "em_servico", estoque: [{ item: "Câmera CV100", quantidade: 3 }, { item: "Sensor RS200", quantidade: 2 }], tipoTecnico: "avulso", valorInstalacao: 150, adicionalKm: 1.2, prazoPagamento: "2 dias úteis" },
+  { id: "3", nome: "Ricardo Santos", cpf: "345.678.901-22", telefone: "(41) 98765-0003", email: "ricardo@tecnico.com", cidade: "Curitiba", estado: "PR", especialidade: "Rastreadores", valorServico: 200, periodoPagamento: "quinzenal", chavePix: "(41) 98765-0003", banco: "Itaú", avaliacao: 4.9, instalacoesMes: 28, equipamentosEmEstoque: 12, saldoAberto: 4500, status: "disponivel", estoque: [{ item: "Rastreador GV300", quantidade: 8 }, { item: "Rastreador ST4955", quantidade: 4 }], tipoTecnico: "proprio", valorInstalacao: 200, adicionalKm: 0, prazoPagamento: "Conforme contrato" },
+  { id: "4", nome: "André Costa", cpf: "456.789.012-33", telefone: "(31) 98765-0004", email: "andre@tecnico.com", cidade: "Belo Horizonte", estado: "MG", especialidade: "Instalação completa", valorServico: 180, periodoPagamento: "mensal", chavePix: "andre@tecnico.com", banco: "Inter", avaliacao: 4.3, instalacoesMes: 10, equipamentosEmEstoque: 3, saldoAberto: 1800, status: "indisponivel", estoque: [{ item: "Rastreador ST4955", quantidade: 3 }], tipoTecnico: "parceiro", valorInstalacao: 180, adicionalKm: 1.3, prazoPagamento: "5 dias úteis" },
+  { id: "5", nome: "Lucas Pereira", cpf: "567.890.123-44", telefone: "(51) 98765-0005", email: "lucas@tecnico.com", cidade: "Porto Alegre", estado: "RS", especialidade: "Rastreadores e câmeras", valorServico: 190, periodoPagamento: "quinzenal", chavePix: "56789012344", banco: "Banco do Brasil", avaliacao: 4.7, instalacoesMes: 19, equipamentosEmEstoque: 7, saldoAberto: 2800, status: "disponivel", estoque: [{ item: "Rastreador GV300", quantidade: 4 }, { item: "Câmera CV100", quantidade: 3 }], tipoTecnico: "avulso", valorInstalacao: 190, adicionalKm: 1.4, prazoPagamento: "2 dias úteis" },
+  { id: "6", nome: "Thiago Almeida", cpf: "678.901.234-55", telefone: "(85) 98765-0006", email: "thiago@tecnico.com", cidade: "Fortaleza", estado: "CE", especialidade: "Bloqueadores", valorServico: 170, periodoPagamento: "mensal", chavePix: "thiago@tecnico.com", banco: "Caixa", avaliacao: 4.1, instalacoesMes: 8, equipamentosEmEstoque: 4, saldoAberto: 1200, status: "em_servico", estoque: [{ item: "Bloqueador BK500", quantidade: 4 }], tipoTecnico: "proprio", valorInstalacao: 170, adicionalKm: 0, prazoPagamento: "Conforme contrato" },
 ];
 
 export interface ServicoAgendado {
@@ -216,6 +237,121 @@ export const financeiroIniciais: Financeiro[] = [
   { id: "FIN-003", tecnicoId: "3", tecnicoNome: "Ricardo Santos", periodo: "16-28/02/2024", totalServicos: 14, servicos: [{ data: "2024-02-16", descricao: "Instalação rastreador - Veículo PQR-1122", valor: 200 }, { data: "2024-02-18", descricao: "Instalação rastreador - Veículo STU-3344", valor: 200 }], valorTotal: 2800, descontos: 0, valorFinal: 2800, status: "pago", dataPagamento: "2024-03-02" },
   { id: "FIN-004", tecnicoId: "5", tecnicoNome: "Lucas Pereira", periodo: "16-28/02/2024", totalServicos: 9, servicos: [{ data: "2024-02-17", descricao: "Troca rastreador - Veículo VWX-5566", valor: 190 }], valorTotal: 1620, descontos: 120, valorFinal: 1500, status: "pago", dataPagamento: "2024-03-02" },
   { id: "FIN-005", tecnicoId: "6", tecnicoNome: "Thiago Almeida", periodo: "01-15/03/2024", totalServicos: 4, servicos: [{ data: "2024-03-02", descricao: "Instalação bloqueador - Veículo YZA-7788", valor: 170 }], valorTotal: 880, descontos: 0, valorFinal: 880, status: "aberto" },
+];
+
+// ===== NEW MODULES =====
+
+export interface Instalacao {
+  id: string;
+  placa: string;
+  imei: string;
+  chip: string;
+  filial: string;
+  tecnicoId: string;
+  tecnicoNome: string;
+  status: "aguardando" | "em_andamento" | "concluida" | "problema";
+  data: string;
+  localizacaoConfirmacao?: string;
+}
+
+export const instalacoesIniciais: Instalacao[] = [
+  { id: "INST-001", placa: "ABC-1234", imei: "351756051523999", chip: "8955031234567890001", filial: "São Paulo", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", status: "concluida", data: "2024-03-08", localizacaoConfirmacao: "-23.5505, -46.6333" },
+  { id: "INST-002", placa: "DEF-5678", imei: "351756051524001", chip: "8955031234567890002", filial: "São Paulo", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", status: "em_andamento", data: "2024-03-08" },
+  { id: "INST-003", placa: "GHI-9012", imei: "351756051524003", chip: "8955031234567890003", filial: "Rio de Janeiro", tecnicoId: "2", tecnicoNome: "Fernando Silva", status: "aguardando", data: "2024-03-09" },
+  { id: "INST-004", placa: "JKL-3456", imei: "351756051524005", chip: "8955031234567890004", filial: "Curitiba", tecnicoId: "3", tecnicoNome: "Ricardo Santos", status: "problema", data: "2024-03-07" },
+  { id: "INST-005", placa: "MNO-7890", imei: "351756051524007", chip: "8955031234567890005", filial: "Porto Alegre", tecnicoId: "5", tecnicoNome: "Lucas Pereira", status: "concluida", data: "2024-03-07", localizacaoConfirmacao: "-30.0346, -51.2177" },
+  { id: "INST-006", placa: "PQR-1122", imei: "351756051524009", chip: "8955031234567890006", filial: "Belo Horizonte", tecnicoId: "4", tecnicoNome: "André Costa", status: "aguardando", data: "2024-03-10" },
+];
+
+export interface ControleKM {
+  id: string;
+  tecnicoId: string;
+  tecnicoNome: string;
+  enderecoInstalacao: string;
+  horario: string;
+  data: string;
+  kmCalculado: number;
+}
+
+export const controleKMIniciais: ControleKM[] = [
+  { id: "KM-001", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", enderecoInstalacao: "Rua das Palmeiras, 450 - Vila Mariana, SP", horario: "09:00", data: "2024-03-08", kmCalculado: 15 },
+  { id: "KM-002", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", enderecoInstalacao: "Av. Paulista, 1500, SP", horario: "11:30", data: "2024-03-08", kmCalculado: 22 },
+  { id: "KM-003", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", enderecoInstalacao: "Rua Augusta, 800, SP", horario: "14:00", data: "2024-03-08", kmCalculado: 8 },
+  { id: "KM-004", tecnicoId: "2", tecnicoNome: "Fernando Silva", enderecoInstalacao: "Av. Brasil, 1200 - Centro, RJ", horario: "09:30", data: "2024-03-08", kmCalculado: 25 },
+  { id: "KM-005", tecnicoId: "2", tecnicoNome: "Fernando Silva", enderecoInstalacao: "Rua do Catete, 300, RJ", horario: "13:00", data: "2024-03-08", kmCalculado: 12 },
+  { id: "KM-006", tecnicoId: "3", tecnicoNome: "Ricardo Santos", enderecoInstalacao: "Rod. BR-116, km 98, PR", horario: "08:00", data: "2024-03-09", kmCalculado: 45 },
+  { id: "KM-007", tecnicoId: "5", tecnicoNome: "Lucas Pereira", enderecoInstalacao: "Av. Ipiranga, 6800, RS", horario: "10:00", data: "2024-03-07", kmCalculado: 18 },
+];
+
+export interface FechamentoTecnico {
+  id: string;
+  tecnicoId: string;
+  tecnicoNome: string;
+  tipoTecnico: "avulso" | "parceiro" | "proprio";
+  periodo: string;
+  dataInicio: string;
+  dataFim: string;
+  instalacoes: { data: string; placa: string; valor: number }[];
+  totalInstalacoes: number;
+  valorInstalacoes: number;
+  kmTotal: number;
+  valorKm: number;
+  valorTotal: number;
+  regraFiscal: "recibo" | "nota_fiscal";
+  status: "pendente" | "enviado_financeiro" | "pago";
+}
+
+export const fechamentosTecnicosIniciais: FechamentoTecnico[] = [
+  { id: "FECH-001", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", tipoTecnico: "parceiro", periodo: "01-15/03/2024", dataInicio: "2024-03-01", dataFim: "2024-03-15", instalacoes: [{ data: "2024-03-02", placa: "ABC-1234", valor: 200 }, { data: "2024-03-04", placa: "DEF-5678", valor: 200 }, { data: "2024-03-08", placa: "GHI-9012", valor: 200 }], totalInstalacoes: 3, valorInstalacoes: 600, kmTotal: 45, valorKm: 67.5, valorTotal: 667.5, regraFiscal: "recibo", status: "pendente" },
+  { id: "FECH-002", tecnicoId: "2", tecnicoNome: "Fernando Silva", tipoTecnico: "avulso", periodo: "01-15/03/2024", dataInicio: "2024-03-01", dataFim: "2024-03-15", instalacoes: [{ data: "2024-03-01", placa: "JKL-3456", valor: 150 }, { data: "2024-03-03", placa: "MNO-7890", valor: 150 }], totalInstalacoes: 2, valorInstalacoes: 300, kmTotal: 37, valorKm: 44.4, valorTotal: 344.4, regraFiscal: "recibo", status: "enviado_financeiro" },
+  { id: "FECH-003", tecnicoId: "3", tecnicoNome: "Ricardo Santos", tipoTecnico: "proprio", periodo: "16-28/02/2024", dataInicio: "2024-02-16", dataFim: "2024-02-28", instalacoes: [{ data: "2024-02-16", placa: "PQR-1122", valor: 200 }, { data: "2024-02-18", placa: "STU-3344", valor: 200 }, { data: "2024-02-20", placa: "VWX-5566", valor: 200 }, { data: "2024-02-22", placa: "YZA-7788", valor: 200 }], totalInstalacoes: 4, valorInstalacoes: 800, kmTotal: 120, valorKm: 0, valorTotal: 800, regraFiscal: "recibo", status: "pago" },
+  { id: "FECH-004", tecnicoId: "5", tecnicoNome: "Lucas Pereira", tipoTecnico: "avulso", periodo: "01-15/03/2024", dataInicio: "2024-03-01", dataFim: "2024-03-15", instalacoes: [{ data: "2024-03-07", placa: "BCD-2233", valor: 190 }], totalInstalacoes: 1, valorInstalacoes: 190, kmTotal: 18, valorKm: 25.2, valorTotal: 215.2, regraFiscal: "recibo", status: "pendente" },
+];
+
+export interface ChamadoSuporte {
+  id: string;
+  origem: "cobranca" | "comercial" | "tecnico" | "cliente";
+  tipo: "instalacao_urgente" | "retirada" | "manutencao" | "atualizacao_equipamento" | "suporte_app";
+  descricao: string;
+  clienteNome: string;
+  prioridade: "normal" | "urgente";
+  status: "aberto" | "em_atendimento" | "resolvido";
+  responsavel: string;
+  dataCriacao: string;
+}
+
+export const chamadosSuporteIniciais: ChamadoSuporte[] = [
+  { id: "SUP-001", origem: "cliente", tipo: "instalacao_urgente", descricao: "Cliente precisa de instalação urgente em 3 veículos novos", clienteNome: "Transportadora Rápida Ltda", prioridade: "urgente", status: "aberto", responsavel: "Ana Paula", dataCriacao: "2024-03-08" },
+  { id: "SUP-002", origem: "tecnico", tipo: "manutencao", descricao: "Rastreador com falha no GPS, precisa de troca", clienteNome: "LogBrasil Transportes", prioridade: "normal", status: "em_atendimento", responsavel: "Carlos Mendes", dataCriacao: "2024-03-07" },
+  { id: "SUP-003", origem: "comercial", tipo: "suporte_app", descricao: "Cliente não consegue acessar o aplicativo de rastreamento", clienteNome: "Frota Segura ME", prioridade: "normal", status: "aberto", responsavel: "Juliana Costa", dataCriacao: "2024-03-08" },
+  { id: "SUP-004", origem: "cobranca", tipo: "retirada", descricao: "Retirada de equipamento por inadimplência", clienteNome: "TransNorte Logística", prioridade: "urgente", status: "em_atendimento", responsavel: "Roberto Lima", dataCriacao: "2024-03-06" },
+  { id: "SUP-005", origem: "cliente", tipo: "atualizacao_equipamento", descricao: "Troca de rastreador antigo por modelo novo", clienteNome: "Associação Rastreamento Nacional", prioridade: "normal", status: "resolvido", responsavel: "Pedro Santos", dataCriacao: "2024-03-05" },
+];
+
+export interface Agendamento {
+  id: string;
+  tipo: "instalacao" | "manutencao" | "retirada";
+  placa: string;
+  associado: string;
+  endereco: string;
+  cidade: string;
+  tecnicoId: string;
+  tecnicoNome: string;
+  data: string;
+  horario: string;
+  status: "agendado" | "realizado" | "sem_retorno";
+  tentativas: number;
+}
+
+export const agendamentosIniciais: Agendamento[] = [
+  { id: "AG-001", tipo: "instalacao", placa: "ABC-1234", associado: "João Martins", endereco: "Rua das Palmeiras, 450", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "09:00", status: "realizado", tentativas: 1 },
+  { id: "AG-002", tipo: "manutencao", placa: "DEF-5678", associado: "Maria Souza", endereco: "Av. Ipiranga, 6800", cidade: "Porto Alegre - RS", tecnicoId: "5", tecnicoNome: "Lucas Pereira", data: "2024-03-09", horario: "10:00", status: "agendado", tentativas: 0 },
+  { id: "AG-003", tipo: "instalacao", placa: "GHI-9012", associado: "Carlos Silva", endereco: "Av. Brasil, 1200", cidade: "Rio de Janeiro - RJ", tecnicoId: "2", tecnicoNome: "Fernando Silva", data: "2024-03-09", horario: "14:00", status: "agendado", tentativas: 0 },
+  { id: "AG-004", tipo: "retirada", placa: "JKL-3456", associado: "Pedro Alves", endereco: "Rua XV de Novembro, 300", cidade: "Curitiba - PR", tecnicoId: "3", tecnicoNome: "Ricardo Santos", data: "2024-03-07", horario: "08:00", status: "sem_retorno", tentativas: 3 },
+  { id: "AG-005", tipo: "instalacao", placa: "MNO-7890", associado: "Ana Beatriz", endereco: "Av. Afonso Pena, 1500", cidade: "Belo Horizonte - MG", tecnicoId: "4", tecnicoNome: "André Costa", data: "2024-03-10", horario: "09:00", status: "agendado", tentativas: 0 },
+  { id: "AG-006", tipo: "manutencao", placa: "PQR-1122", associado: "Roberto Lima", endereco: "Distrito Industrial, Rua A", cidade: "Manaus - AM", tecnicoId: "6", tecnicoNome: "Thiago Almeida", data: "2024-03-06", horario: "11:00", status: "sem_retorno", tentativas: 4 },
+  { id: "AG-007", tipo: "instalacao", placa: "STU-3344", associado: "Fernanda Costa", endereco: "Rua Augusta, 800", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-11", horario: "10:00", status: "agendado", tentativas: 0 },
+  { id: "AG-008", tipo: "instalacao", placa: "VWX-5566", associado: "Lucas Ferreira", endereco: "Av. Paulista, 1500", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "14:00", status: "realizado", tentativas: 1 },
 ];
 
 // ===== CHART DATA =====
