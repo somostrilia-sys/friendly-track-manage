@@ -53,15 +53,21 @@ export function AppSidebar() {
   const [financeiroOpen, setFinanceiroOpen] = useState(true);
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarContent className="py-4">
+    <Sidebar collapsible="icon" className="border-r-0 shadow-xl">
+      <SidebarContent className="py-5">
         {/* Logo */}
-        <div className="px-2 mb-6">
+        <div className="px-3 mb-8">
           {!collapsed ? (
-            <img src={logoTrackit} alt="Trackit - Soluções em Rastreamento e IoT" className="w-full max-w-[180px] mx-auto rounded" />
+            <div className="flex items-center justify-center py-2">
+              <img
+                src={logoTrackit}
+                alt="Trackit - Soluções em Rastreamento e IoT"
+                className="h-12 w-auto object-contain brightness-0 invert opacity-90"
+              />
+            </div>
           ) : (
-            <div className="flex justify-center">
-              <span className="text-lg font-extrabold text-sidebar-primary">T</span>
+            <div className="flex justify-center py-2">
+              <span className="text-base font-black tracking-widest text-sidebar-primary">T</span>
             </div>
           )}
         </div>
