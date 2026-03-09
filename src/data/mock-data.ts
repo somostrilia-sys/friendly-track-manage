@@ -19,6 +19,7 @@ export interface Cliente {
   cpfAssociado: string;
   emailAssociado: string;
   filial: string;
+  tipoServico?: string;
   historicoContatos: { data: string; tipo: string; descricao: string }[];
 }
 
