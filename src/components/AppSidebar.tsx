@@ -104,7 +104,7 @@ export function AppSidebar() {
             <img
               src={logoTrackit}
               alt="Trackit - Soluções em Rastreamento e IoT"
-              className="w-full object-cover"
+              className="w-full max-w-[150px] object-contain"
               style={{ mixBlendMode: 'lighten' }}
             />
           ) : (
