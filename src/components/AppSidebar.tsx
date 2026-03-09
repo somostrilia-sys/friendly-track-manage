@@ -97,7 +97,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
-      <SidebarContent className="py-4 flex flex-col">
+      <SidebarContent className="py-2 flex flex-col">
         {/* Logo */}
         <div className="px-4 mb-1">
           {!collapsed ? (
