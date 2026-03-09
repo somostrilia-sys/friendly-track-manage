@@ -2,8 +2,8 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
+  Satellite,
 } from "lucide-react";
-import logoSidebar from "@/assets/logo-trackit-sidebar.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -41,11 +41,54 @@ const financeiroItems = [
   { title: "Fechamento Técnicos", url: "/fechamento-tecnicos", icon: Receipt },
 ];
 
+interface NavSectionProps {
+  label: string;
+  items: { title: string; url: string; icon: React.ElementType }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  collapsed: boolean;
+}
+
+function NavSection({ label, items, open, onOpenChange, collapsed }: NavSectionProps) {
+  return (
+    <SidebarGroup className="py-0">
+      <Collapsible open={open} onOpenChange={onOpenChange}>
+        <CollapsibleTrigger className="w-full">
+          <SidebarGroupLabel className="cursor-pointer flex items-center justify-between px-4 py-2 text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">{label}</span>
+            {!collapsed && (
+              <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+            )}
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild className="h-9">
+                    <NavLink
+                      to={item.url}
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      className="transition-colors duration-150"
+                    >
+                      <item.icon className="h-[15px] w-[15px] shrink-0" />
+                      {!collapsed && <span className="text-[13px]">{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarGroup>
+  );
+}
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
-  const currentPath = location.pathname;
 
   const [trackitOpen, setTrackitOpen] = useState(true);
   const [objetivoOpen, setObjetivoOpen] = useState(true);
@@ -53,30 +96,50 @@ export function AppSidebar() {
   const [financeiroOpen, setFinanceiroOpen] = useState(true);
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 shadow-xl">
-      <SidebarContent className="py-5">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
+      <SidebarContent className="py-4 flex flex-col">
         {/* Logo */}
-        <div className="px-4 mb-8">
+        <div className="px-5 mb-6">
           {!collapsed ? (
-            <div className="py-3">
-              <img src={logoSidebar} alt="Trackit" className="h-8 w-auto object-contain" />
+            <div className="flex items-center gap-3 py-2">
+              <div className="w-8 h-8 rounded-lg bg-sidebar-primary/15 flex items-center justify-center shrink-0">
+                <Satellite className="w-4 h-4 text-sidebar-primary" />
+              </div>
+              <div className="leading-none min-w-0">
+                <h1 className="text-sm font-extrabold tracking-[0.08em] text-sidebar-foreground">
+                  TRACK<span className="text-sidebar-primary">IT</span>
+                </h1>
+                <p className="text-[9px] text-sidebar-foreground/40 mt-0.5 tracking-wide">
+                  Soluções em Rastreamento e IoT
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="flex justify-center py-3">
-              <span className="text-sm font-black tracking-widest text-sidebar-primary">T</span>
+            <div className="flex justify-center py-2">
+              <div className="w-8 h-8 rounded-lg bg-sidebar-primary/15 flex items-center justify-center">
+                <Satellite className="w-4 h-4 text-sidebar-primary" />
+              </div>
             </div>
           )}
         </div>
 
+        {/* Separator */}
+        <div className="mx-4 mb-3 border-t border-sidebar-border/40" />
+
         {/* Dashboard */}
-        <SidebarGroup>
+        <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/" end activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <LayoutDashboard className="h-4 w-4" />
-                    {!collapsed && <span>Dashboard Geral</span>}
+                <SidebarMenuButton asChild className="h-9">
+                  <NavLink
+                    to="/"
+                    end
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    className="transition-colors duration-150"
+                  >
+                    <LayoutDashboard className="h-[15px] w-[15px] shrink-0" />
+                    {!collapsed && <span className="text-[13px]">Dashboard</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -84,133 +147,44 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Trackit */}
-        <SidebarGroup>
-          <Collapsible open={trackitOpen} onOpenChange={setTrackitOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="cursor-pointer flex items-center justify-between text-sidebar-foreground/60 hover:text-sidebar-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Trackit</span>
-                {!collapsed && <ChevronDown className={`h-3 w-3 transition-transform ${trackitOpen ? "" : "-rotate-90"}`} />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {trackitItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                          <item.icon className="h-4 w-4" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
+        <div className="mx-4 my-2 border-t border-sidebar-border/30" />
 
-        {/* Objetivo */}
-        <SidebarGroup>
-          <Collapsible open={objetivoOpen} onOpenChange={setObjetivoOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="cursor-pointer flex items-center justify-between text-sidebar-foreground/60 hover:text-sidebar-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Objetivo</span>
-                {!collapsed && <ChevronDown className={`h-3 w-3 transition-transform ${objetivoOpen ? "" : "-rotate-90"}`} />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {objetivoItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                          <item.icon className="h-4 w-4" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
+        {/* Navigation Sections */}
+        <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
+        <NavSection label="Objetivo" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
+        <NavSection label="Operacional" items={operacionalItems} open={operacionalOpen} onOpenChange={setOperacionalOpen} collapsed={collapsed} />
+        <NavSection label="Financeiro" items={financeiroItems} open={financeiroOpen} onOpenChange={setFinanceiroOpen} collapsed={collapsed} />
 
-        {/* Operacional */}
-        <SidebarGroup>
-          <Collapsible open={operacionalOpen} onOpenChange={setOperacionalOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="cursor-pointer flex items-center justify-between text-sidebar-foreground/60 hover:text-sidebar-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Operacional</span>
-                {!collapsed && <ChevronDown className={`h-3 w-3 transition-transform ${operacionalOpen ? "" : "-rotate-90"}`} />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {operacionalItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                          <item.icon className="h-4 w-4" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        {/* Financeiro */}
-        <SidebarGroup>
-          <Collapsible open={financeiroOpen} onOpenChange={setFinanceiroOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="cursor-pointer flex items-center justify-between text-sidebar-foreground/60 hover:text-sidebar-foreground">
-                <span className="text-xs font-semibold uppercase tracking-wider">Financeiro</span>
-                {!collapsed && <ChevronDown className={`h-3 w-3 transition-transform ${financeiroOpen ? "" : "-rotate-90"}`} />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {financeiroItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                          <item.icon className="h-4 w-4" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
+        <div className="mx-4 my-2 border-t border-sidebar-border/30" />
 
         {/* Relatórios */}
-        <SidebarGroup>
+        <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/relatorios" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <FileText className="h-4 w-4" />
-                    {!collapsed && <span>Relatórios</span>}
+                <SidebarMenuButton asChild className="h-9">
+                  <NavLink
+                    to="/relatorios"
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    className="transition-colors duration-150"
+                  >
+                    <FileText className="h-[15px] w-[15px] shrink-0" />
+                    {!collapsed && <span className="text-[13px]">Relatórios</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Footer branding */}
+        {!collapsed && (
+          <div className="mt-auto px-5 pb-4 pt-6">
+            <p className="text-[9px] text-sidebar-foreground/25 tracking-wide">
+              © 2026 Trackit · v1.0
+            </p>
+          </div>
+        )}
       </SidebarContent>
     </Sidebar>
   );
