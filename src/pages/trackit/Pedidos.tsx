@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { pedidosIniciais, clientesIniciais, equipamentosIniciais, Pedido, Parcela } from "@/data/mock-data";
+import { pedidosIniciais, clientesIniciais, Pedido, Parcela } from "@/data/mock-data";
 import { Plus, Eye, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,22 +27,63 @@ const parcelaStyles: Record<string, string> = {
   atrasado: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
+const produtosCatalogo = [
+  { id: "plataforma", nome: "Plataforma de Rastreamento Trackit", preco: 29.90, tipo: "mensal" },
+  { id: "linha", nome: "Linha/SIM Card", preco: 15, tipo: "mensal" },
+  { id: "rastreador", nome: "Rastreador", preco: 350, tipo: "unico" },
+];
+
 const Pedidos = () => {
   const [pedidos, setPedidos] = useState(pedidosIniciais);
   const [modalOpen, setModalOpen] = useState(false);
   const [detalhe, setDetalhe] = useState<Pedido | null>(null);
 
   const [clienteId, setClienteId] = useState("");
-  const [produtoId, setProdutoId] = useState("");
+  const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
+  const [combo, setCombo] = useState(false);
+  const [produtoManual, setProdutoManual] = useState("");
+  const [valorManual, setValorManual] = useState(0);
   const [qtd, setQtd] = useState(1);
   const [numParcelas, setNumParcelas] = useState(1);
+  const [taxaAdesao, setTaxaAdesao] = useState(0);
+  const [observacao, setObservacao] = useState("");
 
   const clienteSel = clientesIniciais.find(c => c.id === clienteId);
-  const produtoSel = equipamentosIniciais.find(e => e.id === produtoId);
-  const valorTotal = produtoSel ? produtoSel.preco * qtd : 0;
+
+  const calcValorTotal = () => {
+    let total = 0;
+    if (combo) {
+      total = (350 + 15 + 29.90) * qtd;
+    } else {
+      produtosSelecionados.forEach(pid => {
+        const p = produtosCatalogo.find(x => x.id === pid);
+        if (p) total += p.preco * qtd;
+      });
+    }
+    if (produtoManual && valorManual > 0) total += valorManual * qtd;
+    total += taxaAdesao;
+    return total;
+  };
+
+  const valorTotal = calcValorTotal();
 
   const salvar = () => {
-    if (!clienteId || !produtoId) { toast.error("Selecione cliente e produto"); return; }
+    if (!clienteId || (produtosSelecionados.length === 0 && !combo && !produtoManual)) {
+      toast.error("Selecione cliente e pelo menos um produto"); return;
+    }
+    const itens: Pedido["itens"] = [];
+    if (combo) {
+      itens.push({ produtoId: "combo", nome: "Combo Rastreador + Linha + Plataforma", quantidade: qtd, valorUnitario: 350 + 15 + 29.90 });
+    } else {
+      produtosSelecionados.forEach(pid => {
+        const p = produtosCatalogo.find(x => x.id === pid);
+        if (p) itens.push({ produtoId: pid, nome: p.nome, quantidade: qtd, valorUnitario: p.preco });
+      });
+    }
+    if (produtoManual && valorManual > 0) {
+      itens.push({ produtoId: "manual", nome: produtoManual, quantidade: qtd, valorUnitario: valorManual });
+    }
+
     const valorParcela = Math.floor(valorTotal / numParcelas);
     const parcelas: Parcela[] = Array.from({ length: numParcelas }, (_, i) => ({
       numero: i + 1, valor: i === numParcelas - 1 ? valorTotal - valorParcela * (numParcelas - 1) : valorParcela,
@@ -48,12 +91,11 @@ const Pedidos = () => {
     }));
     const novo: Pedido = {
       id: `PED-${String(pedidos.length + 1).padStart(3, "0")}`, clienteId, clienteNome: clienteSel?.nome || "",
-      itens: [{ produtoId, nome: produtoSel?.modelo || "", quantidade: qtd, valorUnitario: produtoSel?.preco || 0 }],
-      valorTotal, status: "pendente", dataPedido: new Date().toISOString().split("T")[0], parcelas,
+      itens, valorTotal, status: "pendente", dataPedido: new Date().toISOString().split("T")[0], parcelas, observacao,
     };
     setPedidos(prev => [...prev, novo]);
     setModalOpen(false);
-    setClienteId(""); setProdutoId(""); setQtd(1); setNumParcelas(1);
+    setClienteId(""); setProdutosSelecionados([]); setCombo(false); setProdutoManual(""); setValorManual(0); setQtd(1); setNumParcelas(1); setTaxaAdesao(0); setObservacao("");
     toast.success("Pedido criado!");
   };
 
@@ -77,7 +119,7 @@ const Pedidos = () => {
               <TableHead>Valor Total</TableHead>
               <TableHead>Parcelas</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead>Acoes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,7 +144,7 @@ const Pedidos = () => {
 
       {/* Modal Novo Pedido */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Novo Pedido</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Cliente</Label>
@@ -111,19 +153,49 @@ const Pedidos = () => {
                 <SelectContent>{clientesIniciais.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Produto</Label>
-              <Select value={produtoId} onValueChange={setProdutoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
-                <SelectContent>{equipamentosIniciais.filter(e => e.status === "disponivel").map(e => <SelectItem key={e.id} value={e.id}>{e.marca} {e.modelo} — R$ {e.preco}</SelectItem>)}</SelectContent>
-              </Select>
+
+            <div className="space-y-2">
+              <Label>Produtos Pre-cadastrados</Label>
+              {produtosCatalogo.map(p => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <Checkbox
+                    checked={produtosSelecionados.includes(p.id)}
+                    disabled={combo}
+                    onCheckedChange={checked => {
+                      if (checked) setProdutosSelecionados(prev => [...prev, p.id]);
+                      else setProdutosSelecionados(prev => prev.filter(x => x !== p.id));
+                    }}
+                  />
+                  <span className="text-sm">{p.nome} - R$ {p.preco} {p.tipo === "mensal" ? "(mensal)" : ""}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                <Checkbox checked={combo} onCheckedChange={c => { setCombo(!!c); if (c) setProdutosSelecionados([]); }} />
+                <span className="text-sm font-medium">Combo: Rastreador + Linha + Plataforma (R$ {(350 + 15 + 29.90).toFixed(2)}/un)</span>
+              </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
+              <div><Label>Produto Manual</Label><Input value={produtoManual} onChange={e => setProdutoManual(e.target.value)} placeholder="Nome do produto" /></div>
+              <div><Label>Valor Manual (R$)</Label><Input type="number" value={valorManual} onChange={e => setValorManual(+e.target.value)} /></div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
               <div><Label>Quantidade</Label><Input type="number" min={1} value={qtd} onChange={e => setQtd(+e.target.value)} /></div>
               <div><Label>Parcelas</Label><Input type="number" min={1} max={12} value={numParcelas} onChange={e => setNumParcelas(+e.target.value)} /></div>
+              <div><Label>Taxa Adesao (R$)</Label><Input type="number" value={taxaAdesao} onChange={e => setTaxaAdesao(+e.target.value)} /></div>
             </div>
+
+            <div><Label>Observacao</Label><Textarea value={observacao} onChange={e => setObservacao(e.target.value)} rows={2} placeholder="Notas sobre o pedido..." /></div>
+
+            <div className="p-3 rounded-lg bg-muted text-sm">
+              <p className="text-muted-foreground text-xs mb-1">Upload de contrato (PDF) sera disponibilizado apos integracao com banco de dados.</p>
+            </div>
+
             {valorTotal > 0 && (
               <div className="p-3 rounded-lg bg-muted text-sm">
-                <p>Valor Total: <strong>R$ {valorTotal.toLocaleString("pt-BR")}</strong></p>
+                <p>Valor Total: <strong>R$ {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></p>
+                {taxaAdesao > 0 && <p className="text-xs text-muted-foreground">Inclui taxa de adesao: R$ {taxaAdesao.toFixed(2)}</p>}
                 <p>Parcela: <strong>{numParcelas}x de R$ {Math.floor(valorTotal / numParcelas).toLocaleString("pt-BR")}</strong></p>
               </div>
             )}
@@ -148,6 +220,12 @@ const Pedidos = () => {
                   <div><span className="text-muted-foreground">Status</span><p><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[detalhe.status].class}`}>{statusMap[detalhe.status].label}</span></p></div>
                   <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-lg">R$ {detalhe.valorTotal.toLocaleString("pt-BR")}</p></div>
                 </div>
+                {detalhe.observacao && (
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <span className="text-muted-foreground text-xs">Observacao:</span>
+                    <p className="mt-1">{detalhe.observacao}</p>
+                  </div>
+                )}
                 {detalhe.codigoRastreio && (
                   <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
                     <Package className="w-4 h-4" />
@@ -168,7 +246,7 @@ const Pedidos = () => {
                   <div className="space-y-2">
                     {detalhe.parcelas.map(p => (
                       <div key={p.numero} className={`flex justify-between items-center p-2.5 rounded-lg border ${parcelaStyles[p.status]}`}>
-                        <span>Parcela {p.numero} — {p.vencimento}</span>
+                        <span>Parcela {p.numero} - {p.vencimento}</span>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">R$ {p.valor.toLocaleString("pt-BR")}</span>
                           <Badge variant="outline" className="text-xs">{p.status === "pago" ? "Pago" : p.status === "atrasado" ? "Atrasado" : "Pendente"}</Badge>

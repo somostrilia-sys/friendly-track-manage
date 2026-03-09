@@ -18,10 +18,20 @@ const statusAcessoMap: Record<string, { label: string; variant: "default" | "sec
   ativo: { label: "Ativo", variant: "default" },
 };
 
+const tiposServico = [
+  "Plataforma de Rastreamento",
+  "Rastreador + Instalacao",
+  "Linha/SIM Card",
+  "Combo Completo (Rastreador + Linha + Plataforma)",
+  "Manutencao de Equipamento",
+  "Monitoramento 24h",
+  "Outro",
+];
+
 const emptyCliente: Omit<Cliente, "id"> = {
   nome: "", razaoSocial: "", tipo: "empresa", cnpj: "", email: "", telefone: "",
   responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculosAtivos: 0, status: "ativo",
-  statusAcesso: "pendente", cpfAssociado: "", emailAssociado: "", filial: "", historicoContatos: [],
+  statusAcesso: "pendente", cpfAssociado: "", emailAssociado: "", filial: "", tipoServico: "", historicoContatos: [],
 };
 
 const Clientes = () => {
@@ -97,7 +107,7 @@ const Clientes = () => {
             ))}
             {(["all", "empresa", "associacao"] as const).map(f => (
               <button key={f} onClick={() => setFiltroTipo(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filtroTipo === f ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-                {f === "all" ? "Tipo: Todos" : f === "empresa" ? "Empresa" : "Associação"}
+                {f === "all" ? "Tipo: Todos" : f === "empresa" ? "Empresa" : "Associacao"}
               </button>
             ))}
           </div>
@@ -108,20 +118,22 @@ const Clientes = () => {
               <TableHead>Nome</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>CNPJ</TableHead>
+              <TableHead>Tipo Servico</TableHead>
               <TableHead>Filial</TableHead>
               <TableHead>Acesso</TableHead>
-              <TableHead>Veículos</TableHead>
+              <TableHead>Veiculos</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead>Acoes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtrado.map(c => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.nome}</TableCell>
-                <TableCell><Badge variant="secondary">{c.tipo === "empresa" ? "Empresa" : "Associação"}</Badge></TableCell>
+                <TableCell><Badge variant="secondary">{c.tipo === "empresa" ? "Empresa" : "Associacao"}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{c.cnpj}</TableCell>
-                <TableCell className="text-sm">{c.filial || "—"}</TableCell>
+                <TableCell className="text-sm">{c.tipoServico || "--"}</TableCell>
+                <TableCell className="text-sm">{c.filial || "--"}</TableCell>
                 <TableCell><Badge variant={statusAcessoMap[c.statusAcesso]?.variant}>{statusAcessoMap[c.statusAcesso]?.label}</Badge></TableCell>
                 <TableCell>{c.veiculosAtivos}</TableCell>
                 <TableCell><Badge variant={c.status === "ativo" ? "default" : "secondary"}>{c.status === "ativo" ? "Ativo" : "Inativo"}</Badge></TableCell>
@@ -143,15 +155,21 @@ const Clientes = () => {
           <DialogHeader><DialogTitle>{editando ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><Label>Nome Fantasia</Label><Input value={form.nome} onChange={e => setField("nome", e.target.value)} /></div>
-            <div className="col-span-2"><Label>Razão Social</Label><Input value={form.razaoSocial} onChange={e => setField("razaoSocial", e.target.value)} /></div>
+            <div className="col-span-2"><Label>Razao Social</Label><Input value={form.razaoSocial} onChange={e => setField("razaoSocial", e.target.value)} /></div>
             <div><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0001-00" /></div>
             <div><Label>Tipo</Label>
               <Select value={form.tipo} onValueChange={v => setField("tipo", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="empresa">Empresa</SelectItem><SelectItem value="associacao">Associação</SelectItem></SelectContent>
+                <SelectContent><SelectItem value="empresa">Empresa</SelectItem><SelectItem value="associacao">Associacao</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label>Responsável</Label><Input value={form.responsavel} onChange={e => setField("responsavel", e.target.value)} /></div>
+            <div className="col-span-2"><Label>Tipo de Servico</Label>
+              <Select value={form.tipoServico} onValueChange={v => setField("tipoServico", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o servico contratado" /></SelectTrigger>
+                <SelectContent>{tiposServico.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Responsavel</Label><Input value={form.responsavel} onChange={e => setField("responsavel", e.target.value)} /></div>
             <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setField("telefone", e.target.value)} /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={e => setField("email", e.target.value)} /></div>
             <div><Label>CPF Associado</Label><Input value={form.cpfAssociado} onChange={e => setField("cpfAssociado", e.target.value)} /></div>
@@ -173,7 +191,7 @@ const Clientes = () => {
                 <SelectContent><SelectItem value="ativo">Ativo</SelectItem><SelectItem value="inativo">Inativo</SelectItem></SelectContent>
               </Select>
             </div>
-            <div className="col-span-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setField("endereco", e.target.value)} /></div>
+            <div className="col-span-2"><Label>Endereco</Label><Input value={form.endereco} onChange={e => setField("endereco", e.target.value)} /></div>
             <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setField("cidade", e.target.value)} /></div>
             <div><Label>Estado</Label><Input value={form.estado} onChange={e => setField("estado", e.target.value)} placeholder="SP" /></div>
             <div><Label>CEP</Label><Input value={form.cep} onChange={e => setField("cep", e.target.value)} /></div>
@@ -192,28 +210,29 @@ const Clientes = () => {
               <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted-foreground">Razão Social</span><p className="font-medium">{detalhe.razaoSocial}</p></div>
+                  <div><span className="text-muted-foreground">Razao Social</span><p className="font-medium">{detalhe.razaoSocial}</p></div>
                   <div><span className="text-muted-foreground">CNPJ</span><p className="font-medium">{detalhe.cnpj}</p></div>
-                  <div><span className="text-muted-foreground">Tipo</span><p><Badge variant="secondary">{detalhe.tipo === "empresa" ? "Empresa" : "Associação"}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Tipo</span><p><Badge variant="secondary">{detalhe.tipo === "empresa" ? "Empresa" : "Associacao"}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Tipo Servico</span><p className="font-medium">{detalhe.tipoServico || "--"}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={detalhe.status === "ativo" ? "default" : "secondary"}>{detalhe.status}</Badge></p></div>
                   <div><span className="text-muted-foreground">Status Acesso</span><p><Badge variant={statusAcessoMap[detalhe.statusAcesso]?.variant}>{statusAcessoMap[detalhe.statusAcesso]?.label}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Filial</span><p className="font-medium">{detalhe.filial || "—"}</p></div>
-                  <div><span className="text-muted-foreground">CPF Associado</span><p className="font-medium">{detalhe.cpfAssociado || "—"}</p></div>
-                  <div><span className="text-muted-foreground">Email Associado</span><p className="font-medium">{detalhe.emailAssociado || "—"}</p></div>
-                  <div><span className="text-muted-foreground">Responsável</span><p className="font-medium">{detalhe.responsavel}</p></div>
+                  <div><span className="text-muted-foreground">Filial</span><p className="font-medium">{detalhe.filial || "--"}</p></div>
+                  <div><span className="text-muted-foreground">CPF Associado</span><p className="font-medium">{detalhe.cpfAssociado || "--"}</p></div>
+                  <div><span className="text-muted-foreground">Email Associado</span><p className="font-medium">{detalhe.emailAssociado || "--"}</p></div>
+                  <div><span className="text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel}</p></div>
                   <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone}</p></div>
                   <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email}</p></div>
-                  <div><span className="text-muted-foreground">Veículos Ativos</span><p className="font-medium">{detalhe.veiculosAtivos}</p></div>
-                  <div className="col-span-2"><span className="text-muted-foreground">Endereço</span><p className="font-medium">{detalhe.endereco}</p></div>
+                  <div><span className="text-muted-foreground">Veiculos Ativos</span><p className="font-medium">{detalhe.veiculosAtivos}</p></div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Endereco</span><p className="font-medium">{detalhe.endereco}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">CEP</span><p className="font-medium">{detalhe.cep}</p></div>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Histórico de Contatos</h4>
+                  <h4 className="font-semibold mb-2">Historico de Contatos</h4>
                   <div className="flex gap-2 mb-3">
                     <Input placeholder="Tipo (Telefone, Email...)" value={novoContato.tipo} onChange={e => setNovoContato(p => ({ ...p, tipo: e.target.value }))} className="w-32" />
-                    <Input placeholder="Descrição do contato" value={novoContato.descricao} onChange={e => setNovoContato(p => ({ ...p, descricao: e.target.value }))} className="flex-1" />
+                    <Input placeholder="Descricao do contato" value={novoContato.descricao} onChange={e => setNovoContato(p => ({ ...p, descricao: e.target.value }))} className="flex-1" />
                     <Button size="sm" onClick={adicionarContato}>Adicionar</Button>
                   </div>
                   {detalhe.historicoContatos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum contato registrado.</p> : (

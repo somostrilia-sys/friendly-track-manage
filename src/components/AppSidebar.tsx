@@ -1,8 +1,8 @@
 import {
-  LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
+  LayoutDashboard, Users, Package, ShoppingCart, Smartphone,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
-  ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
-  LogOut, Truck, Building2, Settings, ArrowUpCircle,
+  ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays,
+  LogOut, Truck, Building2, Settings,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
@@ -19,17 +19,15 @@ const trackitItems = [
   { title: "Estoque", url: "/trackit/estoque", icon: Package },
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
   { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },
-  { title: "Tarefas", url: "/trackit/tarefas", icon: ListTodo },
+  { title: "Financeiro", url: "/trackit/financeiro", icon: DollarSign },
 ];
 
 const objetivoItems = [
   { title: "Tecnicos", url: "/objetivo/tecnicos", icon: Wrench },
   { title: "Servicos", url: "/objetivo/servicos", icon: Calendar },
   { title: "Manutencoes", url: "/objetivo/manutencoes", icon: Settings2 },
-  { title: "Financeiro", url: "/objetivo/financeiro", icon: DollarSign },
   { title: "Buscar Tecnicos", url: "/objetivo/buscar-tecnicos", icon: Search },
   { title: "Controle Unidades", url: "/objetivo/controle-unidades", icon: Building2 },
-  { title: "Escalonamentos", url: "/objetivo/escalonamentos", icon: ArrowUpCircle },
 ];
 
 const operacionalItems = [
@@ -39,10 +37,6 @@ const operacionalItems = [
   { title: "Fila de Suporte", url: "/suporte", icon: Headphones },
   { title: "Logistica Rastreadores", url: "/logistica-rastreadores", icon: Truck },
   { title: "Config. Dispositivos", url: "/config-dispositivos", icon: Settings },
-];
-
-const financeiroItems = [
-  { title: "Fechamento Tecnicos", url: "/fechamento-tecnicos", icon: Receipt },
 ];
 
 interface NavSectionProps {
@@ -97,7 +91,6 @@ export function AppSidebar() {
   const [trackitOpen, setTrackitOpen] = useState(true);
   const [objetivoOpen, setObjetivoOpen] = useState(true);
   const [operacionalOpen, setOperacionalOpen] = useState(true);
-  const [financeiroOpen, setFinanceiroOpen] = useState(true);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
@@ -143,7 +136,6 @@ export function AppSidebar() {
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
         <NavSection label="Objetivo" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
         <NavSection label="Operacional" items={operacionalItems} open={operacionalOpen} onOpenChange={setOperacionalOpen} collapsed={collapsed} />
-        <NavSection label="Financeiro" items={financeiroItems} open={financeiroOpen} onOpenChange={setFinanceiroOpen} collapsed={collapsed} />
 
         <div className="mx-4 my-2 border-t border-sidebar-border/30" />
 
