@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
+  LogOut,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
