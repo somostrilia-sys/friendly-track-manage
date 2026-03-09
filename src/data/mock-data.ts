@@ -39,6 +39,8 @@ export interface Equipamento {
   marca: string;
   serial: string;
   imei?: string;
+  simCard?: string;
+  iccid?: string;
   custo: number;
   preco: number;
   quantidade: number;
