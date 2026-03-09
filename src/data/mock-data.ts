@@ -89,6 +89,7 @@ export interface Pedido {
   dataPedido: string;
   parcelas: Parcela[];
   codigoRastreio?: string;
+  observacao?: string;
 }
 
 export const pedidosIniciais: Pedido[] = [
