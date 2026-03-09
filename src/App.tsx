@@ -17,6 +17,8 @@ import Servicos from "@/pages/objetivo/Servicos";
 import Manutencoes from "@/pages/objetivo/Manutencoes";
 import FinanceiroPage from "@/pages/objetivo/Financeiro";
 import BuscarTecnicos from "@/pages/objetivo/BuscarTecnicos";
+import ControleUnidades from "@/pages/objetivo/ControleUnidades";
+import Escalonamentos from "@/pages/objetivo/Escalonamentos";
 import Relatorios from "@/pages/Relatorios";
 import TecnicoLink from "@/pages/servico/TecnicoLink";
 import ClienteLink from "@/pages/servico/ClienteLink";
@@ -25,6 +27,8 @@ import ControleKMPage from "@/pages/ControleKM";
 import FechamentoTecnicosPage from "@/pages/FechamentoTecnicos";
 import FilaSuporte from "@/pages/FilaSuporte";
 import Agendamentos from "@/pages/Agendamentos";
+import LogisticaRastreadores from "@/pages/operacional/LogisticaRastreadores";
+import ConfiguracaoDispositivos from "@/pages/operacional/ConfiguracaoDispositivos";
 import Login from "@/pages/auth/Login";
 import Registro from "@/pages/auth/Registro";
 import EsqueciSenha from "@/pages/auth/EsqueciSenha";
@@ -62,11 +66,15 @@ const App = () => (
               <Route path="/objetivo/manutencoes" element={<Manutencoes />} />
               <Route path="/objetivo/financeiro" element={<FinanceiroPage />} />
               <Route path="/objetivo/buscar-tecnicos" element={<BuscarTecnicos />} />
+              <Route path="/objetivo/controle-unidades" element={<ControleUnidades />} />
+              <Route path="/objetivo/escalonamentos" element={<Escalonamentos />} />
               <Route path="/instalacoes" element={<AcompanhamentoInstalacoes />} />
               <Route path="/controle-km" element={<ControleKMPage />} />
               <Route path="/fechamento-tecnicos" element={<FechamentoTecnicosPage />} />
               <Route path="/suporte" element={<FilaSuporte />} />
               <Route path="/agendamentos" element={<Agendamentos />} />
+              <Route path="/logistica-rastreadores" element={<LogisticaRastreadores />} />
+              <Route path="/config-dispositivos" element={<ConfiguracaoDispositivos />} />
               <Route path="/relatorios" element={<Relatorios />} />
             </Route>
 

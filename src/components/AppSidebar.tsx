@@ -2,11 +2,10 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
-  LogOut,
+  LogOut, Truck, Building2, Settings, ArrowUpCircle,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -24,22 +23,26 @@ const trackitItems = [
 ];
 
 const objetivoItems = [
-  { title: "Técnicos", url: "/objetivo/tecnicos", icon: Wrench },
-  { title: "Serviços", url: "/objetivo/servicos", icon: Calendar },
-  { title: "Manutenções", url: "/objetivo/manutencoes", icon: Settings2 },
+  { title: "Tecnicos", url: "/objetivo/tecnicos", icon: Wrench },
+  { title: "Servicos", url: "/objetivo/servicos", icon: Calendar },
+  { title: "Manutencoes", url: "/objetivo/manutencoes", icon: Settings2 },
   { title: "Financeiro", url: "/objetivo/financeiro", icon: DollarSign },
-  { title: "Buscar Técnicos", url: "/objetivo/buscar-tecnicos", icon: Search },
+  { title: "Buscar Tecnicos", url: "/objetivo/buscar-tecnicos", icon: Search },
+  { title: "Controle Unidades", url: "/objetivo/controle-unidades", icon: Building2 },
+  { title: "Escalonamentos", url: "/objetivo/escalonamentos", icon: ArrowUpCircle },
 ];
 
 const operacionalItems = [
-  { title: "Acomp. Instalações", url: "/instalacoes", icon: ClipboardCheck },
+  { title: "Acomp. Instalacoes", url: "/instalacoes", icon: ClipboardCheck },
   { title: "Controle de KM", url: "/controle-km", icon: Route },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarDays },
   { title: "Fila de Suporte", url: "/suporte", icon: Headphones },
+  { title: "Logistica Rastreadores", url: "/logistica-rastreadores", icon: Truck },
+  { title: "Config. Dispositivos", url: "/config-dispositivos", icon: Settings },
 ];
 
 const financeiroItems = [
-  { title: "Fechamento Técnicos", url: "/fechamento-tecnicos", icon: Receipt },
+  { title: "Fechamento Tecnicos", url: "/fechamento-tecnicos", icon: Receipt },
 ];
 
 interface NavSectionProps {
@@ -104,7 +107,7 @@ export function AppSidebar() {
           {!collapsed ? (
             <img
               src={logoTrackit}
-              alt="Trackit - Soluções em Rastreamento e IoT"
+              alt="Trackit - Solucoes em Rastreamento e IoT"
               className="w-full max-w-[150px] object-contain"
               style={{ mixBlendMode: 'lighten', filter: 'contrast(1.15)' }}
             />
@@ -136,8 +139,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-
-
         {/* Navigation Sections */}
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
         <NavSection label="Objetivo" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
@@ -146,7 +147,7 @@ export function AppSidebar() {
 
         <div className="mx-4 my-2 border-t border-sidebar-border/30" />
 
-        {/* Relatórios */}
+        {/* Relatorios */}
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -158,7 +159,7 @@ export function AppSidebar() {
                     className="transition-colors duration-150"
                   >
                     <FileText className="h-[15px] w-[15px] shrink-0" />
-                    {!collapsed && <span className="text-[13px]">Relatórios</span>}
+                    {!collapsed && <span className="text-[13px]">Relatorios</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -190,7 +191,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="px-5 pb-4 pt-2">
               <p className="text-[9px] text-sidebar-foreground/25 tracking-wide">
-                © 2026 Trackit · v1.0
+                &copy; 2026 Trackit - v1.0
               </p>
             </div>
           )}
