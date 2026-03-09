@@ -152,6 +152,8 @@ export interface Tecnico {
   cidade: string;
   estado: string;
   especialidade: string;
+  regiaoAtuacao?: string;
+  statusAtivo?: "ativo" | "inativo";
   valorServico: number;
   periodoPagamento: "quinzenal" | "mensal";
   chavePix: string;
