@@ -99,26 +99,21 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
       <SidebarContent className="py-4 flex flex-col">
         {/* Logo */}
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-2">
           {!collapsed ? (
             <div className="py-3 flex justify-center">
               <img
                 src={logoTrackit}
                 alt="Trackit - Soluções em Rastreamento e IoT"
-                className="h-14 w-auto object-contain brightness-0 invert opacity-85"
+                className="h-10 w-auto object-contain brightness-0 invert opacity-90"
               />
             </div>
           ) : (
             <div className="flex justify-center py-3">
-              <div className="w-7 h-7 rounded-md bg-sidebar-primary/15 flex items-center justify-center">
-                <span className="text-[11px] font-black text-sidebar-primary">T</span>
-              </div>
+              <span className="text-xs font-black text-sidebar-primary">T</span>
             </div>
           )}
         </div>
-
-        {/* Separator */}
-        <div className="mx-4 mb-3 border-t border-sidebar-border/40" />
 
         {/* Dashboard */}
         <SidebarGroup className="py-0">
@@ -141,7 +136,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-4 my-2 border-t border-sidebar-border/30" />
+
 
         {/* Navigation Sections */}
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
