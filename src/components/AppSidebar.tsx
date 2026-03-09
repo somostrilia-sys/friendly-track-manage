@@ -3,7 +3,7 @@ import {
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
 } from "lucide-react";
-import logoTrackit from "@/assets/logo-trackit-full.png";
+import logoTrackit from "@/assets/logo-trackit-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -105,7 +105,7 @@ export function AppSidebar() {
               <img
                 src={logoTrackit}
                 alt="Trackit - Soluções em Rastreamento e IoT"
-                className="w-full max-w-[120px] object-contain brightness-0 invert opacity-90"
+                className="w-full max-w-[120px] object-contain"
                 style={{ imageRendering: 'auto' }}
               />
             </div>
