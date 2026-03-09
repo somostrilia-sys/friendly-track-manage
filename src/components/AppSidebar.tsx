@@ -3,7 +3,7 @@ import {
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
 } from "lucide-react";
-import logoTrackit from "@/assets/logo-trackit.jpg";
+import logoTrackit from "@/assets/logo-trackit-clean.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
