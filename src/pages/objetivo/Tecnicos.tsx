@@ -20,7 +20,10 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   indisponivel: { label: "Indisponível", variant: "outline" },
 };
 
-const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", valorServico: 200, periodoPagamento: "quinzenal" as "quinzenal" | "mensal", chavePix: "", banco: "" };
+const tipoLabels: Record<string, string> = { avulso: "Avulso", parceiro: "Parceiro", proprio: "Próprio" };
+const prazoPadrao: Record<string, string> = { avulso: "2 dias úteis", parceiro: "5 dias úteis", proprio: "Conforme contrato" };
+
+const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", valorServico: 200, periodoPagamento: "quinzenal" as "quinzenal" | "mensal", chavePix: "", banco: "", tipoTecnico: "avulso" as "avulso" | "parceiro" | "proprio", valorInstalacao: 200, adicionalKm: 1.2 };
 
 const Tecnicos = () => {
   const [tecnicos, setTecnicos] = useState(tecnicosIniciais);
@@ -38,6 +41,7 @@ const Tecnicos = () => {
     const novo: Tecnico = {
       ...form, id: Date.now().toString(), avaliacao: 0, instalacoesMes: 0,
       equipamentosEmEstoque: 0, saldoAberto: 0, status: "disponivel", estoque: [],
+      prazoPagamento: prazoPadrao[form.tipoTecnico],
     };
     setTecnicos(prev => [...prev, novo]);
     setModalOpen(false);
@@ -80,11 +84,12 @@ const Tecnicos = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Cidade/UF</TableHead>
-              <TableHead>Especialidade</TableHead>
+              <TableHead>Valor Instal.</TableHead>
+              <TableHead>Adic. KM</TableHead>
               <TableHead>Avaliação</TableHead>
               <TableHead>Instal./Mês</TableHead>
-              <TableHead>Equip.</TableHead>
               <TableHead>Saldo</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -93,11 +98,12 @@ const Tecnicos = () => {
             {tecnicos.map(t => (
               <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetalhe(t)}>
                 <TableCell className="font-medium">{t.nome}</TableCell>
+                <TableCell><Badge variant="secondary">{tipoLabels[t.tipoTecnico]}</Badge></TableCell>
                 <TableCell>{t.cidade}/{t.estado}</TableCell>
-                <TableCell className="text-sm">{t.especialidade}</TableCell>
+                <TableCell>R$ {t.valorInstalacao}</TableCell>
+                <TableCell>R$ {t.adicionalKm}/km</TableCell>
                 <TableCell>⭐ {t.avaliacao}</TableCell>
                 <TableCell>{t.instalacoesMes}</TableCell>
-                <TableCell>{t.equipamentosEmEstoque}</TableCell>
                 <TableCell>R$ {t.saldoAberto.toLocaleString("pt-BR")}</TableCell>
                 <TableCell><Badge variant={statusMap[t.status].variant}>{statusMap[t.status].label}</Badge></TableCell>
               </TableRow>
@@ -106,18 +112,29 @@ const Tecnicos = () => {
         </Table>
       </Card>
 
-      {/* Modal Novo Técnico */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Novo Técnico</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><Label>Nome Completo</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
             <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} placeholder="000.000.000-00" /></div>
+            <div><Label>Tipo</Label>
+              <Select value={form.tipoTecnico} onValueChange={v => setForm(f => ({ ...f, tipoTecnico: v as "avulso" | "parceiro" | "proprio" }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="avulso">Avulso (2 dias úteis)</SelectItem>
+                  <SelectItem value="parceiro">Parceiro (5 dias úteis)</SelectItem>
+                  <SelectItem value="proprio">Próprio (contrato)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
             <div><Label>Especialidade</Label><Input value={form.especialidade} onChange={e => setForm(f => ({ ...f, especialidade: e.target.value }))} /></div>
             <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
             <div><Label>Estado</Label><Input value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} placeholder="SP" /></div>
+            <div><Label>Valor por Instalação (R$)</Label><Input type="number" value={form.valorInstalacao} onChange={e => setForm(f => ({ ...f, valorInstalacao: +e.target.value }))} /></div>
+            <div><Label>Adicional KM (R$/km)</Label><Input type="number" step="0.1" value={form.adicionalKm} onChange={e => setForm(f => ({ ...f, adicionalKm: +e.target.value }))} /></div>
             <div><Label>Valor por Serviço (R$)</Label><Input type="number" value={form.valorServico} onChange={e => setForm(f => ({ ...f, valorServico: +e.target.value }))} /></div>
             <div><Label>Período Pagamento</Label>
               <Select value={form.periodoPagamento} onValueChange={v => setForm(f => ({ ...f, periodoPagamento: v as "quinzenal" | "mensal" }))}>
@@ -138,7 +155,6 @@ const Tecnicos = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Detalhe Técnico */}
       <Sheet open={!!detalhe} onOpenChange={() => setDetalhe(null)}>
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
@@ -146,18 +162,26 @@ const Tecnicos = () => {
               <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-5 text-sm">
                 <div className="grid grid-cols-2 gap-3">
+                  <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{tipoLabels[detalhe.tipoTecnico]}</p></div>
                   <div><span className="text-muted-foreground">CPF</span><p className="font-medium">{detalhe.cpf}</p></div>
                   <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone}</p></div>
                   <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">Especialidade</span><p className="font-medium">{detalhe.especialidade}</p></div>
+                  <div><span className="text-muted-foreground">Valor/Instalação</span><p className="font-medium">R$ {detalhe.valorInstalacao}</p></div>
+                  <div><span className="text-muted-foreground">Adicional KM</span><p className="font-medium">R$ {detalhe.adicionalKm}/km</p></div>
+                  <div><span className="text-muted-foreground">Prazo Pagamento</span><p className="font-medium">{detalhe.prazoPagamento}</p></div>
                   <div><span className="text-muted-foreground">Avaliação</span><p className="font-medium">⭐ {detalhe.avaliacao}</p></div>
-                  <div><span className="text-muted-foreground">Valor/Serviço</span><p className="font-medium">R$ {detalhe.valorServico}</p></div>
                   <div><span className="text-muted-foreground">Pagamento</span><p className="font-medium capitalize">{detalhe.periodoPagamento}</p></div>
                   <div><span className="text-muted-foreground">Chave PIX</span><p className="font-medium">{detalhe.chavePix}</p></div>
                   <div><span className="text-muted-foreground">Banco</span><p className="font-medium">{detalhe.banco}</p></div>
                   <div><span className="text-muted-foreground">Saldo Aberto</span><p className="font-semibold text-primary">R$ {detalhe.saldoAberto.toLocaleString("pt-BR")}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusMap[detalhe.status].variant}>{statusMap[detalhe.status].label}</Badge></p></div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground font-medium">Regra Fiscal</p>
+                  <p className="text-sm">{detalhe.saldoAberto > 1000 ? "Acima de R$ 1.000 — Nota Fiscal obrigatória" : "Até R$ 1.000 — Recibo"}</p>
                 </div>
 
                 <div>
