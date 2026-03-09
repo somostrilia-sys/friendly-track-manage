@@ -99,13 +99,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
       <SidebarContent className="pt-0 pb-2 flex flex-col">
         {/* Logo */}
-        <div className="px-3 -mb-1">
+        <div className="pl-2 pr-4 -mb-1">
           {!collapsed ? (
             <img
               src={logoTrackit}
               alt="Trackit - Soluções em Rastreamento e IoT"
               className="w-full max-w-[150px] object-contain"
-              style={{ mixBlendMode: 'lighten' }}
+              style={{ mixBlendMode: 'lighten', filter: 'contrast(1.15)' }}
             />
           ) : (
             <div className="flex justify-center py-3 px-2">
