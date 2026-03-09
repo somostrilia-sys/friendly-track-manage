@@ -56,18 +56,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarContent className="py-4">
         {/* Logo */}
-        <div className="px-4 mb-6">
+        <div className="px-2 mb-6">
           {!collapsed ? (
-            <div className="flex items-center gap-2">
-              <MapPin className="w-6 h-6 text-sidebar-primary shrink-0" />
-              <div>
-                <h1 className="text-lg font-extrabold tracking-wider text-sidebar-primary">TRACKIT</h1>
-                <p className="text-[10px] text-sidebar-foreground/60">Inovações ao seu alcance!</p>
-              </div>
-            </div>
+            <img src={logoTrackit} alt="Trackit - Soluções em Rastreamento e IoT" className="w-full max-w-[180px] mx-auto rounded" />
           ) : (
             <div className="flex justify-center">
-              <MapPin className="w-5 h-5 text-sidebar-primary" />
+              <span className="text-lg font-extrabold text-sidebar-primary">T</span>
             </div>
           )}
         </div>
