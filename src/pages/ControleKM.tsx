@@ -9,15 +9,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { controleKMIniciais, ControleKM, tecnicosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
-import { Plus, MapPin, Route } from "lucide-react";
+import { Plus, MapPin, Route, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+
+interface InstalacaoDia {
+  endereco: string;
+  horario: string;
+  kmTrecho: number;
+}
 
 const ControleKMPage = () => {
   const [registros, setRegistros] = useState(controleKMIniciais);
   const [modalOpen, setModalOpen] = useState(false);
   const [filtroTecnico, setFiltroTecnico] = useState("all");
   const [filtroData, setFiltroData] = useState("");
-  const [form, setForm] = useState({ tecnicoId: "", enderecoInstalacao: "", horario: "", data: "", kmCalculado: 0 });
+
+  const [formTecnicoId, setFormTecnicoId] = useState("");
+  const [formData, setFormData] = useState("");
+  const [instalacoes, setInstalacoes] = useState<InstalacaoDia[]>([{ endereco: "", horario: "", kmTrecho: 0 }]);
+
+  const addInstalacao = () => setInstalacoes(prev => [...prev, { endereco: "", horario: "", kmTrecho: 0 }]);
+  const removeInstalacao = (i: number) => setInstalacoes(prev => prev.filter((_, idx) => idx !== i));
+  const updateInstalacao = (i: number, field: keyof InstalacaoDia, value: string | number) => {
+    setInstalacoes(prev => prev.map((inst, idx) => idx === i ? { ...inst, [field]: value } : inst));
+  };
+
+  const kmTotalForm = instalacoes.reduce((a, inst) => a + inst.kmTrecho, 0);
 
   const filtrado = registros.filter(r => {
     if (filtroTecnico !== "all" && r.tecnicoId !== filtroTecnico) return false;
@@ -25,7 +42,6 @@ const ControleKMPage = () => {
     return true;
   });
 
-  // Totalização por técnico/dia
   const totais = filtrado.reduce((acc, r) => {
     const key = `${r.tecnicoNome} - ${r.data}`;
     acc[key] = (acc[key] || 0) + r.kmCalculado;
@@ -36,13 +52,28 @@ const ControleKMPage = () => {
   const tecnicosUnicos = [...new Set(filtrado.map(r => r.tecnicoNome))].length;
 
   const salvar = () => {
-    if (!form.tecnicoId || !form.enderecoInstalacao) { toast.error("Preencha técnico e endereço"); return; }
-    const tec = tecnicosIniciais.find(t => t.id === form.tecnicoId);
-    const novo: ControleKM = { id: `KM-${Date.now()}`, tecnicoNome: tec?.nome || "", ...form, data: form.data || new Date().toISOString().split("T")[0] };
-    setRegistros(prev => [...prev, novo]);
+    if (!formTecnicoId || instalacoes.length === 0) { toast.error("Preencha tecnico e pelo menos uma instalacao"); return; }
+    const tec = tecnicosIniciais.find(t => t.id === formTecnicoId);
+    const data = formData || new Date().toISOString().split("T")[0];
+
+    const novos: ControleKM[] = instalacoes
+      .filter(inst => inst.endereco)
+      .map((inst, i) => ({
+        id: `KM-${Date.now()}-${i}`,
+        tecnicoId: formTecnicoId,
+        tecnicoNome: tec?.nome || "",
+        enderecoInstalacao: inst.endereco,
+        horario: inst.horario,
+        data,
+        kmCalculado: inst.kmTrecho,
+      }));
+
+    setRegistros(prev => [...prev, ...novos]);
     setModalOpen(false);
-    setForm({ tecnicoId: "", enderecoInstalacao: "", horario: "", data: "", kmCalculado: 0 });
-    toast.success("KM registrado!");
+    setFormTecnicoId("");
+    setFormData("");
+    setInstalacoes([{ endereco: "", horario: "", kmTrecho: 0 }]);
+    toast.success(`${novos.length} instalacao(es) registrada(s) - Total: ${kmTotalForm} km`);
   };
 
   return (
@@ -50,23 +81,23 @@ const ControleKMPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Controle de KM</h1>
-          <p className="text-muted-foreground text-sm">Quilometragem por técnico e instalação</p>
+          <p className="text-muted-foreground text-sm">Registre todas as instalacoes do dia com KM total automatico</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Registro</Button>
+        <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Registrar Dia</Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total KM" value={`${totalKm} km`} icon={Route} accent="primary" />
         <StatCard label="Registros" value={filtrado.length} icon={MapPin} />
-        <StatCard label="Técnicos" value={tecnicosUnicos} icon={MapPin} accent="success" />
+        <StatCard label="Tecnicos" value={tecnicosUnicos} icon={MapPin} accent="success" />
       </div>
 
       <Card className="card-shadow">
         <div className="p-4 border-b flex flex-wrap gap-3">
           <Select value={filtroTecnico} onValueChange={setFiltroTecnico}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Técnico" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Tecnico" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos Técnicos</SelectItem>
+              <SelectItem value="all">Todos Tecnicos</SelectItem>
               {tecnicosIniciais.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -75,11 +106,11 @@ const ControleKMPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Técnico</TableHead>
-              <TableHead>Endereço</TableHead>
-              <TableHead>Horário</TableHead>
+              <TableHead>Tecnico</TableHead>
+              <TableHead>Endereco</TableHead>
+              <TableHead>Horario</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead>KM</TableHead>
+              <TableHead>KM Trecho</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,10 +127,10 @@ const ControleKMPage = () => {
         </Table>
       </Card>
 
-      {/* Totalização */}
+      {/* Totalizacao */}
       {Object.keys(totais).length > 0 && (
         <Card className="p-6 card-shadow">
-          <h3 className="font-semibold mb-4">Totalização por Técnico / Dia</h3>
+          <h3 className="font-semibold mb-4">Totalizacao por Tecnico / Dia</h3>
           <div className="space-y-2">
             {Object.entries(totais).map(([key, km]) => (
               <div key={key} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
@@ -112,23 +143,48 @@ const ControleKMPage = () => {
       )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Registrar KM</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div><Label>Técnico</Label>
-              <Select value={form.tecnicoId} onValueChange={v => setForm(f => ({ ...f, tecnicoId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{tecnicosIniciais.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
-              </Select>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Registrar Instalacoes do Dia</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Tecnico</Label>
+                <Select value={formTecnicoId} onValueChange={setFormTecnicoId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{tecnicosIniciais.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Data</Label><Input type="date" value={formData} onChange={e => setFormData(e.target.value)} /></div>
             </div>
-            <div><Label>Horário</Label><Input value={form.horario} onChange={e => setForm(f => ({ ...f, horario: e.target.value }))} placeholder="09:00" /></div>
-            <div className="col-span-2"><Label>Endereço da Instalação</Label><Input value={form.enderecoInstalacao} onChange={e => setForm(f => ({ ...f, enderecoInstalacao: e.target.value }))} /></div>
-            <div><Label>Data</Label><Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} /></div>
-            <div><Label>KM Calculado</Label><Input type="number" value={form.kmCalculado} onChange={e => setForm(f => ({ ...f, kmCalculado: +e.target.value }))} /></div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Instalacoes do Dia</Label>
+                <Button size="sm" variant="outline" onClick={addInstalacao}><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
+              </div>
+              <div className="space-y-3">
+                {instalacoes.map((inst, i) => (
+                  <div key={i} className="flex gap-2 items-end p-3 rounded-lg bg-muted/30 border">
+                    <div className="flex-1"><Label className="text-xs">Endereco #{i + 1}</Label><Input value={inst.endereco} onChange={e => updateInstalacao(i, "endereco", e.target.value)} placeholder="Rua, cidade..." /></div>
+                    <div className="w-20"><Label className="text-xs">Horario</Label><Input value={inst.horario} onChange={e => updateInstalacao(i, "horario", e.target.value)} placeholder="09:00" /></div>
+                    <div className="w-24"><Label className="text-xs">KM Trecho</Label><Input type="number" value={inst.kmTrecho} onChange={e => updateInstalacao(i, "kmTrecho", +e.target.value)} /></div>
+                    {instalacoes.length > 1 && (
+                      <Button size="icon" variant="ghost" onClick={() => removeInstalacao(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-sm font-medium">KM Total do Dia: <strong>{kmTotalForm} km</strong></p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Rota: {instalacoes.filter(i => i.endereco).map(i => i.endereco.split(",")[0]).join(" -> ")}
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={salvar}>Registrar</Button>
+            <Button onClick={salvar}>Registrar Dia</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

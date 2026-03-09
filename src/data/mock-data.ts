@@ -19,6 +19,7 @@ export interface Cliente {
   cpfAssociado: string;
   emailAssociado: string;
   filial: string;
+  tipoServico?: string;
   historicoContatos: { data: string; tipo: string; descricao: string }[];
 }
 
@@ -38,6 +39,8 @@ export interface Equipamento {
   marca: string;
   serial: string;
   imei?: string;
+  simCard?: string;
+  iccid?: string;
   custo: number;
   preco: number;
   quantidade: number;
@@ -86,6 +89,7 @@ export interface Pedido {
   dataPedido: string;
   parcelas: Parcela[];
   codigoRastreio?: string;
+  observacao?: string;
 }
 
 export const pedidosIniciais: Pedido[] = [
@@ -101,6 +105,7 @@ export interface LinhaSIM {
   iccid: string;
   operadora: string;
   numero: string;
+  fornecedor?: string;
   status: "online" | "offline";
   empresaId: string;
   empresaNome: string;
@@ -147,6 +152,8 @@ export interface Tecnico {
   cidade: string;
   estado: string;
   especialidade: string;
+  regiaoAtuacao?: string;
+  statusAtivo?: "ativo" | "inativo";
   valorServico: number;
   periodoPagamento: "quinzenal" | "mensal";
   chavePix: string;

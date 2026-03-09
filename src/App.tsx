@@ -11,20 +11,17 @@ import Clientes from "@/pages/trackit/Clientes";
 import Estoque from "@/pages/trackit/Estoque";
 import Pedidos from "@/pages/trackit/Pedidos";
 import LinhasSIM from "@/pages/trackit/LinhasSIM";
-import Tarefas from "@/pages/trackit/Tarefas";
+import FinanceiroPage from "@/pages/objetivo/Financeiro";
 import Tecnicos from "@/pages/objetivo/Tecnicos";
 import Servicos from "@/pages/objetivo/Servicos";
 import Manutencoes from "@/pages/objetivo/Manutencoes";
-import FinanceiroPage from "@/pages/objetivo/Financeiro";
 import BuscarTecnicos from "@/pages/objetivo/BuscarTecnicos";
 import ControleUnidades from "@/pages/objetivo/ControleUnidades";
-import Escalonamentos from "@/pages/objetivo/Escalonamentos";
 import Relatorios from "@/pages/Relatorios";
 import TecnicoLink from "@/pages/servico/TecnicoLink";
 import ClienteLink from "@/pages/servico/ClienteLink";
 import AcompanhamentoInstalacoes from "@/pages/AcompanhamentoInstalacoes";
 import ControleKMPage from "@/pages/ControleKM";
-import FechamentoTecnicosPage from "@/pages/FechamentoTecnicos";
 import FilaSuporte from "@/pages/FilaSuporte";
 import Agendamentos from "@/pages/Agendamentos";
 import LogisticaRastreadores from "@/pages/operacional/LogisticaRastreadores";
@@ -60,17 +57,14 @@ const App = () => (
               <Route path="/trackit/estoque" element={<Estoque />} />
               <Route path="/trackit/pedidos" element={<Pedidos />} />
               <Route path="/trackit/linhas-sim" element={<LinhasSIM />} />
-              <Route path="/trackit/tarefas" element={<Tarefas />} />
+              <Route path="/trackit/financeiro" element={<FinanceiroPage />} />
               <Route path="/objetivo/tecnicos" element={<Tecnicos />} />
               <Route path="/objetivo/servicos" element={<Servicos />} />
               <Route path="/objetivo/manutencoes" element={<Manutencoes />} />
-              <Route path="/objetivo/financeiro" element={<FinanceiroPage />} />
               <Route path="/objetivo/buscar-tecnicos" element={<BuscarTecnicos />} />
               <Route path="/objetivo/controle-unidades" element={<ControleUnidades />} />
-              <Route path="/objetivo/escalonamentos" element={<Escalonamentos />} />
               <Route path="/instalacoes" element={<AcompanhamentoInstalacoes />} />
               <Route path="/controle-km" element={<ControleKMPage />} />
-              <Route path="/fechamento-tecnicos" element={<FechamentoTecnicosPage />} />
               <Route path="/suporte" element={<FilaSuporte />} />
               <Route path="/agendamentos" element={<Agendamentos />} />
               <Route path="/logistica-rastreadores" element={<LogisticaRastreadores />} />
