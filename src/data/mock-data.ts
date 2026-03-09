@@ -354,6 +354,102 @@ export const agendamentosIniciais: Agendamento[] = [
   { id: "AG-008", tipo: "instalacao", placa: "VWX-5566", associado: "Lucas Ferreira", endereco: "Av. Paulista, 1500", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "14:00", status: "realizado", tentativas: 1 },
 ];
 
+// ===== LOGISTICA RASTREADORES =====
+
+export interface DespachoRastreador {
+  id: string;
+  rastreadorModelo: string;
+  serial: string;
+  imei: string;
+  destinatario: string;
+  enderecoDestino: string;
+  cidadeDestino: string;
+  codigoRastreio: string;
+  dataEnvio: string;
+  statusEntrega: "preparando" | "postado" | "em_transito" | "entregue" | "devolvido";
+  unidadeDestino: string;
+  observacoes: string;
+}
+
+export const despachosIniciais: DespachoRastreador[] = [
+  { id: "DSP-001", rastreadorModelo: "J16 4G", serial: "J16-2024-001", imei: "351756051530001", destinatario: "Marcos Oliveira", enderecoDestino: "Rua das Palmeiras, 450", cidadeDestino: "Sao Paulo - SP", codigoRastreio: "BR123456789SP", dataEnvio: "2024-03-05", statusEntrega: "entregue", unidadeDestino: "Objetivo Auto Truck SP", observacoes: "Entregue em maos" },
+  { id: "DSP-002", rastreadorModelo: "J16 4G", serial: "J16-2024-002", imei: "351756051530002", destinatario: "Fernando Silva", enderecoDestino: "Av. Brasil, 1200", cidadeDestino: "Rio de Janeiro - RJ", codigoRastreio: "BR987654321RJ", dataEnvio: "2024-03-06", statusEntrega: "em_transito", unidadeDestino: "Objetivo Auto Truck RJ", observacoes: "" },
+  { id: "DSP-003", rastreadorModelo: "ST4955", serial: "ST-2024-010", imei: "351756051530003", destinatario: "Ricardo Santos", enderecoDestino: "Rod. BR-116, km 98", cidadeDestino: "Curitiba - PR", codigoRastreio: "BR111222333PR", dataEnvio: "2024-03-07", statusEntrega: "postado", unidadeDestino: "Objetivo Auto Truck PR", observacoes: "Urgente" },
+  { id: "DSP-004", rastreadorModelo: "GV300", serial: "QC-2024-015", imei: "351756051530004", destinatario: "Lucas Pereira", enderecoDestino: "Av. Ipiranga, 6800", cidadeDestino: "Porto Alegre - RS", codigoRastreio: "BR444555666RS", dataEnvio: "2024-03-08", statusEntrega: "preparando", unidadeDestino: "Objetivo Auto Truck RS", observacoes: "" },
+  { id: "DSP-005", rastreadorModelo: "J16 4G", serial: "J16-2024-003", imei: "351756051530005", destinatario: "Andre Costa", enderecoDestino: "Av. Afonso Pena, 1500", cidadeDestino: "Belo Horizonte - MG", codigoRastreio: "BR777888999MG", dataEnvio: "2024-03-04", statusEntrega: "entregue", unidadeDestino: "Objetivo Auto Truck MG", observacoes: "Recebido pelo responsavel" },
+];
+
+// ===== CONTROLE POR UNIDADE =====
+
+export interface ControleUnidade {
+  id: string;
+  unidade: string;
+  responsavel: string;
+  cidade: string;
+  estado: string;
+  rastreadores: { serial: string; modelo: string; status: "enviado" | "instalado" | "estoque" }[];
+  chips: { iccid: string; operadora: string; status: "ativo" | "inativo" }[];
+  acessoPlataforma: "ativo" | "pendente" | "bloqueado";
+  totalRastreadores: number;
+  totalChips: number;
+  valorMensal: number;
+}
+
+export const controleUnidadesIniciais: ControleUnidade[] = [
+  { id: "UN-001", unidade: "Objetivo Auto Truck SP", responsavel: "Joao Martins", cidade: "Sao Paulo", estado: "SP", rastreadores: [{ serial: "J16-2024-001", modelo: "J16 4G", status: "instalado" }, { serial: "ST-2024-006", modelo: "ST4955", status: "estoque" }], chips: [{ iccid: "8955031234567890001", operadora: "Vivo", status: "ativo" }, { iccid: "8955031234567890002", operadora: "Claro", status: "ativo" }], acessoPlataforma: "ativo", totalRastreadores: 2, totalChips: 2, valorMensal: 298 },
+  { id: "UN-002", unidade: "Objetivo Auto Truck RJ", responsavel: "Carlos Silva", cidade: "Rio de Janeiro", estado: "RJ", rastreadores: [{ serial: "J16-2024-002", modelo: "J16 4G", status: "enviado" }], chips: [{ iccid: "8955031234567890004", operadora: "Vivo", status: "ativo" }], acessoPlataforma: "ativo", totalRastreadores: 1, totalChips: 1, valorMensal: 149 },
+  { id: "UN-003", unidade: "Objetivo Auto Truck PR", responsavel: "Roberto Lima", cidade: "Curitiba", estado: "PR", rastreadores: [{ serial: "QC-2024-007", modelo: "GV300", status: "instalado" }, { serial: "ST-2024-010", modelo: "ST4955", status: "enviado" }], chips: [{ iccid: "8955031234567890003", operadora: "Tim", status: "inativo" }], acessoPlataforma: "pendente", totalRastreadores: 2, totalChips: 1, valorMensal: 248 },
+  { id: "UN-004", unidade: "Objetivo Auto Truck RS", responsavel: "Maria Souza", cidade: "Porto Alegre", estado: "RS", rastreadores: [{ serial: "QC-2024-015", modelo: "GV300", status: "estoque" }], chips: [{ iccid: "8955031234567890005", operadora: "Claro", status: "ativo" }], acessoPlataforma: "ativo", totalRastreadores: 1, totalChips: 1, valorMensal: 149 },
+];
+
+// ===== CONFIGURACAO DE DISPOSITIVOS =====
+
+export interface ConfiguracaoDispositivo {
+  id: string;
+  serial: string;
+  modelo: string;
+  imei: string;
+  firmware: string;
+  apn: string;
+  ip: string;
+  porta: string;
+  intervaloTransmissao: number;
+  checklistConcluido: boolean;
+  checklist: { item: string; feito: boolean }[];
+  status: "pendente" | "configurado" | "testado";
+  responsavelConfig: string;
+  dataConfig: string;
+  observacoes: string;
+}
+
+export const configuracoesDispositivosIniciais: ConfiguracaoDispositivo[] = [
+  { id: "CFG-001", serial: "J16-2024-001", modelo: "J16 4G", imei: "351756051530001", firmware: "v3.2.1", apn: "trackit.iot", ip: "45.189.10.50", porta: "5001", intervaloTransmissao: 60, checklistConcluido: true, checklist: [{ item: "Firmware atualizado", feito: true }, { item: "APN configurado", feito: true }, { item: "IP/Porta definidos", feito: true }, { item: "Teste de comunicacao", feito: true }, { item: "Teste de GPS", feito: true }], status: "testado", responsavelConfig: "Carlos Mendes", dataConfig: "2024-03-04", observacoes: "Pronto para envio" },
+  { id: "CFG-002", serial: "J16-2024-002", modelo: "J16 4G", imei: "351756051530002", firmware: "v3.2.1", apn: "trackit.iot", ip: "45.189.10.50", porta: "5001", intervaloTransmissao: 60, checklistConcluido: true, checklist: [{ item: "Firmware atualizado", feito: true }, { item: "APN configurado", feito: true }, { item: "IP/Porta definidos", feito: true }, { item: "Teste de comunicacao", feito: true }, { item: "Teste de GPS", feito: false }], status: "configurado", responsavelConfig: "Carlos Mendes", dataConfig: "2024-03-05", observacoes: "Falta teste GPS" },
+  { id: "CFG-003", serial: "ST-2024-010", modelo: "ST4955", imei: "351756051530003", firmware: "v2.8.4", apn: "trackit.iot", ip: "45.189.10.50", porta: "5002", intervaloTransmissao: 90, checklistConcluido: false, checklist: [{ item: "Firmware atualizado", feito: true }, { item: "APN configurado", feito: false }, { item: "IP/Porta definidos", feito: false }, { item: "Teste de comunicacao", feito: false }, { item: "Teste de GPS", feito: false }], status: "pendente", responsavelConfig: "Ana Paula", dataConfig: "2024-03-07", observacoes: "Aguardando APN" },
+  { id: "CFG-004", serial: "QC-2024-015", modelo: "GV300", imei: "351756051530004", firmware: "v4.1.0", apn: "trackit.iot", ip: "45.189.10.50", porta: "5003", intervaloTransmissao: 120, checklistConcluido: false, checklist: [{ item: "Firmware atualizado", feito: false }, { item: "APN configurado", feito: false }, { item: "IP/Porta definidos", feito: false }, { item: "Teste de comunicacao", feito: false }, { item: "Teste de GPS", feito: false }], status: "pendente", responsavelConfig: "", dataConfig: "", observacoes: "Nao iniciado" },
+];
+
+// ===== ESCALONAMENTOS =====
+
+export interface Escalonamento {
+  id: string;
+  tecnicoId: string;
+  tecnicoNome: string;
+  demanda: string;
+  clienteNome: string;
+  motivo: string;
+  dataAbertura: string;
+  status: "pendente" | "em_analise" | "resolvido";
+  responsavelGestor: string;
+  resolucao: string;
+}
+
+export const escalonamentosIniciais: Escalonamento[] = [
+  { id: "ESC-001", tecnicoId: "2", tecnicoNome: "Fernando Silva", demanda: "Rastreador nao transmite apos instalacao", clienteNome: "LogBrasil Transportes", motivo: "Problema de hardware - tecnico nao consegue resolver em campo", dataAbertura: "2024-03-06", status: "pendente", responsavelGestor: "Matheus Souza", resolucao: "" },
+  { id: "ESC-002", tecnicoId: "4", tecnicoNome: "Andre Costa", demanda: "Cliente recusa instalacao no ponto indicado", clienteNome: "Frota Segura ME", motivo: "Divergencia com o cliente sobre local de instalacao", dataAbertura: "2024-03-05", status: "em_analise", responsavelGestor: "Matheus Souza", resolucao: "Contato com cliente para alinhar" },
+  { id: "ESC-003", tecnicoId: "6", tecnicoNome: "Thiago Almeida", demanda: "Equipamento com defeito de fabrica", clienteNome: "TransNorte Logistica", motivo: "Rastreador apresentou falha na placa apos desembalar", dataAbertura: "2024-03-07", status: "resolvido", responsavelGestor: "Matheus Souza", resolucao: "Enviado novo equipamento via Sedex" },
+];
+
 // ===== CHART DATA =====
 export const faturamentoMensal = [
   { mes: "Out", valor: 42000 },
