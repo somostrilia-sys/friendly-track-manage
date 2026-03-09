@@ -334,6 +334,7 @@ export interface Agendamento {
   placa: string;
   associado: string;
   endereco: string;
+  enderecoInstalacao: string;
   cidade: string;
   tecnicoId: string;
   tecnicoNome: string;
@@ -341,17 +342,19 @@ export interface Agendamento {
   horario: string;
   status: "agendado" | "realizado" | "sem_retorno";
   tentativas: number;
+  rastreadorSerial: string;
+  statusEnvioRastreador: "nao_enviado" | "enviado" | "entregue";
 }
 
 export const agendamentosIniciais: Agendamento[] = [
-  { id: "AG-001", tipo: "instalacao", placa: "ABC-1234", associado: "João Martins", endereco: "Rua das Palmeiras, 450", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "09:00", status: "realizado", tentativas: 1 },
-  { id: "AG-002", tipo: "manutencao", placa: "DEF-5678", associado: "Maria Souza", endereco: "Av. Ipiranga, 6800", cidade: "Porto Alegre - RS", tecnicoId: "5", tecnicoNome: "Lucas Pereira", data: "2024-03-09", horario: "10:00", status: "agendado", tentativas: 0 },
-  { id: "AG-003", tipo: "instalacao", placa: "GHI-9012", associado: "Carlos Silva", endereco: "Av. Brasil, 1200", cidade: "Rio de Janeiro - RJ", tecnicoId: "2", tecnicoNome: "Fernando Silva", data: "2024-03-09", horario: "14:00", status: "agendado", tentativas: 0 },
-  { id: "AG-004", tipo: "retirada", placa: "JKL-3456", associado: "Pedro Alves", endereco: "Rua XV de Novembro, 300", cidade: "Curitiba - PR", tecnicoId: "3", tecnicoNome: "Ricardo Santos", data: "2024-03-07", horario: "08:00", status: "sem_retorno", tentativas: 3 },
-  { id: "AG-005", tipo: "instalacao", placa: "MNO-7890", associado: "Ana Beatriz", endereco: "Av. Afonso Pena, 1500", cidade: "Belo Horizonte - MG", tecnicoId: "4", tecnicoNome: "André Costa", data: "2024-03-10", horario: "09:00", status: "agendado", tentativas: 0 },
-  { id: "AG-006", tipo: "manutencao", placa: "PQR-1122", associado: "Roberto Lima", endereco: "Distrito Industrial, Rua A", cidade: "Manaus - AM", tecnicoId: "6", tecnicoNome: "Thiago Almeida", data: "2024-03-06", horario: "11:00", status: "sem_retorno", tentativas: 4 },
-  { id: "AG-007", tipo: "instalacao", placa: "STU-3344", associado: "Fernanda Costa", endereco: "Rua Augusta, 800", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-11", horario: "10:00", status: "agendado", tentativas: 0 },
-  { id: "AG-008", tipo: "instalacao", placa: "VWX-5566", associado: "Lucas Ferreira", endereco: "Av. Paulista, 1500", cidade: "São Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "14:00", status: "realizado", tentativas: 1 },
+  { id: "AG-001", tipo: "instalacao", placa: "ABC-1234", associado: "Joao Martins", endereco: "Rua das Palmeiras, 450", enderecoInstalacao: "Rua das Palmeiras, 450 - Vila Mariana, SP", cidade: "Sao Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "09:00", status: "realizado", tentativas: 1, rastreadorSerial: "J16-2024-001", statusEnvioRastreador: "entregue" },
+  { id: "AG-002", tipo: "manutencao", placa: "DEF-5678", associado: "Maria Souza", endereco: "Av. Ipiranga, 6800", enderecoInstalacao: "Av. Ipiranga, 6800 - Centro, RS", cidade: "Porto Alegre - RS", tecnicoId: "5", tecnicoNome: "Lucas Pereira", data: "2024-03-09", horario: "10:00", status: "agendado", tentativas: 0, rastreadorSerial: "QC-2024-015", statusEnvioRastreador: "enviado" },
+  { id: "AG-003", tipo: "instalacao", placa: "GHI-9012", associado: "Carlos Silva", endereco: "Av. Brasil, 1200", enderecoInstalacao: "Av. Brasil, 1200 - Centro, RJ", cidade: "Rio de Janeiro - RJ", tecnicoId: "2", tecnicoNome: "Fernando Silva", data: "2024-03-09", horario: "14:00", status: "agendado", tentativas: 0, rastreadorSerial: "J16-2024-002", statusEnvioRastreador: "enviado" },
+  { id: "AG-004", tipo: "retirada", placa: "JKL-3456", associado: "Pedro Alves", endereco: "Rua XV de Novembro, 300", enderecoInstalacao: "Rua XV de Novembro, 300 - Centro, PR", cidade: "Curitiba - PR", tecnicoId: "3", tecnicoNome: "Ricardo Santos", data: "2024-03-07", horario: "08:00", status: "sem_retorno", tentativas: 3, rastreadorSerial: "", statusEnvioRastreador: "nao_enviado" },
+  { id: "AG-005", tipo: "instalacao", placa: "MNO-7890", associado: "Ana Beatriz", endereco: "Av. Afonso Pena, 1500", enderecoInstalacao: "Av. Afonso Pena, 1500 - Centro, MG", cidade: "Belo Horizonte - MG", tecnicoId: "4", tecnicoNome: "Andre Costa", data: "2024-03-10", horario: "09:00", status: "agendado", tentativas: 0, rastreadorSerial: "J16-2024-003", statusEnvioRastreador: "entregue" },
+  { id: "AG-006", tipo: "manutencao", placa: "PQR-1122", associado: "Roberto Lima", endereco: "Distrito Industrial, Rua A", enderecoInstalacao: "Distrito Industrial, Rua A, 100 - Manaus, AM", cidade: "Manaus - AM", tecnicoId: "6", tecnicoNome: "Thiago Almeida", data: "2024-03-06", horario: "11:00", status: "sem_retorno", tentativas: 4, rastreadorSerial: "", statusEnvioRastreador: "nao_enviado" },
+  { id: "AG-007", tipo: "instalacao", placa: "STU-3344", associado: "Fernanda Costa", endereco: "Rua Augusta, 800", enderecoInstalacao: "Rua Augusta, 800 - Consolacao, SP", cidade: "Sao Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-11", horario: "10:00", status: "agendado", tentativas: 0, rastreadorSerial: "ST-2024-010", statusEnvioRastreador: "nao_enviado" },
+  { id: "AG-008", tipo: "instalacao", placa: "VWX-5566", associado: "Lucas Ferreira", endereco: "Av. Paulista, 1500", enderecoInstalacao: "Av. Paulista, 1500 - Bela Vista, SP", cidade: "Sao Paulo - SP", tecnicoId: "1", tecnicoNome: "Marcos Oliveira", data: "2024-03-08", horario: "14:00", status: "realizado", tentativas: 1, rastreadorSerial: "J16-2024-001", statusEnvioRastreador: "entregue" },
 ];
 
 // ===== LOGISTICA RASTREADORES =====
