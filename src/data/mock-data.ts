@@ -105,6 +105,7 @@ export interface LinhaSIM {
   iccid: string;
   operadora: string;
   numero: string;
+  fornecedor?: string;
   status: "online" | "offline";
   empresaId: string;
   empresaNome: string;
