@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
+  LogOut,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
@@ -165,14 +166,35 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Footer branding */}
-        {!collapsed && (
-          <div className="mt-auto px-5 pb-4 pt-6">
-            <p className="text-[9px] text-sidebar-foreground/25 tracking-wide">
-              © 2026 Trackit · v1.0
-            </p>
-          </div>
-        )}
+        {/* Logout & Footer */}
+        <div className="mt-auto">
+          <SidebarGroup className="py-0">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="h-9 cursor-pointer text-sidebar-foreground/60 hover:text-destructive"
+                    onClick={() => {
+                      import('@/integrations/supabase/client').then(({ supabase }) => {
+                        supabase.auth.signOut();
+                      });
+                    }}
+                  >
+                    <LogOut className="h-[15px] w-[15px] shrink-0" />
+                    {!collapsed && <span className="text-[13px]">Sair</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          {!collapsed && (
+            <div className="px-5 pb-4 pt-2">
+              <p className="text-[9px] text-sidebar-foreground/25 tracking-wide">
+                © 2026 Trackit · v1.0
+              </p>
+            </div>
+          )}
+        </div>
       </SidebarContent>
     </Sidebar>
   );
