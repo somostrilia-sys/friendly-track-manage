@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone, ListTodo,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays, Receipt,
+  MapPin,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -57,13 +58,16 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="px-4 mb-6">
           {!collapsed ? (
-            <div>
-              <h1 className="text-lg font-bold text-sidebar-primary">Trackit Hub</h1>
-              <p className="text-xs text-sidebar-foreground/60">Sistema de Gestão</p>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-6 h-6 text-sidebar-primary shrink-0" />
+              <div>
+                <h1 className="text-lg font-extrabold tracking-wider text-sidebar-primary">TRACKIT</h1>
+                <p className="text-[10px] text-sidebar-foreground/60">Inovações ao seu alcance!</p>
+              </div>
             </div>
           ) : (
             <div className="flex justify-center">
-              <span className="text-lg font-bold text-sidebar-primary">T</span>
+              <MapPin className="w-5 h-5 text-sidebar-primary" />
             </div>
           )}
         </div>
