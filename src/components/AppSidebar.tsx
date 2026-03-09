@@ -101,11 +101,11 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="px-4 mb-2">
           {!collapsed ? (
-            <div className="py-3 flex justify-center">
+            <div className="py-3">
               <img
                 src={logoTrackit}
                 alt="Trackit - Soluções em Rastreamento e IoT"
-                className="h-[52px] w-auto object-contain brightness-0 invert opacity-90"
+                className="w-full max-w-[160px] object-contain brightness-0 invert opacity-90"
               />
             </div>
           ) : (
