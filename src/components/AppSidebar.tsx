@@ -134,7 +134,7 @@ export function AppSidebar() {
 
         {/* Navigation Sections */}
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
-        <NavSection label="Objetivo" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
+        <NavSection label="Gestao" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
         <NavSection label="Operacional" items={operacionalItems} open={operacionalOpen} onOpenChange={setOperacionalOpen} collapsed={collapsed} />
 
         <div className="mx-4 my-2 border-t border-sidebar-border/30" />
