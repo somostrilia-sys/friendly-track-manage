@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { manutencoesIniciais, tecnicosIniciais, Manutencao } from "@/data/mock-data";
 import { AlertTriangle, Send, WifiOff, Shield, Clock } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const problemaMap: Record<string, string> = { offline: "Offline", falha_gps: "Falha GPS", sem_sinal: "Sem Sinal", bateria_baixa: "Bateria Baixa", violacao: "Violacao" };
@@ -60,10 +61,7 @@ const Manutencoes = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Manutencoes</h1>
-        <p className="text-muted-foreground text-sm">Rastreadores offline e com falha - ordenados por tempo offline</p>
-      </div>
+      <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha - ordenados por tempo offline" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Chamados Abertos" value={abertos} icon={WifiOff} accent="destructive" />

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { escalonamentosIniciais, Escalonamento, tecnicosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { ArrowUpCircle, Clock, CheckCircle, AlertTriangle, Plus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -47,13 +48,9 @@ const Escalonamentos = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Escalonamentos</h1>
-          <p className="text-muted-foreground text-sm">Demandas escalonadas pelos tecnicos ao gestor</p>
-        </div>
+      <PageHeader title="Escalonamentos" subtitle="Demandas escalonadas pelos tecnicos ao gestor">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Escalonamento</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total" value={escalonamentos.length} icon={ArrowUpCircle} accent="primary" />

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { instalacoesIniciais, Instalacao, tecnicosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -52,13 +53,9 @@ const AcompanhamentoInstalacoes = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Acompanhamento de Instalações</h1>
-          <p className="text-muted-foreground text-sm">Controle de instalações em campo</p>
-        </div>
+      <PageHeader title="Acompanhamento de Instalações" subtitle="Controle de instalações em campo">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Instalação</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Aguardando" value={instalacoes.filter(i => i.status === "aguardando").length} icon={Clock} accent="warning" />

@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { configuracoesDispositivosIniciais, ConfiguracaoDispositivo } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { Settings, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
@@ -43,10 +44,7 @@ const ConfiguracaoDispositivos = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Configuracao de Dispositivos</h1>
-        <p className="text-muted-foreground text-sm">Registro tecnico e checklist de rastreadores</p>
-      </div>
+      <PageHeader title="Configuracao de Dispositivos" subtitle="Registro tecnico e checklist de rastreadores" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total" value={configs.length} icon={Settings} accent="primary" />

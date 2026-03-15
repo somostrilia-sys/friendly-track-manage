@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { chamadosSuporteIniciais, ChamadoSuporte } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { Plus, Headphones, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const origemMap: Record<string, string> = { cobranca: "Cobrança", comercial: "Comercial", tecnico: "Técnico", cliente: "Cliente" };
@@ -43,13 +44,9 @@ const FilaSuporte = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Fila de Suporte</h1>
-          <p className="text-muted-foreground text-sm">Chamados e atendimentos</p>
-        </div>
+      <PageHeader title="Fila de Suporte" subtitle="Chamados e atendimentos">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Chamado</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Abertos" value={chamados.filter(c => c.status === "aberto").length} icon={Clock} accent="warning" />

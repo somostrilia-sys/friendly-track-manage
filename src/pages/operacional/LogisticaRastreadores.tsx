@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { despachosIniciais, DespachoRastreador } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { Package, Truck, CheckCircle, Clock, Plus, Search, Upload, Download, FileSpreadsheet, History } from "lucide-react";
 import { toast } from "sonner";
 
@@ -129,10 +130,7 @@ const LogisticaRastreadores = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Logistica de Rastreadores</h1>
-        <p className="text-muted-foreground text-sm">Controle de despacho, entrega e importacao de dispositivos</p>
-      </div>
+      <PageHeader title="Logistica de Rastreadores" subtitle="Controle de despacho, entrega e importacao de dispositivos" />
 
       <Tabs defaultValue="despachos" className="w-full">
         <TabsList className="w-full justify-start">

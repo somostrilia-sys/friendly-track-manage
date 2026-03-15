@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -86,19 +87,13 @@ const LinhasSIM = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Linhas SIM</h1>
-          <p className="text-muted-foreground text-sm">Status das linhas por empresa, ICCID e fornecedor</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template</Button>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar</Button>
-          <Button variant="outline" onClick={() => setApiOpen(true)}><Settings className="w-4 h-4 mr-2" /> API</Button>
-          <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Linha</Button>
-        </div>
-        <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
-      </div>
+      <PageHeader title="Linhas SIM" subtitle="Status das linhas por empresa, ICCID e fornecedor">
+        <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template</Button>
+        <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar</Button>
+        <Button variant="outline" onClick={() => setApiOpen(true)}><Settings className="w-4 h-4 mr-2" /> API</Button>
+        <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Linha</Button>
+      </PageHeader>
+      <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
 
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Total Linhas" value={linhas.length} icon={Wifi} accent="primary" />

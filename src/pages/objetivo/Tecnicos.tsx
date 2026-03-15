@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { tecnicosIniciais, Tecnico, instalacoesPorMes } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { Users, Star, Package, Plus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
@@ -53,13 +54,9 @@ const Tecnicos = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Tecnicos</h1>
-          <p className="text-muted-foreground text-sm">Rede de tecnicos em todo o Brasil</p>
-        </div>
+      <PageHeader title="Tecnicos" subtitle="Rede de tecnicos em todo o Brasil">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Tecnico</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Tecnicos" value={total} icon={Users} />

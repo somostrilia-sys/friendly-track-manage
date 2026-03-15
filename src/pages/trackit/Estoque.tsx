@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -119,18 +120,12 @@ const Estoque = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Estoque</h1>
-          <p className="text-muted-foreground text-sm">Rastreadores, sensores e equipamentos</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
-          <Button onClick={() => { setForm(emptyForm); setModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Adicionar Produto</Button>
-        </div>
-        <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
-      </div>
+      <PageHeader title="Estoque" subtitle="Rastreadores, sensores e equipamentos">
+        <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
+        <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
+        <Button onClick={() => { setForm(emptyForm); setModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Adicionar Produto</Button>
+      </PageHeader>
+      <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Disponivel" value={disponivel} icon={Package} accent="success" />

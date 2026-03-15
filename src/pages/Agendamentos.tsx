@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { agendamentosIniciais, Agendamento, tecnicosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users } from "lucide-react";
 import { toast } from "sonner";
 
@@ -88,12 +89,7 @@ const Agendamentos = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Agendamentos</h1>
-          <p className="text-muted-foreground text-sm">Calendario de instalacoes, manutencoes e retiradas</p>
-        </div>
-      </div>
+      <PageHeader title="Agendamentos" subtitle="Calendario de instalacoes, manutencoes e retiradas" />
 
       <Tabs defaultValue="agendamentos" className="w-full">
         <TabsList>

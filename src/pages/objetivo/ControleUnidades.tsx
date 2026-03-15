@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { controleUnidadesIniciais, ControleUnidade, despachosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { Building2, Cpu, Smartphone, DollarSign, Truck, Package } from "lucide-react";
 
 const meses = ["01/2024", "02/2024", "03/2024"];
@@ -37,11 +38,7 @@ const ControleUnidades = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Controle de Unidades</h1>
-          <p className="text-muted-foreground text-sm">Fechamento mensal por unidade Objetivo Auto Truck</p>
-        </div>
+      <PageHeader title="Controle de Unidades" subtitle="Fechamento mensal por unidade Objetivo Auto Truck">
         <div className="flex items-center gap-3">
           <Label className="text-sm">Periodo:</Label>
           <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
@@ -49,7 +46,7 @@ const ControleUnidades = () => {
             <SelectContent>{meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Unidades" value={unidades.length} icon={Building2} accent="primary" />

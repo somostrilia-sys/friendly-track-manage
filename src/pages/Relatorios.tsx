@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Filter } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 interface RelatorioGerado {
@@ -51,10 +52,7 @@ const Relatorios = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Relatórios</h1>
-        <p className="text-muted-foreground text-sm">Geração e exportação de relatórios do sistema</p>
-      </div>
+      <PageHeader title="Relatórios" subtitle="Geração e exportação de relatórios do sistema" />
 
       <Card className="p-6 card-shadow">
         <h3 className="font-semibold mb-4 flex items-center gap-2"><Filter className="w-4 h-4" /> Filtros</h3>

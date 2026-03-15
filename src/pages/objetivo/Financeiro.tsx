@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/PageHeader";
 import FechamentoTecnicosTab from "./financeiro/FechamentoTecnicosTab";
 import FaturamentoB2BTab from "./financeiro/FaturamentoB2BTab";
 import ConferenciaFornecedorTab from "./financeiro/ConferenciaFornecedorTab";
@@ -6,10 +7,7 @@ import ConferenciaFornecedorTab from "./financeiro/ConferenciaFornecedorTab";
 const FinanceiroPage = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Financeiro</h1>
-        <p className="text-muted-foreground text-sm">Hub financeiro completo - fechamentos, faturamento B2B e conferencia</p>
-      </div>
+      <PageHeader title="Financeiro" subtitle="Hub financeiro completo - fechamentos, faturamento B2B e conferencia" />
 
       <Tabs defaultValue="fechamento" className="w-full">
         <TabsList className="w-full justify-start">

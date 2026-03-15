@@ -67,8 +67,8 @@ function NavSection({ label, items, open, onOpenChange, collapsed }: NavSectionP
                   <SidebarMenuButton asChild className="h-9">
                     <NavLink
                       to={item.url}
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                      className="transition-colors duration-150"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                      className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
                     >
                       <item.icon className="h-[15px] w-[15px] shrink-0" />
                       {!collapsed && <span className="text-[13px]">{item.title}</span>}
@@ -120,8 +120,8 @@ export function AppSidebar() {
                   <NavLink
                     to="/"
                     end
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    className="transition-colors duration-150"
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
                   >
                     <LayoutDashboard className="h-[15px] w-[15px] shrink-0" />
                     {!collapsed && <span className="text-[13px]">Dashboard</span>}
@@ -147,8 +147,8 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild className="h-9">
                   <NavLink
                     to="/relatorios"
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    className="transition-colors duration-150"
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
                   >
                     <FileText className="h-[15px] w-[15px] shrink-0" />
                     {!collapsed && <span className="text-[13px]">Relatorios</span>}

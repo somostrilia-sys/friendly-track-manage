@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { fechamentosTecnicosIniciais, FechamentoTecnico } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, FileText, Send, CheckCircle } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
@@ -40,10 +41,7 @@ const FechamentoTecnicosPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Fechamento Técnicos</h1>
-        <p className="text-muted-foreground text-sm">Fechamento financeiro por prestador</p>
-      </div>
+      <PageHeader title="Fechamento Técnicos" subtitle="Fechamento financeiro por prestador" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Pendente" value={`R$ ${totalPendente.toFixed(2)}`} icon={DollarSign} accent="warning" />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,13 +53,9 @@ const Tarefas = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Tarefas</h1>
-          <p className="text-muted-foreground text-sm">Gestão de tarefas por prioridade</p>
-        </div>
+      <PageHeader title="Tarefas" subtitle="Gestão de tarefas por prioridade">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Tarefa</Button>
-      </div>
+      </PageHeader>
 
       <div className="flex flex-wrap gap-2">
         <span className="text-xs text-muted-foreground self-center mr-1">Prioridade:</span>

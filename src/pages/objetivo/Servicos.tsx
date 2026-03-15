@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { servicosIniciais, tecnicosIniciais, clientesIniciais, ServicoAgendado } from "@/data/mock-data";
 import { MapPin, Navigation, ExternalLink, Plus, Copy, Check } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; class: string }> = {
@@ -51,13 +52,9 @@ const Servicos = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Serviços Agendados</h1>
-          <p className="text-muted-foreground text-sm">Ordens de serviço e acompanhamento</p>
-        </div>
+      <PageHeader title="Serviços Agendados" subtitle="Ordens de serviço e acompanhamento">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova OS</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4">
         {servicos.map(s => (

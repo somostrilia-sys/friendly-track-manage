@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { controleKMIniciais, ControleKM, tecnicosIniciais } from "@/data/mock-data";
 import { StatCard } from "@/components/StatCard";
 import { Plus, MapPin, Route, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 interface InstalacaoDia {
@@ -78,13 +79,9 @@ const ControleKMPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Controle de KM</h1>
-          <p className="text-muted-foreground text-sm">Registre todas as instalacoes do dia com KM total automatico</p>
-        </div>
+      <PageHeader title="Controle de KM" subtitle="Registre todas as instalacoes do dia com KM total automatico">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Registrar Dia</Button>
-      </div>
+      </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total KM" value={`${totalKm} km`} icon={Route} accent="primary" />

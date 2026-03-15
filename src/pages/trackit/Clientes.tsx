@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { clientesIniciais, Cliente } from "@/data/mock-data";
 import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const statusAcessoMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
@@ -85,13 +86,9 @@ const Clientes = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground text-sm">Gerenciamento de clientes do sistema</p>
-        </div>
+      <PageHeader title="Clientes" subtitle="Gerenciamento de clientes do sistema">
         <Button onClick={abrirNovo}><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
-      </div>
+      </PageHeader>
 
       <Card className="card-shadow">
         <div className="p-4 border-b flex flex-col md:flex-row gap-3">
