@@ -27,10 +27,10 @@ const tiposServico = [
 
 type ClienteComHistorico = DbCliente & { historicoContatos: { data: string; tipo: string; descricao: string }[] };
 
-const emptyForm = {
-  nome: "", razao_social: "", tipo: "empresa" as const, cnpj: "", email: "", telefone: "",
-  responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculos_ativos: 0, status: "ativo" as const,
-  status_acesso: "pendente" as const, cpf_associado: "", email_associado: "", filial: "", tipo_servico: "",
+const emptyForm: Record<string, any> = {
+  nome: "", razao_social: "", tipo: "empresa", cnpj: "", email: "", telefone: "",
+  responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculos_ativos: 0, status: "ativo",
+  status_acesso: "pendente", cpf_associado: "", email_associado: "", filial: "", tipo_servico: "",
 };
 
 const Clientes = () => {
