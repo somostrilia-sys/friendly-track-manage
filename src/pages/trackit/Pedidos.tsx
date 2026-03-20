@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { pedidosIniciais, clientesIniciais, Pedido, Parcela } from "@/data/mock-data";
+import { usePedidosCompletos, useInsertPedido, useInsertPedidoItem, useInsertParcela, useClientes } from "@/hooks/useSupabaseData";
+import type { DbPedido, DbPedidoItem, DbParcela } from "@/types/database";
 import { Plus, Eye, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,10 +35,17 @@ const produtosCatalogo = [
   { id: "rastreador", nome: "Rastreador", preco: 350, tipo: "unico" },
 ];
 
+type PedidoCompleto = DbPedido & { itens: DbPedidoItem[]; parcelas: DbParcela[] };
+
 const Pedidos = () => {
-  const [pedidos, setPedidos] = useState(pedidosIniciais);
+  const { data: pedidos = [], isLoading } = usePedidosCompletos();
+  const { data: clientes = [] } = useClientes();
+  const insertPedido = useInsertPedido();
+  const insertItem = useInsertPedidoItem();
+  const insertParcela = useInsertParcela();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [detalhe, setDetalhe] = useState<Pedido | null>(null);
+  const [detalhe, setDetalhe] = useState<PedidoCompleto | null>(null);
 
   const [clienteId, setClienteId] = useState("");
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
@@ -49,7 +57,7 @@ const Pedidos = () => {
   const [taxaAdesao, setTaxaAdesao] = useState(0);
   const [observacao, setObservacao] = useState("");
 
-  const clienteSel = clientesIniciais.find(c => c.id === clienteId);
+  const clienteSel = clientes.find(c => c.id === clienteId);
 
   const calcValorTotal = () => {
     let total = 0;
@@ -68,37 +76,64 @@ const Pedidos = () => {
 
   const valorTotal = calcValorTotal();
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!clienteId || (produtosSelecionados.length === 0 && !combo && !produtoManual)) {
       toast.error("Selecione cliente e pelo menos um produto"); return;
     }
-    const itens: Pedido["itens"] = [];
-    if (combo) {
-      itens.push({ produtoId: "combo", nome: "Combo Rastreador + Linha + Plataforma", quantidade: qtd, valorUnitario: 350 + 15 + 29.90 });
-    } else {
-      produtosSelecionados.forEach(pid => {
-        const p = produtosCatalogo.find(x => x.id === pid);
-        if (p) itens.push({ produtoId: pid, nome: p.nome, quantidade: qtd, valorUnitario: p.preco });
+    try {
+      const codigo = `PED-${String((pedidos as PedidoCompleto[]).length + 1).padStart(3, "0")}`;
+      const pedido = await insertPedido.mutateAsync({
+        codigo,
+        cliente_id: clienteId,
+        cliente_nome: clienteSel?.nome || "",
+        valor_total: valorTotal,
+        status: "pendente",
+        data_pedido: new Date().toISOString().split("T")[0],
+        observacao: observacao || "",
+        codigo_rastreio: "",
       });
-    }
-    if (produtoManual && valorManual > 0) {
-      itens.push({ produtoId: "manual", nome: produtoManual, quantidade: qtd, valorUnitario: valorManual });
-    }
 
-    const valorParcela = Math.floor(valorTotal / numParcelas);
-    const parcelas: Parcela[] = Array.from({ length: numParcelas }, (_, i) => ({
-      numero: i + 1, valor: i === numParcelas - 1 ? valorTotal - valorParcela * (numParcelas - 1) : valorParcela,
-      vencimento: new Date(Date.now() + (i + 1) * 30 * 86400000).toISOString().split("T")[0], status: "pendente",
-    }));
-    const novo: Pedido = {
-      id: `PED-${String(pedidos.length + 1).padStart(3, "0")}`, clienteId, clienteNome: clienteSel?.nome || "",
-      itens, valorTotal, status: "pendente", dataPedido: new Date().toISOString().split("T")[0], parcelas, observacao,
-    };
-    setPedidos(prev => [...prev, novo]);
-    setModalOpen(false);
-    setClienteId(""); setProdutosSelecionados([]); setCombo(false); setProdutoManual(""); setValorManual(0); setQtd(1); setNumParcelas(1); setTaxaAdesao(0); setObservacao("");
-    toast.success("Pedido criado!");
+      // Insert items
+      const itens: { produto_id: string; nome: string; quantidade: number; valor_unitario: number }[] = [];
+      if (combo) {
+        itens.push({ produto_id: "combo", nome: "Combo Rastreador + Linha + Plataforma", quantidade: qtd, valor_unitario: 350 + 15 + 29.90 });
+      } else {
+        produtosSelecionados.forEach(pid => {
+          const p = produtosCatalogo.find(x => x.id === pid);
+          if (p) itens.push({ produto_id: pid, nome: p.nome, quantidade: qtd, valor_unitario: p.preco });
+        });
+      }
+      if (produtoManual && valorManual > 0) {
+        itens.push({ produto_id: "manual", nome: produtoManual, quantidade: qtd, valor_unitario: valorManual });
+      }
+
+      for (const item of itens) {
+        await insertItem.mutateAsync({ pedido_id: pedido.id, ...item });
+      }
+
+      // Insert parcelas
+      const valorParcela = Math.floor(valorTotal / numParcelas);
+      for (let i = 0; i < numParcelas; i++) {
+        await insertParcela.mutateAsync({
+          pedido_id: pedido.id,
+          numero: i + 1,
+          valor: i === numParcelas - 1 ? valorTotal - valorParcela * (numParcelas - 1) : valorParcela,
+          vencimento: new Date(Date.now() + (i + 1) * 30 * 86400000).toISOString().split("T")[0],
+          status: "pendente",
+        });
+      }
+
+      setModalOpen(false);
+      setClienteId(""); setProdutosSelecionados([]); setCombo(false); setProdutoManual(""); setValorManual(0); setQtd(1); setNumParcelas(1); setTaxaAdesao(0); setObservacao("");
+      toast.success("Pedido criado!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+
+  const peds = pedidos as PedidoCompleto[];
 
   return (
     <div className="space-y-6">
@@ -120,15 +155,15 @@ const Pedidos = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pedidos.map(p => (
+            {peds.map(p => (
               <TableRow key={p.id}>
-                <TableCell className="font-mono font-medium">{p.id}</TableCell>
-                <TableCell>{p.clienteNome}</TableCell>
+                <TableCell className="font-mono font-medium">{p.codigo}</TableCell>
+                <TableCell>{p.cliente_nome}</TableCell>
                 <TableCell className="text-sm">{p.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ")}</TableCell>
-                <TableCell>R$ {p.valorTotal.toLocaleString("pt-BR")}</TableCell>
+                <TableCell>R$ {p.valor_total.toLocaleString("pt-BR")}</TableCell>
                 <TableCell className="text-sm">{p.parcelas.length}x</TableCell>
                 <TableCell>
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[p.status].class}`}>{statusMap[p.status].label}</span>
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[p.status]?.class}`}>{statusMap[p.status]?.label}</span>
                 </TableCell>
                 <TableCell>
                   <Button size="icon" variant="ghost" onClick={() => setDetalhe(p)}><Eye className="w-4 h-4" /></Button>
@@ -147,7 +182,7 @@ const Pedidos = () => {
             <div><Label>Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                <SelectContent>{clientesIniciais.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -186,7 +221,7 @@ const Pedidos = () => {
             <div><Label>Observacao</Label><Textarea value={observacao} onChange={e => setObservacao(e.target.value)} rows={2} placeholder="Notas sobre o pedido..." /></div>
 
             <div className="p-3 rounded-lg bg-muted text-sm">
-              <p className="text-muted-foreground text-xs mb-1">Upload de contrato (PDF) sera disponibilizado apos integracao com banco de dados.</p>
+              <p className="text-muted-foreground text-xs mb-1">Upload de contrato (PDF) sera disponibilizado apos integracao com storage.</p>
             </div>
 
             {valorTotal > 0 && (
@@ -209,13 +244,13 @@ const Pedidos = () => {
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
-              <SheetHeader><SheetTitle>Pedido {detalhe.id}</SheetTitle></SheetHeader>
+              <SheetHeader><SheetTitle>Pedido {detalhe.codigo}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-5 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Cliente</span><p className="font-medium">{detalhe.clienteNome}</p></div>
-                  <div><span className="text-muted-foreground">Data</span><p>{detalhe.dataPedido}</p></div>
-                  <div><span className="text-muted-foreground">Status</span><p><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[detalhe.status].class}`}>{statusMap[detalhe.status].label}</span></p></div>
-                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-lg">R$ {detalhe.valorTotal.toLocaleString("pt-BR")}</p></div>
+                  <div><span className="text-muted-foreground">Cliente</span><p className="font-medium">{detalhe.cliente_nome}</p></div>
+                  <div><span className="text-muted-foreground">Data</span><p>{detalhe.data_pedido}</p></div>
+                  <div><span className="text-muted-foreground">Status</span><p><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[detalhe.status]?.class}`}>{statusMap[detalhe.status]?.label}</span></p></div>
+                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-lg">R$ {detalhe.valor_total.toLocaleString("pt-BR")}</p></div>
                 </div>
                 {detalhe.observacao && (
                   <div className="p-3 rounded-lg bg-muted/50">
@@ -223,10 +258,10 @@ const Pedidos = () => {
                     <p className="mt-1">{detalhe.observacao}</p>
                   </div>
                 )}
-                {detalhe.codigoRastreio && (
+                {detalhe.codigo_rastreio && (
                   <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    <span>Rastreio: <strong className="font-mono">{detalhe.codigoRastreio}</strong></span>
+                    <span>Rastreio: <strong className="font-mono">{detalhe.codigo_rastreio}</strong></span>
                   </div>
                 )}
                 <div>
@@ -234,7 +269,7 @@ const Pedidos = () => {
                   {detalhe.itens.map((item, i) => (
                     <div key={i} className="flex justify-between p-2 rounded bg-muted/50 mb-1">
                       <span>{item.quantidade}x {item.nome}</span>
-                      <span>R$ {(item.quantidade * item.valorUnitario).toLocaleString("pt-BR")}</span>
+                      <span>R$ {(item.quantidade * item.valor_unitario).toLocaleString("pt-BR")}</span>
                     </div>
                   ))}
                 </div>

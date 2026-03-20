@@ -87,16 +87,16 @@ export const useDeleteEquipamento = () => useSupabaseDelete("equipamentos", "equ
 
 export const useMovimentacoes = (equipamentoId?: string) => {
   return useQuery<DbMovimentacao[]>({
-    queryKey: ["movimentacoes", equipamentoId],
+    queryKey: ["movimentacoes_equipamento", equipamentoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("movimentacoes").select("*").eq("equipamento_id", equipamentoId!);
+      const { data, error } = await supabase.from("movimentacoes_equipamento").select("*").eq("equipamento_id", equipamentoId!);
       if (error) throw error;
       return (data || []) as DbMovimentacao[];
     },
     enabled: !!equipamentoId,
   });
 };
-export const useInsertMovimentacao = () => useSupabaseInsert<DbMovimentacao>("movimentacoes", "movimentacoes");
+export const useInsertMovimentacao = () => useSupabaseInsert<DbMovimentacao>("movimentacoes_equipamento", "movimentacoes_equipamento");
 
 export const useComodatos = (equipamentoId?: string) => {
   return useQuery<DbComodato[]>({
@@ -118,16 +118,16 @@ export const useUpdatePedido = () => useSupabaseUpdate<DbPedido>("pedidos", "ped
 
 export const usePedidoItens = (pedidoId?: string) => {
   return useQuery<DbPedidoItem[]>({
-    queryKey: ["pedido_itens", pedidoId],
+    queryKey: ["itens_pedido", pedidoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pedido_itens").select("*").eq("pedido_id", pedidoId!);
+      const { data, error } = await supabase.from("itens_pedido").select("*").eq("pedido_id", pedidoId!);
       if (error) throw error;
       return (data || []) as DbPedidoItem[];
     },
     enabled: !!pedidoId,
   });
 };
-export const useInsertPedidoItem = () => useSupabaseInsert<DbPedidoItem>("pedido_itens", "pedido_itens");
+export const useInsertPedidoItem = () => useSupabaseInsert<DbPedidoItem>("itens_pedido", "itens_pedido");
 
 export const useParcelas = (pedidoId?: string) => {
   return useQuery<DbParcela[]>({
@@ -173,15 +173,15 @@ export const useTecnicoEstoque = (tecnicoId?: string) => {
 };
 
 // ============ SERVICOS ============
-export const useServicos = () => useSupabaseQuery<DbServico>("servicos", "servicos");
-export const useInsertServico = () => useSupabaseInsert<DbServico>("servicos", "servicos");
-export const useUpdateServico = () => useSupabaseUpdate<DbServico>("servicos", "servicos");
+export const useServicos = () => useSupabaseQuery<DbServico>("servicos_agendados", "servicos_agendados");
+export const useInsertServico = () => useSupabaseInsert<DbServico>("servicos_agendados", "servicos_agendados");
+export const useUpdateServico = () => useSupabaseUpdate<DbServico>("servicos_agendados", "servicos_agendados");
 
 export const useServicoById = (id?: string) => {
   return useQuery<DbServico | null>({
     queryKey: ["servico", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("servicos").select("*").eq("codigo", id!).single();
+      const { data, error } = await supabase.from("servicos_agendados").select("*").eq("codigo", id!).single();
       if (error) return null;
       return data as DbServico;
     },
@@ -247,9 +247,9 @@ export const useInsertAgendamento = () => useSupabaseInsert<DbAgendamento>("agen
 export const useUpdateAgendamento = () => useSupabaseUpdate<DbAgendamento>("agendamentos", "agendamentos");
 
 // ============ DESPACHOS ============
-export const useDespachos = () => useSupabaseQuery<DbDespacho>("despachos", "despachos");
-export const useInsertDespacho = () => useSupabaseInsert<DbDespacho>("despachos", "despachos");
-export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos", "despachos");
+export const useDespachos = () => useSupabaseQuery<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
+export const useInsertDespacho = () => useSupabaseInsert<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
+export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
 
 // ============ CONTROLE UNIDADES ============
 export const useControleUnidades = () => useSupabaseQuery<DbControleUnidade>("controle_unidades", "controle_unidades");
@@ -358,7 +358,7 @@ export const usePedidosCompletos = () => {
     queryFn: async () => {
       const [pedidosRes, itensRes, parcelasRes] = await Promise.all([
         supabase.from("pedidos").select("*").order("created_at", { ascending: false }),
-        supabase.from("pedido_itens").select("*"),
+        supabase.from("itens_pedido").select("*"),
         supabase.from("parcelas").select("*"),
       ]);
       if (pedidosRes.error) throw pedidosRes.error;
@@ -366,7 +366,7 @@ export const usePedidosCompletos = () => {
       if (parcelasRes.error) throw parcelasRes.error;
 
       const pedidos = (pedidosRes.data || []) as DbPedido[];
-      const itens = (pedidosRes.data ? itensRes.data : []) as DbPedidoItem[];
+      const itens = (itensRes.data || []) as DbPedidoItem[];
       const parcelas = (parcelasRes.data || []) as DbParcela[];
 
       return pedidos.map(p => ({
@@ -385,7 +385,7 @@ export const useEquipamentosCompletos = () => {
     queryFn: async () => {
       const [equipRes, movRes, comRes] = await Promise.all([
         supabase.from("equipamentos").select("*").order("created_at", { ascending: false }),
-        supabase.from("movimentacoes").select("*"),
+        supabase.from("movimentacoes_equipamento").select("*"),
         supabase.from("comodatos").select("*"),
       ]);
       if (equipRes.error) throw equipRes.error;
