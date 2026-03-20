@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { manutencoesIniciais, tecnicosIniciais, Manutencao } from "@/data/mock-data";
+import { useManutencoes, useUpdateManutencao, useTecnicos } from "@/hooks/useSupabaseData";
+import type { DbManutencao } from "@/types/database";
 import { AlertTriangle, Send, WifiOff, Shield, Clock } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -32,72 +33,70 @@ const statusMap: Record<string, { label: string; variant: "destructive" | "secon
 };
 
 const Manutencoes = () => {
-  const [manutencoes, setManutencoes] = useState(manutencoesIniciais);
+  const { data: manutencoes = [], isLoading } = useManutencoes();
+  const { data: tecnicos = [] } = useTecnicos();
+  const updateManutencao = useUpdateManutencao();
+
   const [despacharId, setDespacharId] = useState<string | null>(null);
   const [tecnicoId, setTecnicoId] = useState("");
 
   const ordenadas = useMemo(() => {
     return [...manutencoes].sort((a, b) => {
-      const prioA = classificarPrioridade(a.dataAbertura).ordem;
-      const prioB = classificarPrioridade(b.dataAbertura).ordem;
+      const prioA = classificarPrioridade(a.data_abertura).ordem;
+      const prioB = classificarPrioridade(b.data_abertura).ordem;
       return prioA - prioB;
     });
   }, [manutencoes]);
 
   const abertos = manutencoes.filter(m => m.status === "aberto").length;
   const criticos = manutencoes.filter(m => {
-    const dias = Math.floor((new Date().getTime() - new Date(m.dataAbertura).getTime()) / (1000 * 60 * 60 * 24));
+    const dias = Math.floor((new Date().getTime() - new Date(m.data_abertura).getTime()) / (1000 * 60 * 60 * 24));
     return dias > 30;
   }).length;
 
-  const despachar = () => {
+  const despachar = async () => {
     if (!tecnicoId) { toast.error("Selecione um tecnico"); return; }
-    const tec = tecnicosIniciais.find(t => t.id === tecnicoId);
-    setManutencoes(prev => prev.map(m => m.id === despacharId ? { ...m, tecnicoDesignado: tec?.nome, status: "designado" } : m));
-    setDespacharId(null);
-    setTecnicoId("");
-    toast.success("Tecnico despachado!");
+    const tec = tecnicos.find(t => t.id === tecnicoId);
+    try {
+      await updateManutencao.mutateAsync({ id: despacharId!, tecnico_designado: tec?.nome || "", status: "designado" });
+      setDespacharId(null);
+      setTecnicoId("");
+      toast.success("Tecnico despachado!");
+    } catch (e: any) { toast.error(e.message); }
   };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha - ordenados por tempo offline" />
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Chamados Abertos" value={abertos} icon={WifiOff} accent="destructive" />
         <StatCard label="Criticos (>30 dias)" value={criticos} icon={AlertTriangle} accent="warning" />
         <StatCard label="Total" value={manutencoes.length} icon={Shield} accent="primary" />
         <StatCard label="Tempo Medio" value="12 dias" icon={Clock} accent="muted" />
       </div>
-
       <Card className="card-shadow">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Veiculo/Placa</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Problema</TableHead>
-              <TableHead>Classificacao</TableHead>
-              <TableHead>Tecnico</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Acao</TableHead>
+              <TableHead>ID</TableHead><TableHead>Veiculo/Placa</TableHead><TableHead>Cliente</TableHead>
+              <TableHead>Problema</TableHead><TableHead>Classificacao</TableHead><TableHead>Tecnico</TableHead>
+              <TableHead>Status</TableHead><TableHead>Acao</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {ordenadas.map(m => {
-              const prio = classificarPrioridade(m.dataAbertura);
+              const prio = classificarPrioridade(m.data_abertura);
               return (
                 <TableRow key={m.id}>
-                  <TableCell className="font-mono text-sm">{m.id}</TableCell>
+                  <TableCell className="font-mono text-sm">{m.codigo}</TableCell>
                   <TableCell className="font-medium">{m.veiculo} - {m.placa}</TableCell>
-                  <TableCell>{m.clienteNome}</TableCell>
+                  <TableCell>{m.cliente_nome}</TableCell>
                   <TableCell>{problemaMap[m.problema]}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span>
-                  </TableCell>
-                  <TableCell>{m.tecnicoDesignado || "--"}</TableCell>
-                  <TableCell><Badge variant={statusMap[m.status].variant}>{statusMap[m.status].label}</Badge></TableCell>
+                  <TableCell><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span></TableCell>
+                  <TableCell>{m.tecnico_designado || "--"}</TableCell>
+                  <TableCell><Badge variant={statusMap[m.status]?.variant}>{statusMap[m.status]?.label}</Badge></TableCell>
                   <TableCell>
                     {m.status === "aberto" && (
                       <Button size="sm" variant="outline" className="text-xs" onClick={() => setDespacharId(m.id)}>
@@ -111,7 +110,6 @@ const Manutencoes = () => {
           </TableBody>
         </Table>
       </Card>
-
       <Dialog open={!!despacharId} onOpenChange={() => setDespacharId(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Despachar Tecnico</DialogTitle></DialogHeader>
@@ -119,7 +117,7 @@ const Manutencoes = () => {
             <Select value={tecnicoId} onValueChange={setTecnicoId}>
               <SelectTrigger><SelectValue placeholder="Selecione o tecnico" /></SelectTrigger>
               <SelectContent>
-                {tecnicosIniciais.filter(t => t.status === "disponivel").map(t => (
+                {tecnicos.filter(t => t.status === "disponivel").map(t => (
                   <SelectItem key={t.id} value={t.id}>{t.nome} - {t.cidade}/{t.estado}</SelectItem>
                 ))}
               </SelectContent>

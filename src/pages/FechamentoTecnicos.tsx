@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { fechamentosTecnicosIniciais, FechamentoTecnico } from "@/data/mock-data";
+import { useFechamentoCompleto, useUpdateFechamentoTecnico } from "@/hooks/useSupabaseData";
+import type { DbFechamentoTecnico, DbFechamentoInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, FileText, Send, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -16,65 +17,67 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   pago: { label: "Pago", variant: "default" },
 };
 
+type FechamentoComInstalacoes = DbFechamentoTecnico & { instalacoes: DbFechamentoInstalacao[] };
+
 const FechamentoTecnicosPage = () => {
-  const [fechamentos, setFechamentos] = useState(fechamentosTecnicosIniciais);
-  const [detalhe, setDetalhe] = useState<FechamentoTecnico | null>(null);
+  const { data: fechamentos = [], isLoading } = useFechamentoCompleto();
+  const updateFechamento = useUpdateFechamentoTecnico();
+  const [detalhe, setDetalhe] = useState<FechamentoComInstalacoes | null>(null);
 
-  const totalPendente = fechamentos.filter(f => f.status === "pendente").reduce((a, f) => a + f.valorTotal, 0);
-  const totalPago = fechamentos.filter(f => f.status === "pago").reduce((a, f) => a + f.valorTotal, 0);
+  const fecs = fechamentos as FechamentoComInstalacoes[];
+  const totalPendente = fecs.filter(f => f.status === "pendente").reduce((a, f) => a + f.valor_total, 0);
+  const totalPago = fecs.filter(f => f.status === "pago").reduce((a, f) => a + f.valor_total, 0);
 
-  const enviarFinanceiro = (id: string) => {
-    setFechamentos(prev => prev.map(f => f.id === id ? { ...f, status: "enviado_financeiro" as const } : f));
-    toast.success("Enviado ao financeiro!");
+  const enviarFinanceiro = async (id: string) => {
+    try {
+      await updateFechamento.mutateAsync({ id, status: "enviado_financeiro" });
+      toast.success("Enviado ao financeiro!");
+    } catch (e: any) { toast.error(e.message); }
   };
 
-  const marcarPago = (id: string) => {
-    setFechamentos(prev => prev.map(f => f.id === id ? { ...f, status: "pago" as const } : f));
-    toast.success("Marcado como pago!");
+  const marcarPago = async (id: string) => {
+    try {
+      await updateFechamento.mutateAsync({ id, status: "pago" });
+      toast.success("Marcado como pago!");
+    } catch (e: any) { toast.error(e.message); }
   };
 
-  const gerarEtiqueta = (f: FechamentoTecnico) => {
-    const etiqueta = `ETIQUETA DE PAGAMENTO\n${f.tecnicoNome} (${f.tipoTecnico})\nPeríodo: ${f.periodo}\nInstalações: ${f.totalInstalacoes} x R$ ${(f.valorInstalacoes / f.totalInstalacoes).toFixed(2)}\nKM: ${f.kmTotal} km x R$ ${f.valorKm > 0 ? (f.valorKm / f.kmTotal).toFixed(2) : "0.00"}/km\nTotal: R$ ${f.valorTotal.toFixed(2)}\nDoc: ${f.regraFiscal === "nota_fiscal" ? "Nota Fiscal Obrigatória" : "Recibo"}`;
+  const gerarEtiqueta = (f: FechamentoComInstalacoes) => {
+    const etiqueta = `ETIQUETA DE PAGAMENTO\n${f.tecnico_nome} (${f.tipo_tecnico})\nPeríodo: ${f.periodo}\nInstalações: ${f.total_instalacoes} x R$ ${(f.valor_instalacoes / (f.total_instalacoes || 1)).toFixed(2)}\nKM: ${f.km_total} km x R$ ${f.valor_km > 0 ? (f.valor_km / (f.km_total || 1)).toFixed(2) : "0.00"}/km\nTotal: R$ ${f.valor_total.toFixed(2)}\nDoc: ${f.regra_fiscal === "nota_fiscal" ? "Nota Fiscal Obrigatória" : "Recibo"}`;
     navigator.clipboard.writeText(etiqueta);
     toast.success("Etiqueta copiada para área de transferência!");
   };
 
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Fechamento Técnicos" subtitle="Fechamento financeiro por prestador" />
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Pendente" value={`R$ ${totalPendente.toFixed(2)}`} icon={DollarSign} accent="warning" />
         <StatCard label="Total Pago" value={`R$ ${totalPago.toFixed(2)}`} icon={CheckCircle} accent="success" />
-        <StatCard label="Fechamentos" value={fechamentos.length} icon={FileText} accent="primary" />
-        <StatCard label="Pendentes" value={fechamentos.filter(f => f.status === "pendente").length} icon={Send} accent="destructive" />
+        <StatCard label="Fechamentos" value={fecs.length} icon={FileText} accent="primary" />
+        <StatCard label="Pendentes" value={fecs.filter(f => f.status === "pendente").length} icon={Send} accent="destructive" />
       </div>
-
       <Card className="card-shadow">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Técnico</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Período</TableHead>
-              <TableHead>Instalações</TableHead>
-              <TableHead>KM</TableHead>
-              <TableHead>Valor Total</TableHead>
-              <TableHead>Doc. Fiscal</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead>Técnico</TableHead><TableHead>Tipo</TableHead><TableHead>Período</TableHead>
+              <TableHead>Instalações</TableHead><TableHead>KM</TableHead><TableHead>Valor Total</TableHead>
+              <TableHead>Doc. Fiscal</TableHead><TableHead>Status</TableHead><TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {fechamentos.map(f => (
+            {fecs.map(f => (
               <TableRow key={f.id} className="cursor-pointer" onClick={() => setDetalhe(f)}>
-                <TableCell className="font-medium">{f.tecnicoNome}</TableCell>
-                <TableCell><Badge variant="secondary" className="capitalize">{f.tipoTecnico}</Badge></TableCell>
+                <TableCell className="font-medium">{f.tecnico_nome}</TableCell>
+                <TableCell><Badge variant="secondary" className="capitalize">{f.tipo_tecnico}</Badge></TableCell>
                 <TableCell className="text-sm">{f.periodo}</TableCell>
-                <TableCell>{f.totalInstalacoes}</TableCell>
-                <TableCell>{f.kmTotal} km</TableCell>
-                <TableCell className="font-semibold">R$ {f.valorTotal.toFixed(2)}</TableCell>
-                <TableCell><Badge variant={f.regraFiscal === "nota_fiscal" ? "destructive" : "outline"}>{f.regraFiscal === "nota_fiscal" ? "NF Obrigatória" : "Recibo"}</Badge></TableCell>
+                <TableCell>{f.total_instalacoes}</TableCell>
+                <TableCell>{f.km_total} km</TableCell>
+                <TableCell className="font-semibold">R$ {f.valor_total.toFixed(2)}</TableCell>
+                <TableCell><Badge variant={f.regra_fiscal === "nota_fiscal" ? "destructive" : "outline"}>{f.regra_fiscal === "nota_fiscal" ? "NF Obrigatória" : "Recibo"}</Badge></TableCell>
                 <TableCell><Badge variant={statusMap[f.status]?.variant}>{statusMap[f.status]?.label}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1" onClick={e => e.stopPropagation()}>
@@ -88,20 +91,19 @@ const FechamentoTecnicosPage = () => {
           </TableBody>
         </Table>
       </Card>
-
       <Sheet open={!!detalhe} onOpenChange={() => setDetalhe(null)}>
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
-              <SheetHeader><SheetTitle>Fechamento - {detalhe.tecnicoNome}</SheetTitle></SheetHeader>
+              <SheetHeader><SheetTitle>Fechamento - {detalhe.tecnico_nome}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{detalhe.tipoTecnico}</p></div>
+                  <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{detalhe.tipo_tecnico}</p></div>
                   <div><span className="text-muted-foreground">Período</span><p className="font-medium">{detalhe.periodo}</p></div>
-                  <div><span className="text-muted-foreground">Valor Instalações</span><p className="font-medium">R$ {detalhe.valorInstalacoes.toFixed(2)}</p></div>
-                  <div><span className="text-muted-foreground">Valor KM</span><p className="font-medium">R$ {detalhe.valorKm.toFixed(2)}</p></div>
-                  <div><span className="text-muted-foreground">KM Total</span><p className="font-medium">{detalhe.kmTotal} km</p></div>
-                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-primary">R$ {detalhe.valorTotal.toFixed(2)}</p></div>
+                  <div><span className="text-muted-foreground">Valor Instalações</span><p className="font-medium">R$ {detalhe.valor_instalacoes.toFixed(2)}</p></div>
+                  <div><span className="text-muted-foreground">Valor KM</span><p className="font-medium">R$ {detalhe.valor_km.toFixed(2)}</p></div>
+                  <div><span className="text-muted-foreground">KM Total</span><p className="font-medium">{detalhe.km_total} km</p></div>
+                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-primary">R$ {detalhe.valor_total.toFixed(2)}</p></div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Instalações</h4>
@@ -115,7 +117,7 @@ const FechamentoTecnicosPage = () => {
                   </div>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">Regra fiscal: {detalhe.valorTotal > 1000 ? "Acima de R$ 1.000 — Nota Fiscal obrigatória" : "Até R$ 1.000 — Recibo"}</p>
+                  <p className="text-xs text-muted-foreground">Regra fiscal: {detalhe.valor_total > 1000 ? "Acima de R$ 1.000 — Nota Fiscal obrigatória" : "Até R$ 1.000 — Recibo"}</p>
                 </div>
               </div>
             </>
