@@ -118,16 +118,16 @@ export const useUpdatePedido = () => useSupabaseUpdate<DbPedido>("pedidos", "ped
 
 export const usePedidoItens = (pedidoId?: string) => {
   return useQuery<DbPedidoItem[]>({
-    queryKey: ["pedido_itens", pedidoId],
+    queryKey: ["itens_pedido", pedidoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("pedido_itens").select("*").eq("pedido_id", pedidoId!);
+      const { data, error } = await supabase.from("itens_pedido").select("*").eq("pedido_id", pedidoId!);
       if (error) throw error;
       return (data || []) as DbPedidoItem[];
     },
     enabled: !!pedidoId,
   });
 };
-export const useInsertPedidoItem = () => useSupabaseInsert<DbPedidoItem>("pedido_itens", "pedido_itens");
+export const useInsertPedidoItem = () => useSupabaseInsert<DbPedidoItem>("itens_pedido", "itens_pedido");
 
 export const useParcelas = (pedidoId?: string) => {
   return useQuery<DbParcela[]>({
