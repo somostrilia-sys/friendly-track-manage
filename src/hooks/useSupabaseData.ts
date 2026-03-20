@@ -385,7 +385,7 @@ export const useEquipamentosCompletos = () => {
     queryFn: async () => {
       const [equipRes, movRes, comRes] = await Promise.all([
         supabase.from("equipamentos").select("*").order("created_at", { ascending: false }),
-        supabase.from("movimentacoes").select("*"),
+        supabase.from("movimentacoes_equipamento").select("*"),
         supabase.from("comodatos").select("*"),
       ]);
       if (equipRes.error) throw equipRes.error;
