@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { linhasSIMIniciais, clientesIniciais, LinhaSIM } from "@/data/mock-data";
+import { useLinhasSIM, useInsertLinhaSIM, useClientes } from "@/hooks/useSupabaseData";
+import type { DbLinhaSIM } from "@/types/database";
 import { Plus, Settings, Wifi, WifiOff, Upload, Download } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
@@ -16,7 +17,10 @@ import { toast } from "sonner";
 const fornecedores = ["SmartSim", "Linkfield", "Arqia", "Alcon"];
 
 const LinhasSIM = () => {
-  const [linhas, setLinhas] = useState(linhasSIMIniciais);
+  const { data: linhas = [], isLoading } = useLinhasSIM();
+  const { data: clientes = [] } = useClientes();
+  const insertLinha = useInsertLinhaSIM();
+
   const [filtro, setFiltro] = useState<"all" | "online" | "offline">("all");
   const [filtroCliente, setFiltroCliente] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,27 +29,32 @@ const LinhasSIM = () => {
   const [apiKey, setApiKey] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({ iccid: "", operadora: "Vivo", numero: "", empresaId: "", veiculo: "", fornecedor: "SmartSim" });
+  const [form, setForm] = useState({ iccid: "", operadora: "Vivo", numero: "", empresa_id: "", veiculo: "", fornecedor: "SmartSim" });
 
   const filtrado = linhas.filter(l => {
     if (filtro !== "all" && l.status !== filtro) return false;
-    if (filtroCliente !== "all" && l.empresaId !== filtroCliente) return false;
+    if (filtroCliente !== "all" && l.empresa_id !== filtroCliente) return false;
     return true;
   });
   const online = linhas.filter(l => l.status === "online").length;
   const offline = linhas.filter(l => l.status === "offline").length;
 
-  const salvar = () => {
-    if (!form.iccid || !form.empresaId) { toast.error("Preencha ICCID e empresa"); return; }
-    const empresa = clientesIniciais.find(c => c.id === form.empresaId);
-    const nova: LinhaSIM = {
-      id: Date.now().toString(), ...form,
-      status: "offline", empresaNome: empresa?.nome || "", ultimaConexao: "Nunca",
-    };
-    setLinhas(prev => [...prev, nova]);
-    setModalOpen(false);
-    setForm({ iccid: "", operadora: "Vivo", numero: "", empresaId: "", veiculo: "", fornecedor: "SmartSim" });
-    toast.success("Linha SIM adicionada!");
+  const salvar = async () => {
+    if (!form.iccid || !form.empresa_id) { toast.error("Preencha ICCID e empresa"); return; }
+    const empresa = clientes.find(c => c.id === form.empresa_id);
+    try {
+      await insertLinha.mutateAsync({
+        ...form,
+        status: "offline",
+        empresa_nome: empresa?.nome || "",
+        ultima_conexao: "Nunca",
+      });
+      setModalOpen(false);
+      setForm({ iccid: "", operadora: "Vivo", numero: "", empresa_id: "", veiculo: "", fornecedor: "SmartSim" });
+      toast.success("Linha SIM adicionada!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const baixarTemplate = () => {
@@ -57,33 +66,40 @@ const LinhasSIM = () => {
     toast.info("Template CSV baixado!");
   };
 
-  const importarCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importarCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const text = ev.target?.result as string;
       const lines = text.trim().split("\n");
       let count = 0;
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(/[;,]/);
         if (cols.length < 3) continue;
-        const empresa = clientesIniciais.find(c => c.id === cols[4]?.trim());
-        const nova: LinhaSIM = {
-          id: `IMP-${Date.now()}-${i}`, iccid: cols[0]?.trim() || "",
-          operadora: cols[1]?.trim() || "Vivo", numero: cols[2]?.trim() || "",
-          fornecedor: cols[3]?.trim() || "SmartSim",
-          empresaId: cols[4]?.trim() || "", empresaNome: empresa?.nome || "",
-          veiculo: cols[5]?.trim() || "", status: "offline", ultimaConexao: "Nunca",
-        };
-        setLinhas(prev => [...prev, nova]);
-        count++;
+        const empresa = clientes.find(c => c.id === cols[4]?.trim());
+        try {
+          await insertLinha.mutateAsync({
+            iccid: cols[0]?.trim() || "",
+            operadora: cols[1]?.trim() || "Vivo",
+            numero: cols[2]?.trim() || "",
+            fornecedor: cols[3]?.trim() || "SmartSim",
+            empresa_id: cols[4]?.trim() || "",
+            empresa_nome: empresa?.nome || "",
+            veiculo: cols[5]?.trim() || "",
+            status: "offline",
+            ultima_conexao: "Nunca",
+          });
+          count++;
+        } catch { /* skip */ }
       }
       toast.success(`${count} linhas importadas!`);
     };
     reader.readAsText(file);
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-6">
@@ -111,7 +127,7 @@ const LinhasSIM = () => {
           <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="Filtrar cliente" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos Clientes</SelectItem>
-            {clientesIniciais.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+            {clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -137,7 +153,7 @@ const LinhasSIM = () => {
                 <TableCell>{l.operadora}</TableCell>
                 <TableCell>{l.numero}</TableCell>
                 <TableCell><Badge variant="outline">{l.fornecedor || "--"}</Badge></TableCell>
-                <TableCell>{l.empresaNome}</TableCell>
+                <TableCell>{l.empresa_nome}</TableCell>
                 <TableCell className="font-medium">{l.veiculo}</TableCell>
                 <TableCell>
                   <Badge variant={l.status === "online" ? "default" : "secondary"}>
@@ -145,7 +161,7 @@ const LinhasSIM = () => {
                     {l.status === "online" ? "Online" : "Offline"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{l.ultimaConexao}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{l.ultima_conexao}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -179,9 +195,9 @@ const LinhasSIM = () => {
             </div>
             <div><Label>Numero</Label><Input value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} /></div>
             <div><Label>Cliente B2B</Label>
-              <Select value={form.empresaId} onValueChange={v => setForm(f => ({ ...f, empresaId: v }))}>
+              <Select value={form.empresa_id} onValueChange={v => setForm(f => ({ ...f, empresa_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{clientesIniciais.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Veiculo (Placa)</Label><Input value={form.veiculo} onChange={e => setForm(f => ({ ...f, veiculo: e.target.value }))} /></div>

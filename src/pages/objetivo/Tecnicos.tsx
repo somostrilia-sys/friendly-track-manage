@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { tecnicosIniciais, Tecnico, instalacoesPorMes } from "@/data/mock-data";
+import { useTecnicosCompletos, useInsertTecnico } from "@/hooks/useSupabaseData";
+import type { DbTecnico, DbTecnicoEstoque } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Users, Star, Package, Plus } from "lucide-react";
@@ -24,33 +25,56 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 
 const tipoLabels: Record<string, string> = { avulso: "Avulso", parceiro: "Parceiro", proprio: "Proprio" };
 
-const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", regiaoAtuacao: "", statusAtivo: "ativo" as "ativo" | "inativo", valorServico: 200, periodoPagamento: "quinzenal" as "quinzenal" | "mensal", chavePix: "", banco: "", tipoTecnico: "avulso" as "avulso" | "parceiro" | "proprio", valorInstalacao: 200, adicionalKm: 1.2 };
+// Static chart data (will be replaced by aggregated queries later)
+const instalacoesPorMes = [
+  { mes: "Out", instalacoes: 65 },
+  { mes: "Nov", instalacoes: 72 },
+  { mes: "Dez", instalacoes: 80 },
+  { mes: "Jan", instalacoes: 68 },
+  { mes: "Fev", instalacoes: 85 },
+  { mes: "Mar", instalacoes: 102 },
+];
+
+const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", regiao_atuacao: "", status_ativo: "ativo" as "ativo" | "inativo", valor_servico: 200, periodo_pagamento: "quinzenal" as "quinzenal" | "mensal", chave_pix: "", banco: "", tipo_tecnico: "avulso" as "avulso" | "parceiro" | "proprio", valor_instalacao: 200, adicional_km: 1.2 };
+
+type TecnicoComEstoque = DbTecnico & { estoque: DbTecnicoEstoque[] };
 
 const Tecnicos = () => {
-  const [tecnicos, setTecnicos] = useState(tecnicosIniciais);
+  const { data: tecnicos = [], isLoading } = useTecnicosCompletos();
+  const insertTecnico = useInsertTecnico();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [detalhe, setDetalhe] = useState<Tecnico | null>(null);
+  const [detalhe, setDetalhe] = useState<TecnicoComEstoque | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const total = tecnicos.length;
-  const disponiveis = tecnicos.filter(t => t.status === "disponivel").length;
-  const mediaAvaliacao = (tecnicos.reduce((a, t) => a + t.avaliacao, 0) / total).toFixed(1);
-  const totalInstalacoes = tecnicos.reduce((a, t) => a + t.instalacoesMes, 0);
+  const tecs = tecnicos as TecnicoComEstoque[];
+  const total = tecs.length;
+  const disponiveis = tecs.filter(t => t.status === "disponivel").length;
+  const mediaAvaliacao = total > 0 ? (tecs.reduce((a, t) => a + t.avaliacao, 0) / total).toFixed(1) : "0";
+  const totalInstalacoes = tecs.reduce((a, t) => a + t.instalacoes_mes, 0);
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.nome || !form.cpf) { toast.error("Preencha nome e CPF"); return; }
     const prazoPadrao: Record<string, string> = { avulso: "2 dias uteis", parceiro: "5 dias uteis", proprio: "Conforme contrato" };
-    const novo: Tecnico = {
-      ...form, id: Date.now().toString(), avaliacao: 0, instalacoesMes: 0,
-      equipamentosEmEstoque: 0, saldoAberto: 0, status: form.statusAtivo === "ativo" ? "disponivel" : "indisponivel",
-      estoque: [], prazoPagamento: prazoPadrao[form.tipoTecnico],
-      regiaoAtuacao: form.regiaoAtuacao, statusAtivo: form.statusAtivo,
-    };
-    setTecnicos(prev => [...prev, novo]);
-    setModalOpen(false);
-    setForm(emptyForm);
-    toast.success("Tecnico cadastrado!");
+    try {
+      await insertTecnico.mutateAsync({
+        ...form,
+        avaliacao: 0,
+        instalacoes_mes: 0,
+        equipamentos_em_estoque: 0,
+        saldo_aberto: 0,
+        status: form.status_ativo === "ativo" ? "disponivel" : "indisponivel",
+        prazo_pagamento: prazoPadrao[form.tipo_tecnico],
+      });
+      setModalOpen(false);
+      setForm(emptyForm);
+      toast.success("Tecnico cadastrado!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-6">
@@ -94,17 +118,17 @@ const Tecnicos = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tecnicos.map(t => (
+            {tecs.map(t => (
               <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetalhe(t)}>
                 <TableCell className="font-medium">{t.nome}</TableCell>
-                <TableCell><Badge variant="secondary">{tipoLabels[t.tipoTecnico]}</Badge></TableCell>
+                <TableCell><Badge variant="secondary">{tipoLabels[t.tipo_tecnico]}</Badge></TableCell>
                 <TableCell className="text-sm">{t.telefone}</TableCell>
                 <TableCell>{t.cidade}/{t.estado}</TableCell>
                 <TableCell className="text-sm">{t.especialidade}</TableCell>
-                <TableCell className="text-sm">{t.regiaoAtuacao || "--"}</TableCell>
+                <TableCell className="text-sm">{t.regiao_atuacao || "--"}</TableCell>
                 <TableCell>{t.avaliacao}</TableCell>
-                <TableCell>{t.instalacoesMes}</TableCell>
-                <TableCell><Badge variant={statusMap[t.statusAtivo === "inativo" ? "inativo" : t.status]?.variant}>{statusMap[t.statusAtivo === "inativo" ? "inativo" : t.status]?.label}</Badge></TableCell>
+                <TableCell>{t.instalacoes_mes}</TableCell>
+                <TableCell><Badge variant={statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.variant}>{statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.label}</Badge></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -118,7 +142,7 @@ const Tecnicos = () => {
             <div className="col-span-2"><Label>Nome Completo</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
             <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} placeholder="000.000.000-00" /></div>
             <div><Label>Tipo</Label>
-              <Select value={form.tipoTecnico} onValueChange={v => setForm(f => ({ ...f, tipoTecnico: v as "avulso" | "parceiro" | "proprio" }))}>
+              <Select value={form.tipo_tecnico} onValueChange={v => setForm(f => ({ ...f, tipo_tecnico: v as "avulso" | "parceiro" | "proprio" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="avulso">Avulso</SelectItem>
@@ -130,24 +154,24 @@ const Tecnicos = () => {
             <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
             <div><Label>Especialidade</Label><Input value={form.especialidade} onChange={e => setForm(f => ({ ...f, especialidade: e.target.value }))} placeholder="Rastreadores, cameras..." /></div>
-            <div><Label>Regiao de Atuacao</Label><Input value={form.regiaoAtuacao} onChange={e => setForm(f => ({ ...f, regiaoAtuacao: e.target.value }))} placeholder="Grande SP, Interior PR..." /></div>
+            <div><Label>Regiao de Atuacao</Label><Input value={form.regiao_atuacao} onChange={e => setForm(f => ({ ...f, regiao_atuacao: e.target.value }))} placeholder="Grande SP, Interior PR..." /></div>
             <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
             <div><Label>Estado</Label><Input value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} placeholder="SP" /></div>
             <div><Label>Status</Label>
-              <Select value={form.statusAtivo} onValueChange={v => setForm(f => ({ ...f, statusAtivo: v as "ativo" | "inativo" }))}>
+              <Select value={form.status_ativo} onValueChange={v => setForm(f => ({ ...f, status_ativo: v as "ativo" | "inativo" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="ativo">Ativo</SelectItem><SelectItem value="inativo">Inativo</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label>Valor por Instalacao (R$)</Label><Input type="number" value={form.valorInstalacao} onChange={e => setForm(f => ({ ...f, valorInstalacao: +e.target.value }))} /></div>
-            <div><Label>Adicional KM (R$/km)</Label><Input type="number" step="0.1" value={form.adicionalKm} onChange={e => setForm(f => ({ ...f, adicionalKm: +e.target.value }))} /></div>
+            <div><Label>Valor por Instalacao (R$)</Label><Input type="number" value={form.valor_instalacao} onChange={e => setForm(f => ({ ...f, valor_instalacao: +e.target.value }))} /></div>
+            <div><Label>Adicional KM (R$/km)</Label><Input type="number" step="0.1" value={form.adicional_km} onChange={e => setForm(f => ({ ...f, adicional_km: +e.target.value }))} /></div>
             <div><Label>Periodo Pagamento</Label>
-              <Select value={form.periodoPagamento} onValueChange={v => setForm(f => ({ ...f, periodoPagamento: v as "quinzenal" | "mensal" }))}>
+              <Select value={form.periodo_pagamento} onValueChange={v => setForm(f => ({ ...f, periodo_pagamento: v as "quinzenal" | "mensal" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="quinzenal">Quinzenal</SelectItem><SelectItem value="mensal">Mensal</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label>Chave PIX</Label><Input value={form.chavePix} onChange={e => setForm(f => ({ ...f, chavePix: e.target.value }))} /></div>
+            <div><Label>Chave PIX</Label><Input value={form.chave_pix} onChange={e => setForm(f => ({ ...f, chave_pix: e.target.value }))} /></div>
             <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} /></div>
           </div>
           <DialogFooter>
@@ -164,27 +188,27 @@ const Tecnicos = () => {
               <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-5 text-sm">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{tipoLabels[detalhe.tipoTecnico]}</p></div>
+                  <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{tipoLabels[detalhe.tipo_tecnico]}</p></div>
                   <div><span className="text-muted-foreground">CPF</span><p className="font-medium">{detalhe.cpf}</p></div>
                   <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone}</p></div>
                   <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">Especialidade</span><p className="font-medium">{detalhe.especialidade}</p></div>
-                  <div><span className="text-muted-foreground">Regiao de Atuacao</span><p className="font-medium">{detalhe.regiaoAtuacao || "--"}</p></div>
-                  <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusMap[detalhe.statusAtivo === "inativo" ? "inativo" : detalhe.status]?.variant}>{detalhe.statusAtivo === "inativo" ? "Inativo" : statusMap[detalhe.status]?.label}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Valor/Instalacao</span><p className="font-medium">R$ {detalhe.valorInstalacao}</p></div>
-                  <div><span className="text-muted-foreground">Adicional KM</span><p className="font-medium">R$ {detalhe.adicionalKm}/km</p></div>
-                  <div><span className="text-muted-foreground">Prazo Pagamento</span><p className="font-medium">{detalhe.prazoPagamento}</p></div>
+                  <div><span className="text-muted-foreground">Regiao de Atuacao</span><p className="font-medium">{detalhe.regiao_atuacao || "--"}</p></div>
+                  <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusMap[detalhe.status_ativo === "inativo" ? "inativo" : detalhe.status]?.variant}>{detalhe.status_ativo === "inativo" ? "Inativo" : statusMap[detalhe.status]?.label}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Valor/Instalacao</span><p className="font-medium">R$ {detalhe.valor_instalacao}</p></div>
+                  <div><span className="text-muted-foreground">Adicional KM</span><p className="font-medium">R$ {detalhe.adicional_km}/km</p></div>
+                  <div><span className="text-muted-foreground">Prazo Pagamento</span><p className="font-medium">{detalhe.prazo_pagamento}</p></div>
                   <div><span className="text-muted-foreground">Avaliacao</span><p className="font-medium">{detalhe.avaliacao}</p></div>
-                  <div><span className="text-muted-foreground">Pagamento</span><p className="font-medium capitalize">{detalhe.periodoPagamento}</p></div>
-                  <div><span className="text-muted-foreground">Chave PIX</span><p className="font-medium">{detalhe.chavePix}</p></div>
+                  <div><span className="text-muted-foreground">Pagamento</span><p className="font-medium capitalize">{detalhe.periodo_pagamento}</p></div>
+                  <div><span className="text-muted-foreground">Chave PIX</span><p className="font-medium">{detalhe.chave_pix}</p></div>
                   <div><span className="text-muted-foreground">Banco</span><p className="font-medium">{detalhe.banco}</p></div>
-                  <div><span className="text-muted-foreground">Saldo Aberto</span><p className="font-semibold text-primary">R$ {detalhe.saldoAberto.toLocaleString("pt-BR")}</p></div>
+                  <div><span className="text-muted-foreground">Saldo Aberto</span><p className="font-semibold text-primary">R$ {detalhe.saldo_aberto.toLocaleString("pt-BR")}</p></div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground font-medium">Regra Fiscal</p>
-                  <p className="text-sm">{detalhe.saldoAberto > 1000 ? "Acima de R$ 1.000 - Nota Fiscal obrigatoria" : "Ate R$ 1.000 - Recibo"}</p>
+                  <p className="text-sm">{detalhe.saldo_aberto > 1000 ? "Acima de R$ 1.000 - Nota Fiscal obrigatoria" : "Ate R$ 1.000 - Recibo"}</p>
                 </div>
 
                 <div>

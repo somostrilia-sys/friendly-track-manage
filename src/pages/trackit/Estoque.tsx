@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { equipamentosIniciais, Equipamento, Comodato, tecnicosIniciais } from "@/data/mock-data";
+import { useEquipamentosCompletos, useInsertEquipamento, useInsertMovimentacao, useInsertComodato, useTecnicos } from "@/hooks/useSupabaseData";
+import type { DbEquipamento, DbMovimentacao, DbComodato } from "@/types/database";
 import { Plus, Package, CheckCircle, AlertTriangle, XCircle, Eye, Search, Upload, Download } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
@@ -22,63 +23,75 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 };
 const tipoMap: Record<string, string> = { rastreador: "Rastreador", sensor: "Sensor", camera: "Camera", bloqueador: "Bloqueador", acessorio: "Acessorio", sim: "SIM Card" };
 
-const emptyForm = { tipo: "rastreador" as Equipamento["tipo"], modelo: "", marca: "", serial: "", imei: "", simCard: "", iccid: "", custo: 0, preco: 0, quantidade: 1, status: "disponivel" as Equipamento["status"], localizacao: "Estoque Central SP" };
+const emptyForm = { tipo: "rastreador" as DbEquipamento["tipo"], modelo: "", marca: "", serial: "", imei: "", sim_card: "", iccid: "", custo: 0, preco: 0, quantidade: 1, status: "disponivel" as DbEquipamento["status"], localizacao: "Estoque Central SP" };
+
+type EquipComDetalhes = DbEquipamento & { movimentacoes: DbMovimentacao[]; comodatos: DbComodato[] };
 
 const Estoque = () => {
-  const [equipamentos, setEquipamentos] = useState(equipamentosIniciais);
+  const { data: equipamentos = [], isLoading } = useEquipamentosCompletos();
+  const { data: tecnicos = [] } = useTecnicos();
+  const insertEquipamento = useInsertEquipamento();
+  const insertMovimentacao = useInsertMovimentacao();
+  const insertComodato = useInsertComodato();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [comodatoModal, setComodatoModal] = useState(false);
-  const [detalhe, setDetalhe] = useState<Equipamento | null>(null);
+  const [detalhe, setDetalhe] = useState<EquipComDetalhes | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [buscaImei, setBuscaImei] = useState("");
-  const [comodatoForm, setComodatoForm] = useState({ destinoTipo: "tecnico" as "tecnico" | "filial", destinoNome: "", quantidade: 1, codigoRastreio: "" });
+  const [comodatoForm, setComodatoForm] = useState({ destino_tipo: "tecnico" as "tecnico" | "filial", destino_nome: "", quantidade: 1, codigo_rastreio: "" });
   const [comodatoEquipId, setComodatoEquipId] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const disponivel = equipamentos.filter(e => e.status === "disponivel").length;
-  const instalado = equipamentos.filter(e => e.status === "instalado").length;
-  const manutencao = equipamentos.filter(e => e.status === "manutencao").length;
-  const defeito = equipamentos.filter(e => e.status === "defeito").length;
+  const eqs = equipamentos as EquipComDetalhes[];
+  const disponivel = eqs.filter(e => e.status === "disponivel").length;
+  const instalado = eqs.filter(e => e.status === "instalado").length;
+  const manutencao = eqs.filter(e => e.status === "manutencao").length;
+  const defeito = eqs.filter(e => e.status === "defeito").length;
 
   const filtrado = buscaImei
-    ? equipamentos.filter(e => e.imei?.includes(buscaImei) || e.serial.includes(buscaImei) || e.iccid?.includes(buscaImei))
-    : equipamentos;
+    ? eqs.filter(e => e.imei?.includes(buscaImei) || e.serial.includes(buscaImei) || e.iccid?.includes(buscaImei))
+    : eqs;
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.modelo || !form.marca) { toast.error("Preencha modelo e marca"); return; }
-    const novo: Equipamento = {
-      ...form, id: Date.now().toString(),
-      serial: form.serial || `${form.tipo.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-4)}`,
-      movimentacoes: [{ data: new Date().toISOString().split("T")[0], tipo: "entrada", descricao: `Cadastro de ${form.quantidade} unidade(s)` }],
-      comodatos: [],
-    };
-    setEquipamentos(prev => [...prev, novo]);
-    setForm(emptyForm);
-    setModalOpen(false);
-    toast.success("Produto adicionado ao estoque!");
+    try {
+      const serial = form.serial || `${form.tipo.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+      await insertEquipamento.mutateAsync({ ...form, serial });
+      setForm(emptyForm);
+      setModalOpen(false);
+      toast.success("Produto adicionado ao estoque!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const abrirComodato = (eqId: string) => {
     setComodatoEquipId(eqId);
-    setComodatoForm({ destinoTipo: "tecnico", destinoNome: "", quantidade: 1, codigoRastreio: "" });
+    setComodatoForm({ destino_tipo: "tecnico", destino_nome: "", quantidade: 1, codigo_rastreio: "" });
     setComodatoModal(true);
   };
 
-  const salvarComodato = () => {
-    if (!comodatoForm.destinoNome) { toast.error("Preencha o destino"); return; }
-    const novoComodato: Comodato = {
-      id: `COM-${Date.now()}`, ...comodatoForm, dataEnvio: new Date().toISOString().split("T")[0], status: "enviado",
-    };
-    setEquipamentos(prev => prev.map(e => {
-      if (e.id !== comodatoEquipId) return e;
-      return {
-        ...e,
-        comodatos: [...e.comodatos, novoComodato],
-        movimentacoes: [...e.movimentacoes, { data: new Date().toISOString().split("T")[0], tipo: "saida_comodato", descricao: `Comodato: ${comodatoForm.quantidade}x para ${comodatoForm.destinoNome}` }],
-      };
-    }));
-    setComodatoModal(false);
-    toast.success("Comodato registrado!");
+  const salvarComodato = async () => {
+    if (!comodatoForm.destino_nome) { toast.error("Preencha o destino"); return; }
+    try {
+      await insertComodato.mutateAsync({
+        equipamento_id: comodatoEquipId,
+        ...comodatoForm,
+        data_envio: new Date().toISOString().split("T")[0],
+        status: "enviado",
+      });
+      await insertMovimentacao.mutateAsync({
+        equipamento_id: comodatoEquipId,
+        data: new Date().toISOString().split("T")[0],
+        tipo: "saida_comodato",
+        descricao: `Comodato: ${comodatoForm.quantidade}x para ${comodatoForm.destino_nome}`,
+      });
+      setComodatoModal(false);
+      toast.success("Comodato registrado!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const baixarTemplate = () => {
@@ -90,33 +103,34 @@ const Estoque = () => {
     toast.info("Template CSV baixado!");
   };
 
-  const importarCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importarCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const text = ev.target?.result as string;
       const lines = text.trim().split("\n");
       let count = 0;
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(/[;,]/);
         if (cols.length < 2) continue;
-        const novo: Equipamento = {
-          id: `IMP-${Date.now()}-${i}`, tipo: "rastreador", modelo: cols[1]?.trim() || "J16 4G", marca: "Trackit",
-          serial: `IMP-${Date.now().toString().slice(-4)}-${i}`, imei: cols[0]?.trim() || "",
-          simCard: cols[2]?.trim() || "", iccid: cols[3]?.trim() || "",
-          custo: 0, preco: 0, quantidade: 1, status: "disponivel", localizacao: "Estoque Central SP",
-          movimentacoes: [{ data: new Date().toISOString().split("T")[0], tipo: "entrada", descricao: "Importacao em massa" }],
-          comodatos: [],
-        };
-        setEquipamentos(prev => [...prev, novo]);
-        count++;
+        try {
+          await insertEquipamento.mutateAsync({
+            tipo: "rastreador", modelo: cols[1]?.trim() || "J16 4G", marca: "Trackit",
+            serial: `IMP-${Date.now().toString().slice(-4)}-${i}`, imei: cols[0]?.trim() || "",
+            sim_card: cols[2]?.trim() || "", iccid: cols[3]?.trim() || "",
+            custo: 0, preco: 0, quantidade: 1, status: "disponivel", localizacao: "Estoque Central SP",
+          });
+          count++;
+        } catch { /* skip */ }
       }
       toast.success(`${count} itens importados!`);
     };
     reader.readAsText(file);
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-6">
@@ -165,7 +179,7 @@ const Estoque = () => {
                 <TableCell className="font-medium">{e.modelo}</TableCell>
                 <TableCell className="text-sm text-muted-foreground font-mono">{e.serial}</TableCell>
                 <TableCell className="text-sm text-muted-foreground font-mono">{e.imei || "--"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground font-mono">{e.iccid || e.simCard || "--"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground font-mono">{e.iccid || e.sim_card || "--"}</TableCell>
                 <TableCell>{e.quantidade}</TableCell>
                 <TableCell><Badge variant={statusMap[e.status]?.variant}>{statusMap[e.status]?.label}</Badge></TableCell>
                 <TableCell>
@@ -186,7 +200,7 @@ const Estoque = () => {
           <DialogHeader><DialogTitle>Adicionar Produto ao Estoque</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Tipo</Label>
-              <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as Equipamento["tipo"] }))}>
+              <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as DbEquipamento["tipo"] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{Object.entries(tipoMap).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
@@ -195,7 +209,7 @@ const Estoque = () => {
             <div><Label>Modelo</Label><Input value={form.modelo} onChange={e => setForm(f => ({ ...f, modelo: e.target.value }))} /></div>
             <div><Label>Serial</Label><Input value={form.serial} onChange={e => setForm(f => ({ ...f, serial: e.target.value }))} placeholder="Auto-gerado" /></div>
             <div><Label>IMEI Rastreador</Label><Input value={form.imei} onChange={e => setForm(f => ({ ...f, imei: e.target.value }))} /></div>
-            <div><Label>SIM Card</Label><Input value={form.simCard} onChange={e => setForm(f => ({ ...f, simCard: e.target.value }))} /></div>
+            <div><Label>SIM Card</Label><Input value={form.sim_card} onChange={e => setForm(f => ({ ...f, sim_card: e.target.value }))} /></div>
             <div><Label>ICCID da Linha</Label><Input value={form.iccid} onChange={e => setForm(f => ({ ...f, iccid: e.target.value }))} /></div>
             <div><Label>Quantidade</Label><Input type="number" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: +e.target.value }))} /></div>
             <div><Label>Custo (R$)</Label><Input type="number" value={form.custo} onChange={e => setForm(f => ({ ...f, custo: +e.target.value }))} /></div>
@@ -215,23 +229,23 @@ const Estoque = () => {
           <DialogHeader><DialogTitle>Registrar Comodato / Saida</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Destino</Label>
-              <Select value={comodatoForm.destinoTipo} onValueChange={v => setComodatoForm(f => ({ ...f, destinoTipo: v as "tecnico" | "filial" }))}>
+              <Select value={comodatoForm.destino_tipo} onValueChange={v => setComodatoForm(f => ({ ...f, destino_tipo: v as "tecnico" | "filial" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="tecnico">Tecnico</SelectItem><SelectItem value="filial">Filial</SelectItem></SelectContent>
               </Select>
             </div>
             <div><Label>Nome do Destino</Label>
-              {comodatoForm.destinoTipo === "tecnico" ? (
-                <Select value={comodatoForm.destinoNome} onValueChange={v => setComodatoForm(f => ({ ...f, destinoNome: v }))}>
+              {comodatoForm.destino_tipo === "tecnico" ? (
+                <Select value={comodatoForm.destino_nome} onValueChange={v => setComodatoForm(f => ({ ...f, destino_nome: v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{tecnicosIniciais.map(t => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
+                  <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
                 </Select>
               ) : (
-                <Input value={comodatoForm.destinoNome} onChange={e => setComodatoForm(f => ({ ...f, destinoNome: e.target.value }))} placeholder="Nome da filial" />
+                <Input value={comodatoForm.destino_nome} onChange={e => setComodatoForm(f => ({ ...f, destino_nome: e.target.value }))} placeholder="Nome da filial" />
               )}
             </div>
             <div><Label>Quantidade</Label><Input type="number" value={comodatoForm.quantidade} onChange={e => setComodatoForm(f => ({ ...f, quantidade: +e.target.value }))} /></div>
-            <div><Label>Codigo Rastreio (Correios)</Label><Input value={comodatoForm.codigoRastreio} onChange={e => setComodatoForm(f => ({ ...f, codigoRastreio: e.target.value }))} placeholder="BR000000000XX" /></div>
+            <div><Label>Codigo Rastreio (Correios)</Label><Input value={comodatoForm.codigo_rastreio} onChange={e => setComodatoForm(f => ({ ...f, codigo_rastreio: e.target.value }))} placeholder="BR000000000XX" /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setComodatoModal(false)}>Cancelar</Button>
@@ -251,7 +265,7 @@ const Estoque = () => {
                   <div><span className="text-muted-foreground">Tipo</span><p className="font-medium">{tipoMap[detalhe.tipo]}</p></div>
                   <div><span className="text-muted-foreground">Serial</span><p className="font-mono">{detalhe.serial}</p></div>
                   <div><span className="text-muted-foreground">IMEI</span><p className="font-mono">{detalhe.imei || "--"}</p></div>
-                  <div><span className="text-muted-foreground">SIM Card</span><p className="font-mono">{detalhe.simCard || "--"}</p></div>
+                  <div><span className="text-muted-foreground">SIM Card</span><p className="font-mono">{detalhe.sim_card || "--"}</p></div>
                   <div><span className="text-muted-foreground">ICCID</span><p className="font-mono">{detalhe.iccid || "--"}</p></div>
                   <div><span className="text-muted-foreground">Quantidade</span><p>{detalhe.quantidade}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusMap[detalhe.status]?.variant}>{statusMap[detalhe.status]?.label}</Badge></p></div>
@@ -265,10 +279,10 @@ const Estoque = () => {
                       {detalhe.comodatos.map(c => (
                         <div key={c.id} className="p-3 rounded-lg bg-muted/50">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="font-medium">{c.destinoNome}</span>
+                            <span className="font-medium">{c.destino_nome}</span>
                             <Badge variant="outline">{c.status}</Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">{c.quantidade}x - Envio: {c.dataEnvio} {c.codigoRastreio && `- Rastreio: ${c.codigoRastreio}`}</p>
+                          <p className="text-xs text-muted-foreground">{c.quantidade}x - Envio: {c.data_envio} {c.codigo_rastreio && `- Rastreio: ${c.codigo_rastreio}`}</p>
                         </div>
                       ))}
                     </div>
