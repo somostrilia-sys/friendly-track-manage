@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { clientesIniciais, Cliente } from "@/data/mock-data";
+import { useClientesCompletos, useInsertCliente, useUpdateCliente, useDeleteCliente, useInsertHistoricoContato } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
+import type { DbCliente } from "@/types/database";
 
 const statusAcessoMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   pendente: { label: "Pendente", variant: "outline" },
@@ -20,69 +21,100 @@ const statusAcessoMap: Record<string, { label: string; variant: "default" | "sec
 };
 
 const tiposServico = [
-  "Plataforma de Rastreamento",
-  "Rastreador + Instalacao",
-  "Linha/SIM Card",
-  "Combo Completo (Rastreador + Linha + Plataforma)",
-  "Manutencao de Equipamento",
-  "Monitoramento 24h",
-  "Outro",
+  "Plataforma de Rastreamento", "Rastreador + Instalacao", "Linha/SIM Card",
+  "Combo Completo (Rastreador + Linha + Plataforma)", "Manutencao de Equipamento", "Monitoramento 24h", "Outro",
 ];
 
-const emptyCliente: Omit<Cliente, "id"> = {
-  nome: "", razaoSocial: "", tipo: "empresa", cnpj: "", email: "", telefone: "",
-  responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculosAtivos: 0, status: "ativo",
-  statusAcesso: "pendente", cpfAssociado: "", emailAssociado: "", filial: "", tipoServico: "", historicoContatos: [],
+type ClienteComHistorico = DbCliente & { historicoContatos: { data: string; tipo: string; descricao: string }[] };
+
+const emptyForm = {
+  nome: "", razao_social: "", tipo: "empresa" as const, cnpj: "", email: "", telefone: "",
+  responsavel: "", endereco: "", cidade: "", estado: "", cep: "", veiculos_ativos: 0, status: "ativo" as const,
+  status_acesso: "pendente" as const, cpf_associado: "", email_associado: "", filial: "", tipo_servico: "",
 };
 
 const Clientes = () => {
-  const [clientes, setClientes] = useState<Cliente[]>(clientesIniciais);
+  const { data: clientes = [], isLoading } = useClientesCompletos();
+  const insertCliente = useInsertCliente();
+  const updateCliente = useUpdateCliente();
+  const deleteCliente = useDeleteCliente();
+  const insertContato = useInsertHistoricoContato();
+
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [filtroTipo, setFiltroTipo] = useState<"all" | "empresa" | "associacao">("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<Cliente | null>(null);
-  const [detalhe, setDetalhe] = useState<Cliente | null>(null);
-  const [form, setForm] = useState(emptyCliente);
+  const [editando, setEditando] = useState<ClienteComHistorico | null>(null);
+  const [detalhe, setDetalhe] = useState<ClienteComHistorico | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const [novoContato, setNovoContato] = useState({ tipo: "", descricao: "" });
 
-  const filtrado = clientes.filter(c => {
+  const filtrado = (clientes as ClienteComHistorico[]).filter(c => {
     const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase()) || c.cnpj.includes(busca);
     const matchStatus = filtroStatus === "all" || c.status === filtroStatus;
     const matchTipo = filtroTipo === "all" || c.tipo === filtroTipo;
     return matchBusca && matchStatus && matchTipo;
   });
 
-  const abrirNovo = () => { setForm(emptyCliente); setEditando(null); setModalOpen(true); };
-  const abrirEditar = (c: Cliente) => { setForm(c); setEditando(c); setModalOpen(true); };
+  const abrirNovo = () => { setForm(emptyForm); setEditando(null); setModalOpen(true); };
+  const abrirEditar = (c: ClienteComHistorico) => {
+    setForm({
+      nome: c.nome, razao_social: c.razao_social, tipo: c.tipo, cnpj: c.cnpj, email: c.email,
+      telefone: c.telefone, responsavel: c.responsavel, endereco: c.endereco, cidade: c.cidade,
+      estado: c.estado, cep: c.cep, veiculos_ativos: c.veiculos_ativos, status: c.status,
+      status_acesso: c.status_acesso, cpf_associado: c.cpf_associado, email_associado: c.email_associado,
+      filial: c.filial, tipo_servico: c.tipo_servico,
+    });
+    setEditando(c);
+    setModalOpen(true);
+  };
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.nome || !form.cnpj) { toast.error("Preencha nome e CNPJ"); return; }
-    if (editando) {
-      setClientes(prev => prev.map(c => c.id === editando.id ? { ...editando, ...form } : c));
-      toast.success("Cliente atualizado!");
-    } else {
-      setClientes(prev => [...prev, { ...form, id: Date.now().toString() } as Cliente]);
-      toast.success("Cliente cadastrado!");
+    try {
+      if (editando) {
+        await updateCliente.mutateAsync({ id: editando.id, ...form });
+        toast.success("Cliente atualizado!");
+      } else {
+        await insertCliente.mutateAsync(form);
+        toast.success("Cliente cadastrado!");
+      }
+      setModalOpen(false);
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    setModalOpen(false);
   };
 
-  const excluir = (id: string) => {
-    setClientes(prev => prev.filter(c => c.id !== id));
-    toast.success("Cliente removido!");
+  const excluir = async (id: string) => {
+    try {
+      await deleteCliente.mutateAsync(id);
+      toast.success("Cliente removido!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
-  const adicionarContato = () => {
+  const adicionarContato = async () => {
     if (!detalhe || !novoContato.descricao) return;
-    const updated = { ...detalhe, historicoContatos: [{ data: new Date().toISOString().split("T")[0], ...novoContato }, ...detalhe.historicoContatos] };
-    setClientes(prev => prev.map(c => c.id === detalhe.id ? updated : c));
-    setDetalhe(updated);
-    setNovoContato({ tipo: "", descricao: "" });
-    toast.success("Contato registrado!");
+    try {
+      await insertContato.mutateAsync({
+        cliente_id: detalhe.id,
+        data: new Date().toISOString().split("T")[0],
+        tipo: novoContato.tipo,
+        descricao: novoContato.descricao,
+      });
+      setNovoContato({ tipo: "", descricao: "" });
+      toast.success("Contato registrado!");
+      // Refresh detalhe
+      setDetalhe(null);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
-  const setField = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const setField = (key: string, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-6">
@@ -112,15 +144,9 @@ const Clientes = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>CNPJ</TableHead>
-              <TableHead>Tipo Servico</TableHead>
-              <TableHead>Filial</TableHead>
-              <TableHead>Acesso</TableHead>
-              <TableHead>Veiculos</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Acoes</TableHead>
+              <TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>CNPJ</TableHead>
+              <TableHead>Tipo Servico</TableHead><TableHead>Filial</TableHead><TableHead>Acesso</TableHead>
+              <TableHead>Veiculos</TableHead><TableHead>Status</TableHead><TableHead>Acoes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -129,10 +155,10 @@ const Clientes = () => {
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell><Badge variant="secondary">{c.tipo === "empresa" ? "Empresa" : "Associacao"}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{c.cnpj}</TableCell>
-                <TableCell className="text-sm">{c.tipoServico || "--"}</TableCell>
+                <TableCell className="text-sm">{c.tipo_servico || "--"}</TableCell>
                 <TableCell className="text-sm">{c.filial || "--"}</TableCell>
-                <TableCell><Badge variant={statusAcessoMap[c.statusAcesso]?.variant}>{statusAcessoMap[c.statusAcesso]?.label}</Badge></TableCell>
-                <TableCell>{c.veiculosAtivos}</TableCell>
+                <TableCell><Badge variant={statusAcessoMap[c.status_acesso]?.variant}>{statusAcessoMap[c.status_acesso]?.label}</Badge></TableCell>
+                <TableCell>{c.veiculos_ativos}</TableCell>
                 <TableCell><Badge variant={c.status === "ativo" ? "default" : "secondary"}>{c.status === "ativo" ? "Ativo" : "Inativo"}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -152,7 +178,7 @@ const Clientes = () => {
           <DialogHeader><DialogTitle>{editando ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><Label>Nome Fantasia</Label><Input value={form.nome} onChange={e => setField("nome", e.target.value)} /></div>
-            <div className="col-span-2"><Label>Razao Social</Label><Input value={form.razaoSocial} onChange={e => setField("razaoSocial", e.target.value)} /></div>
+            <div className="col-span-2"><Label>Razao Social</Label><Input value={form.razao_social} onChange={e => setField("razao_social", e.target.value)} /></div>
             <div><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0001-00" /></div>
             <div><Label>Tipo</Label>
               <Select value={form.tipo} onValueChange={v => setField("tipo", v)}>
@@ -161,7 +187,7 @@ const Clientes = () => {
               </Select>
             </div>
             <div className="col-span-2"><Label>Tipo de Servico</Label>
-              <Select value={form.tipoServico} onValueChange={v => setField("tipoServico", v)}>
+              <Select value={form.tipo_servico} onValueChange={v => setField("tipo_servico", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione o servico contratado" /></SelectTrigger>
                 <SelectContent>{tiposServico.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
@@ -169,11 +195,11 @@ const Clientes = () => {
             <div><Label>Responsavel</Label><Input value={form.responsavel} onChange={e => setField("responsavel", e.target.value)} /></div>
             <div><Label>Telefone</Label><Input value={form.telefone} onChange={e => setField("telefone", e.target.value)} /></div>
             <div><Label>Email</Label><Input value={form.email} onChange={e => setField("email", e.target.value)} /></div>
-            <div><Label>CPF Associado</Label><Input value={form.cpfAssociado} onChange={e => setField("cpfAssociado", e.target.value)} /></div>
-            <div><Label>Email Associado</Label><Input value={form.emailAssociado} onChange={e => setField("emailAssociado", e.target.value)} /></div>
+            <div><Label>CPF Associado</Label><Input value={form.cpf_associado} onChange={e => setField("cpf_associado", e.target.value)} /></div>
+            <div><Label>Email Associado</Label><Input value={form.email_associado} onChange={e => setField("email_associado", e.target.value)} /></div>
             <div><Label>Filial</Label><Input value={form.filial} onChange={e => setField("filial", e.target.value)} /></div>
             <div><Label>Status Acesso</Label>
-              <Select value={form.statusAcesso} onValueChange={v => setField("statusAcesso", v)}>
+              <Select value={form.status_acesso} onValueChange={v => setField("status_acesso", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendente">Pendente</SelectItem>
@@ -207,24 +233,23 @@ const Clientes = () => {
               <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
               <div className="mt-6 space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted-foreground">Razao Social</span><p className="font-medium">{detalhe.razaoSocial}</p></div>
+                  <div><span className="text-muted-foreground">Razao Social</span><p className="font-medium">{detalhe.razao_social}</p></div>
                   <div><span className="text-muted-foreground">CNPJ</span><p className="font-medium">{detalhe.cnpj}</p></div>
                   <div><span className="text-muted-foreground">Tipo</span><p><Badge variant="secondary">{detalhe.tipo === "empresa" ? "Empresa" : "Associacao"}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Tipo Servico</span><p className="font-medium">{detalhe.tipoServico || "--"}</p></div>
+                  <div><span className="text-muted-foreground">Tipo Servico</span><p className="font-medium">{detalhe.tipo_servico || "--"}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={detalhe.status === "ativo" ? "default" : "secondary"}>{detalhe.status}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Status Acesso</span><p><Badge variant={statusAcessoMap[detalhe.statusAcesso]?.variant}>{statusAcessoMap[detalhe.statusAcesso]?.label}</Badge></p></div>
+                  <div><span className="text-muted-foreground">Status Acesso</span><p><Badge variant={statusAcessoMap[detalhe.status_acesso]?.variant}>{statusAcessoMap[detalhe.status_acesso]?.label}</Badge></p></div>
                   <div><span className="text-muted-foreground">Filial</span><p className="font-medium">{detalhe.filial || "--"}</p></div>
-                  <div><span className="text-muted-foreground">CPF Associado</span><p className="font-medium">{detalhe.cpfAssociado || "--"}</p></div>
-                  <div><span className="text-muted-foreground">Email Associado</span><p className="font-medium">{detalhe.emailAssociado || "--"}</p></div>
+                  <div><span className="text-muted-foreground">CPF Associado</span><p className="font-medium">{detalhe.cpf_associado || "--"}</p></div>
+                  <div><span className="text-muted-foreground">Email Associado</span><p className="font-medium">{detalhe.email_associado || "--"}</p></div>
                   <div><span className="text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel}</p></div>
                   <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone}</p></div>
                   <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email}</p></div>
-                  <div><span className="text-muted-foreground">Veiculos Ativos</span><p className="font-medium">{detalhe.veiculosAtivos}</p></div>
+                  <div><span className="text-muted-foreground">Veiculos Ativos</span><p className="font-medium">{detalhe.veiculos_ativos}</p></div>
                   <div className="col-span-2"><span className="text-muted-foreground">Endereco</span><p className="font-medium">{detalhe.endereco}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">CEP</span><p className="font-medium">{detalhe.cep}</p></div>
                 </div>
-
                 <div>
                   <h4 className="font-semibold mb-2">Historico de Contatos</h4>
                   <div className="flex gap-2 mb-3">
