@@ -358,7 +358,7 @@ export const usePedidosCompletos = () => {
     queryFn: async () => {
       const [pedidosRes, itensRes, parcelasRes] = await Promise.all([
         supabase.from("pedidos").select("*").order("created_at", { ascending: false }),
-        supabase.from("pedido_itens").select("*"),
+        supabase.from("itens_pedido").select("*"),
         supabase.from("parcelas").select("*"),
       ]);
       if (pedidosRes.error) throw pedidosRes.error;
@@ -366,7 +366,7 @@ export const usePedidosCompletos = () => {
       if (parcelasRes.error) throw parcelasRes.error;
 
       const pedidos = (pedidosRes.data || []) as DbPedido[];
-      const itens = (pedidosRes.data ? itensRes.data : []) as DbPedidoItem[];
+      const itens = (itensRes.data || []) as DbPedidoItem[];
       const parcelas = (parcelasRes.data || []) as DbParcela[];
 
       return pedidos.map(p => ({
