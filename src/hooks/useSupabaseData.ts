@@ -247,9 +247,9 @@ export const useInsertAgendamento = () => useSupabaseInsert<DbAgendamento>("agen
 export const useUpdateAgendamento = () => useSupabaseUpdate<DbAgendamento>("agendamentos", "agendamentos");
 
 // ============ DESPACHOS ============
-export const useDespachos = () => useSupabaseQuery<DbDespacho>("despachos", "despachos");
-export const useInsertDespacho = () => useSupabaseInsert<DbDespacho>("despachos", "despachos");
-export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos", "despachos");
+export const useDespachos = () => useSupabaseQuery<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
+export const useInsertDespacho = () => useSupabaseInsert<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
+export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
 
 // ============ CONTROLE UNIDADES ============
 export const useControleUnidades = () => useSupabaseQuery<DbControleUnidade>("controle_unidades", "controle_unidades");
