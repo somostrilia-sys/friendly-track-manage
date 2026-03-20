@@ -59,10 +59,10 @@ const Clientes = () => {
   const abrirNovo = () => { setForm(emptyForm); setEditando(null); setModalOpen(true); };
   const abrirEditar = (c: ClienteComHistorico) => {
     setForm({
-      nome: c.nome, razao_social: c.razao_social, tipo: c.tipo, cnpj: c.cnpj, email: c.email,
+      nome: c.nome, razao_social: c.razao_social, tipo: c.tipo as "empresa" | "associacao", cnpj: c.cnpj, email: c.email,
       telefone: c.telefone, responsavel: c.responsavel, endereco: c.endereco, cidade: c.cidade,
-      estado: c.estado, cep: c.cep, veiculos_ativos: c.veiculos_ativos, status: c.status,
-      status_acesso: c.status_acesso, cpf_associado: c.cpf_associado, email_associado: c.email_associado,
+      estado: c.estado, cep: c.cep, veiculos_ativos: c.veiculos_ativos, status: c.status as "ativo" | "inativo",
+      status_acesso: c.status_acesso as "pendente" | "credenciais_enviadas" | "ativo", cpf_associado: c.cpf_associado, email_associado: c.email_associado,
       filial: c.filial, tipo_servico: c.tipo_servico,
     });
     setEditando(c);
