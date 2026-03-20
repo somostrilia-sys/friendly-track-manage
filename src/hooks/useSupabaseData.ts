@@ -87,16 +87,16 @@ export const useDeleteEquipamento = () => useSupabaseDelete("equipamentos", "equ
 
 export const useMovimentacoes = (equipamentoId?: string) => {
   return useQuery<DbMovimentacao[]>({
-    queryKey: ["movimentacoes", equipamentoId],
+    queryKey: ["movimentacoes_equipamento", equipamentoId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("movimentacoes").select("*").eq("equipamento_id", equipamentoId!);
+      const { data, error } = await supabase.from("movimentacoes_equipamento").select("*").eq("equipamento_id", equipamentoId!);
       if (error) throw error;
       return (data || []) as DbMovimentacao[];
     },
     enabled: !!equipamentoId,
   });
 };
-export const useInsertMovimentacao = () => useSupabaseInsert<DbMovimentacao>("movimentacoes", "movimentacoes");
+export const useInsertMovimentacao = () => useSupabaseInsert<DbMovimentacao>("movimentacoes_equipamento", "movimentacoes_equipamento");
 
 export const useComodatos = (equipamentoId?: string) => {
   return useQuery<DbComodato[]>({
