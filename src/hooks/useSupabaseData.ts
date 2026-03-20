@@ -173,15 +173,15 @@ export const useTecnicoEstoque = (tecnicoId?: string) => {
 };
 
 // ============ SERVICOS ============
-export const useServicos = () => useSupabaseQuery<DbServico>("servicos", "servicos");
-export const useInsertServico = () => useSupabaseInsert<DbServico>("servicos", "servicos");
-export const useUpdateServico = () => useSupabaseUpdate<DbServico>("servicos", "servicos");
+export const useServicos = () => useSupabaseQuery<DbServico>("servicos_agendados", "servicos_agendados");
+export const useInsertServico = () => useSupabaseInsert<DbServico>("servicos_agendados", "servicos_agendados");
+export const useUpdateServico = () => useSupabaseUpdate<DbServico>("servicos_agendados", "servicos_agendados");
 
 export const useServicoById = (id?: string) => {
   return useQuery<DbServico | null>({
     queryKey: ["servico", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("servicos").select("*").eq("codigo", id!).single();
+      const { data, error } = await supabase.from("servicos_agendados").select("*").eq("codigo", id!).single();
       if (error) return null;
       return data as DbServico;
     },
