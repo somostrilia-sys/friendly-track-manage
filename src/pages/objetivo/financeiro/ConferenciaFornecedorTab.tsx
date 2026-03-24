@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/StatCard";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, Download, XCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { linhasSIMIniciais } from "@/data/mock-data";
+import { useLinhasSIM } from "@/hooks/useSupabaseData";
 import * as XLSX from "xlsx";
 
 interface LinhaConferencia {
