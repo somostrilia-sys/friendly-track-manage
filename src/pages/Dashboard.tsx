@@ -1,22 +1,13 @@
-import { ShoppingCart, Wifi, WifiOff, DollarSign, Users, Brain, TrendingUp, AlertTriangle, Truck, CalendarDays, CheckCircle, ArrowRight } from "lucide-react";
+import { ShoppingCart, Wifi, WifiOff, DollarSign, Users, TrendingUp, AlertTriangle, Truck, CalendarDays, CheckCircle, ArrowRight } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useClientes, useLinhasSIM, useManutencoes, useDespachos, useAgendamentos, useTecnicos } from "@/hooks/useSupabaseData";
+import { useClientes, useLinhasSIM, useManutencoes, useDespachos, useAgendamentos, useTecnicos, useFinanceiro } from "@/hooks/useSupabaseData";
 import { usePedidosCompletos } from "@/hooks/useSupabaseData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-
-const faturamentoMensal = [
-  { mes: "Out", valor: 42000 },
-  { mes: "Nov", valor: 48000 },
-  { mes: "Dez", valor: 51000 },
-  { mes: "Jan", valor: 45000 },
-  { mes: "Fev", valor: 53000 },
-  { mes: "Mar", valor: 58000 },
-];
 
 const Dashboard = () => {
   const { data: clientes = [] } = useClientes();
@@ -26,18 +17,32 @@ const Dashboard = () => {
   const { data: despachos = [] } = useDespachos();
   const { data: agendamentos = [] } = useAgendamentos();
   const { data: tecnicos = [] } = useTecnicos();
+  const { data: financeiro = [] } = useFinanceiro();
 
   const pendentes = pedidos.filter(p => p.status === "pendente").length;
   const online = linhas.filter(l => l.status === "online").length;
   const offline = linhas.filter(l => l.status === "offline").length;
   const clientesAtivos = clientes.filter(c => c.status === "ativo").length;
-  const faturamento = "R$ 58.000";
+  const faturamentoTotal = financeiro.reduce((sum: number, f: any) => sum + Number(f.valor_total || 0), 0);
+  const faturamento = faturamentoTotal > 0 ? `R$ ${faturamentoTotal.toLocaleString("pt-BR")}` : "R$ 0";
   const manutencoesAbertas = manutencoes.filter(m => m.status === "aberto");
   const emTransito = despachos.filter(d => d.status_entrega === "em_transito" || d.status_entrega === "postado").length;
   const agendados = agendamentos.filter(a => a.status === "agendado").length;
   const realizados = agendamentos.filter(a => a.status === "realizado").length;
   const totalTecnicos = tecnicos.length;
   const tecnicosDisponiveis = tecnicos.filter(t => t.status === "disponivel").length;
+
+  // Faturamento mensal real — agrupa financeiro por mes
+  const faturamentoMensal = (() => {
+    const meses: Record<string, number> = {};
+    financeiro.forEach((f: any) => {
+      const date = new Date(f.created_at || f.data_emissao);
+      if (isNaN(date.getTime())) return;
+      const key = date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+      meses[key] = (meses[key] || 0) + Number(f.valor_total || 0);
+    });
+    return Object.entries(meses).map(([mes, valor]) => ({ mes, valor }));
+  })();
 
   const pieData = [
     { name: "Online", value: online, fill: "hsl(160, 55%, 38%)" },
@@ -60,10 +65,10 @@ const Dashboard = () => {
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Pedidos Pendentes" value={pendentes} icon={ShoppingCart} accent="warning" trend="+12%" trendDirection="up" />
-        <StatCard label="Linhas Online" value={online} icon={Wifi} accent="success" trend="+3.1%" trendDirection="up" />
-        <StatCard label="Linhas Offline" value={offline} icon={WifiOff} accent="muted" trend="-2.4%" trendDirection="down" />
-        <StatCard label="Faturamento Mes" value={faturamento} icon={DollarSign} accent="primary" trend="+9.4%" trendDirection="up" />
+        <StatCard label="Pedidos Pendentes" value={pendentes} icon={ShoppingCart} accent="warning" />
+        <StatCard label="Linhas Online" value={online} icon={Wifi} accent="success" />
+        <StatCard label="Linhas Offline" value={offline} icon={WifiOff} accent="muted" />
+        <StatCard label="Faturamento Mes" value={faturamento} icon={DollarSign} accent="primary" />
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -75,15 +80,21 @@ const Dashboard = () => {
             </div>
             <Badge variant="secondary" className="text-xs">Mensal</Badge>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={faturamentoMensal}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 15%, 18%)" vertical={false} />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(210, 8%, 50%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "hsl(210, 8%, 50%)" }} tickFormatter={(v) => `${v/1000}k`} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} contentStyle={{ background: "hsl(210, 20%, 10%)", border: "1px solid hsl(210, 15%, 18%)", borderRadius: "12px", fontSize: "12px" }} />
-              <Bar dataKey="valor" fill="hsl(174, 55%, 40%)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {faturamentoMensal.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={faturamentoMensal}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 15%, 18%)" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(210, 8%, 50%)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(210, 8%, 50%)" }} tickFormatter={(v) => `${v/1000}k`} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} contentStyle={{ background: "hsl(210, 20%, 10%)", border: "1px solid hsl(210, 15%, 18%)", borderRadius: "12px", fontSize: "12px" }} />
+                <Bar dataKey="valor" fill="hsl(174, 55%, 40%)" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[260px] text-muted-foreground text-sm">
+              Sem dados de faturamento ainda
+            </div>
+          )}
         </Card>
 
         <Card className="col-span-12 lg:col-span-4 p-6 card-shadow card-hover">
@@ -189,21 +200,20 @@ const Dashboard = () => {
 
           <Card className="p-5 card-shadow card-hover border-l-2 border-l-primary">
             <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-primary/10"><Brain className="w-4 h-4 text-primary" /></div>
-              <h3 className="font-semibold text-sm">IA Conselheira</h3>
-              <Badge variant="secondary" className="text-[10px]">Beta</Badge>
+              <div className="p-2 rounded-lg bg-primary/10"><TrendingUp className="w-4 h-4 text-primary" /></div>
+              <h3 className="font-semibold text-sm">Resumo</h3>
             </div>
             <div className="space-y-2.5">
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15">
-                <p className="font-medium text-xs text-primary flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Viabilidade</p>
+                <p className="font-medium text-xs text-primary">Clientes</p>
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                  <strong>Manaus/AM</strong>: indice de furto elevado, sem tecnico local. Sugestao: cadastrar tecnico parceiro.
+                  {clientes.length} cadastrados, {clientesAtivos} ativos
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-warning/5 border border-warning/15">
-                <p className="font-medium text-xs text-warning">Insight</p>
+              <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
+                <p className="font-medium text-xs text-muted-foreground">Linhas SIM</p>
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                  Faturamento cresceu 9,4%. Ricardo Santos (PR) lidera com 28 instalacoes/mes.
+                  {linhas.length} total, {online} online, {offline} offline
                 </p>
               </div>
             </div>

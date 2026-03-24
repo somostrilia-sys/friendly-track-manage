@@ -13,14 +13,7 @@ interface Resultado {
   id: string; nome: string; cnpj: string; cnae: string; cidade: string; estado: string; telefone: string; email: string; endereco: string;
 }
 
-const resultadosMock: Resultado[] = [
-  { id: "1", nome: "Auto Elétrica Santos", cnpj: "11.222.333/0001-44", cnae: "4321-5/00", cidade: "Campinas", estado: "SP", telefone: "(19) 3232-1234", email: "contato@autoeletricasantos.com.br", endereco: "Rua Augusta, 200" },
-  { id: "2", nome: "Rastreadores & Cia", cnpj: "22.333.444/0001-55", cnae: "4530-7/03", cidade: "Ribeirão Preto", estado: "SP", telefone: "(16) 3636-5678", email: "cia@rastreadores.com.br", endereco: "Av. Independência, 450" },
-  { id: "3", nome: "TechVeicular Instalações", cnpj: "33.444.555/0001-66", cnae: "4541-2/06", cidade: "Goiânia", estado: "GO", telefone: "(62) 3434-9012", email: "tech@veicular.com.br", endereco: "Rua 15, Setor Central" },
-  { id: "4", nome: "Elétrica & Som Automotivo", cnpj: "44.555.666/0001-77", cnae: "4321-5/00", cidade: "Uberlândia", estado: "MG", telefone: "(34) 3232-3456", email: "eletrica@som.com.br", endereco: "Av. Rondon Pacheco, 1200" },
-  { id: "5", nome: "GPS Track Soluções", cnpj: "55.666.777/0001-88", cnae: "4530-7/03", cidade: "Salvador", estado: "BA", telefone: "(71) 3131-7890", email: "gps@track.com.br", endereco: "Rua Chile, 80" },
-  { id: "6", nome: "Instalatec Veículos", cnpj: "66.777.888/0001-99", cnae: "4541-2/06", cidade: "Recife", estado: "PE", telefone: "(81) 3232-4567", email: "contato@instalatec.com.br", endereco: "Av. Boa Viagem, 3200" },
-];
+const resultadosMock: Resultado[] = [];
 
 const estados = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
 
