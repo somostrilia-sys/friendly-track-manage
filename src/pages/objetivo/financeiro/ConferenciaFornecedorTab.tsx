@@ -121,7 +121,7 @@ const ConferenciaFornecedorTab = () => {
   };
 
   const gerarTemplate = () => {
-    const csv = "ICCID;Valor\n8955031234567890001;25.00\n8955031234567890002;30.00\n8955031234567890001;5.50\n8955031234567890099;28.00";
+    const csv = "ICCID;Valor";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

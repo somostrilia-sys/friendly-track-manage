@@ -21,13 +21,7 @@ const tipoLabels: Record<string, string> = { instalacao: "Instalacao", manutenca
 const envioLabels: Record<string, string> = { nao_enviado: "Nao Enviado", enviado: "Enviado", entregue: "Entregue" };
 const envioVariants: Record<string, "outline" | "secondary" | "default"> = { nao_enviado: "outline", enviado: "secondary", entregue: "default" };
 
-const erpAssociados = [
-  { id: "ERP-001", numero: "12345", nome: "Joao Silva", modeloVeiculo: "Fiat Strada", placa: "ABC-1234", produto: "Rastreador Veicular" },
-  { id: "ERP-002", numero: "12346", nome: "Maria Santos", modeloVeiculo: "VW Saveiro", placa: "DEF-5678", produto: "Rastreador Veicular" },
-  { id: "ERP-003", numero: "12347", nome: "Carlos Oliveira", modeloVeiculo: "Chevrolet S10", placa: "GHI-9012", produto: "Rastreador Veicular" },
-  { id: "ERP-004", numero: "12348", nome: "Ana Costa", modeloVeiculo: "Toyota Hilux", placa: "JKL-3456", produto: "Rastreador Veicular" },
-  { id: "ERP-005", numero: "12349", nome: "Pedro Lima", modeloVeiculo: "Ford Ranger", placa: "MNO-7890", produto: "Rastreador Veicular" },
-];
+const erpAssociados: { id: string; numero: string; nome: string; modeloVeiculo: string; placa: string; produto: string }[] = [];
 
 const Agendamentos = () => {
   const { data: agendamentos = [], isLoading } = useAgendamentos();

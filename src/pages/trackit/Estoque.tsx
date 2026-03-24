@@ -95,7 +95,7 @@ const Estoque = () => {
   };
 
   const baixarTemplate = () => {
-    const csv = "imei_rastreador;modelo_rastreador;sim_card;iccid;numero_sim\n351756051523999;J16 4G;Vivo;8955031234567890001;(11) 99001-0001\n351756051524001;ST4955;Claro;8955031234567890002;(11) 99001-0002";
+    const csv = "imei_rastreador;modelo_rastreador;sim_card;iccid;numero_sim";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "template-estoque.csv"; a.click();

@@ -58,7 +58,7 @@ const LinhasSIM = () => {
   };
 
   const baixarTemplate = () => {
-    const csv = "iccid;operadora;numero;fornecedor;empresa_id;veiculo\n8955031234567890001;Vivo;(11) 99001-0001;SmartSim;1;ABC-1234";
+    const csv = "iccid;operadora;numero;fornecedor;empresa_id;veiculo";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "template-linhas-sim.csv"; a.click();
