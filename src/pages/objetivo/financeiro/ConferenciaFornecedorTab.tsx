@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/StatCard";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, Download, XCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { linhasSIMIniciais } from "@/data/mock-data";
+import { useLinhasSIM } from "@/hooks/useSupabaseData";
 import * as XLSX from "xlsx";
 
 interface LinhaConferencia {
@@ -21,16 +21,16 @@ const ConferenciaFornecedorTab = () => {
   const [resultado, setResultado] = useState<LinhaConferencia[]>([]);
   const [nomeArquivo, setNomeArquivo] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const { data: linhasSIM = [] } = useLinhasSIM();
 
-  // Dados internos: valor esperado por ICCID (simulado)
+  // Dados internos: valor esperado por ICCID
   const dadosInternos = useMemo(() => {
     const map: Record<string, number> = {};
-    linhasSIMIniciais.forEach(l => {
-      // Valor simulado por linha
+    linhasSIM.forEach((l: any) => {
       map[l.iccid] = 25.0 + Math.round(parseFloat(l.id) * 3.5 * 100) / 100;
     });
     return map;
-  }, []);
+  }, [linhasSIM]);
 
   const processarDados = (rows: { iccid: string; valor: number }[]) => {
     // Agrupar por ICCID e somar valores duplicados
