@@ -45,17 +45,9 @@ const calcTotais = (c: Omit<ClienteB2B, "totalPlataforma" | "totalSmartSim" | "t
   return { totalPlataforma, totalSmartSim, totalLinkfield, totalArqia, totalLinhas, totalGeral };
 };
 
-const clientesB2BIniciais: ClienteB2B[] = [
-  { id: "B2B-001", empresa: "Transportadora Rapida Ltda", diaFechamento: 10, mesAno: "03/2024", qtdPlacas: 45, valorPlaca: 29.90, ...(() => { const t = calcTotais({ id: "", empresa: "", diaFechamento: 0, mesAno: "", qtdPlacas: 45, valorPlaca: 29.90, qtdSmartSim: 20, valorSmartSim: 15, qtdLinkfield: 15, valorLinkfield: 18, qtdArqia: 10, valorArqia: 22, status: "pendente", obs: "" }); return t; })(), qtdSmartSim: 20, valorSmartSim: 15, qtdLinkfield: 15, valorLinkfield: 18, qtdArqia: 10, valorArqia: 22, status: "pendente", obs: "" },
-  { id: "B2B-002", empresa: "LogBrasil Transportes", diaFechamento: 15, mesAno: "03/2024", qtdPlacas: 32, valorPlaca: 29.90, ...(() => { const t = calcTotais({ id: "", empresa: "", diaFechamento: 0, mesAno: "", qtdPlacas: 32, valorPlaca: 29.90, qtdSmartSim: 10, valorSmartSim: 15, qtdLinkfield: 12, valorLinkfield: 18, qtdArqia: 10, valorArqia: 22, status: "pago", obs: "" }); return t; })(), qtdSmartSim: 10, valorSmartSim: 15, qtdLinkfield: 12, valorLinkfield: 18, qtdArqia: 10, valorArqia: 22, status: "pago", obs: "Pago via boleto" },
-  { id: "B2B-003", empresa: "Assoc. Caminhoneiros do Sul", diaFechamento: 5, mesAno: "03/2024", qtdPlacas: 120, valorPlaca: 24.90, ...(() => { const t = calcTotais({ id: "", empresa: "", diaFechamento: 0, mesAno: "", qtdPlacas: 120, valorPlaca: 24.90, qtdSmartSim: 50, valorSmartSim: 15, qtdLinkfield: 40, valorLinkfield: 18, qtdArqia: 30, valorArqia: 22, status: "atrasado", obs: "" }); return t; })(), qtdSmartSim: 50, valorSmartSim: 15, qtdLinkfield: 40, valorLinkfield: 18, qtdArqia: 30, valorArqia: 22, status: "atrasado", obs: "Cobranca enviada 2x" },
-];
+const clientesB2BIniciais: ClienteB2B[] = [];
 
-const mesAnterior: Record<string, number> = {
-  "B2B-001": 2580,
-  "B2B-002": 1550,
-  "B2B-003": 5200,
-};
+const mesAnterior: Record<string, number> = {};
 
 const statusBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
   pendente: { label: "Pendente", variant: "secondary" },
@@ -63,12 +55,24 @@ const statusBadge: Record<string, { label: string; variant: "default" | "seconda
   atrasado: { label: "Atrasado", variant: "destructive" },
 };
 
-const meses = ["01/2024", "02/2024", "03/2024", "04/2024", "05/2024", "06/2024", "07/2024", "08/2024", "09/2024", "10/2024", "11/2024", "12/2024"];
+// Gera meses dinamicamente: 12 meses a partir do mes atual
+const meses = (() => {
+  const now = new Date();
+  const result: string[] = [];
+  for (let i = -6; i <= 5; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    result.push(`${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`);
+  }
+  return result;
+})();
 
 const FaturamentoB2BTab = () => {
   const [clientes, setClientes] = useState(clientesB2BIniciais);
   const [modalOpen, setModalOpen] = useState(false);
-  const [filtroMes, setFiltroMes] = useState("03/2024");
+  const [filtroMes, setFiltroMes] = useState(() => {
+    const now = new Date();
+    return `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  });
   const [form, setForm] = useState({
     empresa: "", diaFechamento: 10, qtdPlacas: 0, valorPlaca: 29.90,
     qtdSmartSim: 0, valorSmartSim: 15, qtdLinkfield: 0, valorLinkfield: 18,
