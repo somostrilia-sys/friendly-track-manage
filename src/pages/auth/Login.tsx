@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Radio, Navigation } from 'lucide-react';
-import logoImg from '@/assets/logo-trackit-full.png';
+import { MapPin } from 'lucide-react';
+
+const LOGIN_BG = 'https://jlrslrljvpveaeheetlm.supabase.co/storage/v1/object/public/faturamento-docs/login-bg.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
