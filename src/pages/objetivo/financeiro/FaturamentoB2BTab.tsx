@@ -28,28 +28,36 @@ const CHART_COLORS = [
   "#6366f1", "#14b8a6", "#e11d48", "#a855f7", "#0ea5e9",
 ];
 
-const fmt = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00";
+const fmt = (v: number | null | undefined) => {
+  if (v == null) return "R$ 0";
+  const n = Number(v);
+  if (n === 0) return "R$ 0";
+  // Compact: omit decimals when cents are .00
+  const hasCents = n % 1 !== 0;
+  return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 })}`;
+};
 const fmtNum = (v: number | null | undefined) => v != null ? Number(v) : 0;
 const fmtCompact = (v: number) => {
   if (v >= 1000000) return `R$ ${(v / 1000000).toFixed(1)}M`;
   if (v >= 1000) return `R$ ${(v / 1000).toFixed(1)}K`;
-  return `R$ ${v.toFixed(2)}`;
+  return `R$ ${v.toFixed(0)}`;
 };
 
-const MONTH_ORDER: Record<string, number> = {
-  JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
-  JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
+const MONTH_MAP: Record<string, string> = {
+  JANEIRO: "01", FEVEREIRO: "02", MARCO: "03", ABRIL: "04", MAIO: "05", JUNHO: "06",
+  JULHO: "07", AGOSTO: "08", SETEMBRO: "09", OUTUBRO: "10", NOVEMBRO: "11", DEZEMBRO: "12",
 };
 
-function mesParaNumero(mesRef: string): number {
+/** Convert "MARCO 2026" → "2026-03" for correct lexicographic sorting */
+function mesParaSortKey(mesRef: string): string {
   const parts = mesRef.trim().split(/\s+/);
-  const mesNome = parts[0]?.toUpperCase() || "";
-  const ano = parseInt(parts[1]) || 0;
-  return ano * 100 + (MONTH_ORDER[mesNome] || 0);
+  const mesNome = parts[0]?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+  const ano = parts[1] || "0000";
+  return `${ano}-${MONTH_MAP[mesNome] || "00"}`;
 }
 
 function sortMesesAsc(a: string, b: string) {
-  return mesParaNumero(a) - mesParaNumero(b);
+  return mesParaSortKey(a).localeCompare(mesParaSortKey(b));
 }
 
 const emptyForm: Record<string, any> = {
