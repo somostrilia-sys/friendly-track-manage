@@ -55,6 +55,7 @@ const App = () => (
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trackit/clientes" element={<Clientes />} />
+              <Route path="/trackit/fornecedores" element={<Fornecedores />} />
               <Route path="/trackit/estoque" element={<Estoque />} />
               <Route path="/trackit/pedidos" element={<Pedidos />} />
               <Route path="/trackit/linhas-sim" element={<LinhasSIM />} />

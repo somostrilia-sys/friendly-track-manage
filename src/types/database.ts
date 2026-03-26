@@ -358,6 +358,22 @@ export interface DbConfigChecklist {
   feito: boolean;
 }
 
+export interface DbFornecedor {
+  id: string;
+  nome: string;
+  razao_social: string;
+  cnpj_cpf: string;
+  tipo_fornecimento: string;
+  endereco: string;
+  telefone: string;
+  email: string;
+  responsavel: string;
+  valor_chip: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DbEscalonamento {
   id: string;
   codigo: string;

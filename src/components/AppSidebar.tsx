@@ -16,6 +16,7 @@ import { useState } from "react";
 
 const trackitItems = [
   { title: "Clientes", url: "/trackit/clientes", icon: Users },
+  { title: "Fornecedores", url: "/trackit/fornecedores", icon: Truck },
   { title: "Estoque", url: "/trackit/estoque", icon: Package },
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
   { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },

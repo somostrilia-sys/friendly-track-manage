@@ -324,6 +324,12 @@ export const useEscalonamentos = () => useSupabaseQuery<DbEscalonamento>("escalo
 export const useInsertEscalonamento = () => useSupabaseInsert<DbEscalonamento>("escalonamentos", "escalonamentos");
 export const useUpdateEscalonamento = () => useSupabaseUpdate<DbEscalonamento>("escalonamentos", "escalonamentos");
 
+// ============ FORNECEDORES ============
+export const useFornecedores = () => useSupabaseQuery<DbFornecedor>("fornecedores", "fornecedores");
+export const useInsertFornecedor = () => useSupabaseInsert<DbFornecedor>("fornecedores", "fornecedores");
+export const useUpdateFornecedor = () => useSupabaseUpdate<DbFornecedor>("fornecedores", "fornecedores");
+export const useDeleteFornecedor = () => useSupabaseDelete("fornecedores", "fornecedores");
+
 // ============ UNIDADES COM DETALHES ============
 export const useUnidadesCompletas = () => {
   return useQuery({
