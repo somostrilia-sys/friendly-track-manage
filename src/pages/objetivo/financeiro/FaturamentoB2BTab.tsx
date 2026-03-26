@@ -460,8 +460,8 @@ const FaturamentoB2BTab = () => {
                   ))}
                   {registrosMes.length > 0 && (
                     <tr className="bg-muted/60 font-bold border-t-2 border-primary/30">
-                      <td className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-2 py-1.5 text-[10px]" colSpan={1}></td>
-                      <td className="sticky left-[90px] z-10 bg-muted/80 backdrop-blur px-2 py-1.5 border-r border-border/50 text-[10px]">TOTAIS</td>
+                      <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px]" colSpan={1}></td>
+                      <td className="sticky left-[90px] z-10 bg-muted px-2 py-1.5 border-r border-border/50 text-[10px]">TOTAIS</td>
                       <td className="px-2 py-1.5"></td>
                       <td className="px-2 py-1.5 text-right text-[10px]">{totais.qtd_placas}</td>
                       <td className="px-2 py-1.5"></td>
