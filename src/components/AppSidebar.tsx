@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays,
-  LogOut, Truck, Building2, Settings, BarChart3,
+  LogOut, Truck, Building2, Settings,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
@@ -21,7 +21,7 @@ const trackitItems = [
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
   { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },
   { title: "Financeiro", url: "/trackit/financeiro", icon: DollarSign },
-  { title: "Faturamento B2B", url: "/trackit/faturamento-b2b", icon: BarChart3 },
+  
 ];
 
 const objetivoItems = [
