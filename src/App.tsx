@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/trackit/Clientes";
+import Fornecedores from "@/pages/trackit/Fornecedores";
 import Estoque from "@/pages/trackit/Estoque";
 import Pedidos from "@/pages/trackit/Pedidos";
 import LinhasSIM from "@/pages/trackit/LinhasSIM";
