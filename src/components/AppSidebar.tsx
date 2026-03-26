@@ -21,7 +21,7 @@ const trackitItems = [
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
   { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },
   { title: "Financeiro", url: "/trackit/financeiro", icon: DollarSign },
-  { title: "Faturamento B2B", url: "/trackit/faturamento-b2b", icon: BarChart3 },
+  
 ];
 
 const objetivoItems = [
