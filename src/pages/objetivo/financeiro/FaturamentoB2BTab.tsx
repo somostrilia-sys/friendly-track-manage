@@ -28,28 +28,36 @@ const CHART_COLORS = [
   "#6366f1", "#14b8a6", "#e11d48", "#a855f7", "#0ea5e9",
 ];
 
-const fmt = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00";
+const fmt = (v: number | null | undefined) => {
+  if (v == null) return "R$ 0";
+  const n = Number(v);
+  if (n === 0) return "R$ 0";
+  // Compact: omit decimals when cents are .00
+  const hasCents = n % 1 !== 0;
+  return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 })}`;
+};
 const fmtNum = (v: number | null | undefined) => v != null ? Number(v) : 0;
 const fmtCompact = (v: number) => {
   if (v >= 1000000) return `R$ ${(v / 1000000).toFixed(1)}M`;
   if (v >= 1000) return `R$ ${(v / 1000).toFixed(1)}K`;
-  return `R$ ${v.toFixed(2)}`;
+  return `R$ ${v.toFixed(0)}`;
 };
 
-const MONTH_ORDER: Record<string, number> = {
-  JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
-  JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
+const MONTH_MAP: Record<string, string> = {
+  JANEIRO: "01", FEVEREIRO: "02", MARCO: "03", ABRIL: "04", MAIO: "05", JUNHO: "06",
+  JULHO: "07", AGOSTO: "08", SETEMBRO: "09", OUTUBRO: "10", NOVEMBRO: "11", DEZEMBRO: "12",
 };
 
-function mesParaNumero(mesRef: string): number {
+/** Convert "MARCO 2026" → "2026-03" for correct lexicographic sorting */
+function mesParaSortKey(mesRef: string): string {
   const parts = mesRef.trim().split(/\s+/);
-  const mesNome = parts[0]?.toUpperCase() || "";
-  const ano = parseInt(parts[1]) || 0;
-  return ano * 100 + (MONTH_ORDER[mesNome] || 0);
+  const mesNome = parts[0]?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+  const ano = parts[1] || "0000";
+  return `${ano}-${MONTH_MAP[mesNome] || "00"}`;
 }
 
 function sortMesesAsc(a: string, b: string) {
-  return mesParaNumero(a) - mesParaNumero(b);
+  return mesParaSortKey(a).localeCompare(mesParaSortKey(b));
 }
 
 const emptyForm: Record<string, any> = {
@@ -385,7 +393,7 @@ const FaturamentoB2BTab = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-[11px]" style={{ minWidth: "1800px" }}>
+              <table className="w-full text-xs" style={{ minWidth: "1700px" }}>
                 <thead>
                   {/* Grouped column headers */}
                   <tr className="border-b bg-muted/20">
@@ -425,27 +433,27 @@ const FaturamentoB2BTab = () => {
                 </thead>
                 <tbody>
                   {registrosMesFiltrados.map((r, idx) => (
-                    <tr key={r.id} className={`border-b border-border/20 hover:bg-muted/40 transition-colors ${idx % 2 === 0 ? "" : "bg-muted/10"}`}>
-                      <td className="sticky left-0 z-10 bg-background/95 backdrop-blur px-2 py-1 whitespace-nowrap text-[10px]">{fmtDate(r.data_fechamento)}</td>
-                      <td className="sticky left-[90px] z-10 bg-background/95 backdrop-blur px-2 py-1 font-medium whitespace-nowrap border-r border-border/30 text-[10px]">{r.empresa}</td>
-                      <td className="px-2 py-1 whitespace-nowrap text-[10px] text-muted-foreground">{getVencimento(r.data_fechamento)}</td>
-                      <td className="px-2 py-1 text-right text-[10px]">{fmtNum(r.qtd_placas)}</td>
-                      <td className="px-2 py-1 text-right text-[10px]">{fmt(r.valor_por_placa)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-medium">{fmt(r.total_plataforma)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-sky-500/5">{fmtNum(r.qtd_linhas_smartsim)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-sky-500/5">{fmt(r.valor_smartsim)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-sky-500/5">{fmt(r.total_smartsim)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-emerald-500/5">{fmtNum(r.qtd_linhas_linkfield)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-emerald-500/5">{fmt(r.valor_linkfield)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-emerald-500/5">{fmt(r.total_linkfield)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-amber-500/5">{fmtNum(r.qtd_linhas_arqia)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] bg-amber-500/5">{fmt(r.valor_arqia)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-amber-500/5">{fmt(r.total_arqia)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-medium">{fmtNum(r.total_linhas)}</td>
-                      <td className="px-2 py-1 text-right text-[10px] font-bold text-primary">{fmt(r.total_geral)}</td>
-                      <td className="px-2 py-1 text-center">{getSituacaoBadge(r.situacao)}</td>
-                      <td className="px-2 py-1 max-w-[80px] truncate text-muted-foreground text-[10px]">{r.observacao || "--"}</td>
-                      <td className="px-2 py-1 text-center">
+                    <tr key={r.id} className={`border-b border-border/20 hover:bg-primary/5 transition-colors ${idx % 2 === 0 ? "bg-background" : "bg-muted/15"}`}>
+                      <td className={`sticky left-0 z-10 backdrop-blur px-1.5 py-0.5 whitespace-nowrap text-xs ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`}>{fmtDate(r.data_fechamento)}</td>
+                      <td className={`sticky left-[90px] z-10 backdrop-blur px-1.5 py-0.5 font-medium border-r border-border/30 text-xs max-w-[200px] truncate ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`} title={r.empresa}>{r.empresa}</td>
+                      <td className="px-1.5 py-0.5 whitespace-nowrap text-xs text-muted-foreground">{getVencimento(r.data_fechamento)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs">{fmtNum(r.qtd_placas)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs">{fmt(r.valor_por_placa)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-medium">{fmt(r.total_plataforma)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-sky-500/5">{fmtNum(r.qtd_linhas_smartsim)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-sky-500/5">{fmt(r.valor_smartsim)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-medium bg-sky-500/5">{fmt(r.total_smartsim)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-emerald-500/5">{fmtNum(r.qtd_linhas_linkfield)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-emerald-500/5">{fmt(r.valor_linkfield)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-medium bg-emerald-500/5">{fmt(r.total_linkfield)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-amber-500/5">{fmtNum(r.qtd_linhas_arqia)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs bg-amber-500/5">{fmt(r.valor_arqia)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-medium bg-amber-500/5">{fmt(r.total_arqia)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-medium">{fmtNum(r.total_linhas)}</td>
+                      <td className="px-1.5 py-0.5 text-right text-xs font-bold text-primary">{fmt(r.total_geral)}</td>
+                      <td className="px-1.5 py-0.5 text-center">{getSituacaoBadge(r.situacao)}</td>
+                      <td className="px-1.5 py-0.5 max-w-[80px] truncate text-muted-foreground text-xs">{r.observacao || "--"}</td>
+                      <td className="px-1.5 py-0.5 text-center">
                         <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => abrirEditar(r)}>Editar</Button>
                       </td>
                     </tr>
