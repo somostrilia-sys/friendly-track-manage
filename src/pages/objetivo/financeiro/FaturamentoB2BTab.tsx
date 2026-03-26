@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatCard } from "@/components/StatCard";
 import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B } from "@/hooks/useSupabaseData";
-import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users, CheckCircle2, AlertTriangle, Upload, Trash2, FileText, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { DbFaturamentoB2B } from "@/types/database";
 import * as XLSX from "xlsx";
@@ -32,7 +33,6 @@ const fmt = (v: number | null | undefined) => {
   if (v == null) return "R$ 0";
   const n = Number(v);
   if (n === 0) return "R$ 0";
-  // Compact: omit decimals when cents are .00
   const hasCents = n % 1 !== 0;
   return `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 })}`;
 };
@@ -48,7 +48,6 @@ const MONTH_MAP: Record<string, string> = {
   JULHO: "07", AGOSTO: "08", SETEMBRO: "09", OUTUBRO: "10", NOVEMBRO: "11", DEZEMBRO: "12",
 };
 
-/** Convert "MARCO 2026" → "2026-03" for correct lexicographic sorting */
 function mesParaSortKey(mesRef: string): string {
   const parts = mesRef.trim().split(/\s+/);
   const mesNome = parts[0]?.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
@@ -60,11 +59,20 @@ function sortMesesAsc(a: string, b: string) {
   return mesParaSortKey(a).localeCompare(mesParaSortKey(b));
 }
 
+const SITUACAO_CONFIG: Record<string, { label: string; color: string; bgClass: string; textClass: string }> = {
+  aberto: { label: "Aberto", color: "gray", bgClass: "bg-muted text-muted-foreground", textClass: "text-muted-foreground" },
+  faturado: { label: "Faturado", color: "blue", bgClass: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30", textClass: "text-blue-600" },
+  pago: { label: "Pago", color: "green", bgClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30", textClass: "text-emerald-600" },
+  atrasado: { label: "Atrasado", color: "red", bgClass: "bg-destructive/15 text-destructive border-destructive/30", textClass: "text-destructive" },
+  parcial: { label: "Parcial", color: "yellow", bgClass: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30", textClass: "text-yellow-600" },
+};
+
 const emptyForm: Record<string, any> = {
   mes_referencia: "", data_fechamento: "", empresa: "", qtd_placas: 0, valor_por_placa: 0,
   total_plataforma: 0, qtd_linhas_smartsim: 0, valor_smartsim: 0, total_smartsim: 0,
   qtd_linhas_linkfield: 0, valor_linkfield: 0, total_linkfield: 0, qtd_linhas_arqia: 0,
   valor_arqia: 0, total_arqia: 0, total_linhas: 0, total_geral: 0, situacao: "aberto", observacao: "",
+  valor_pago: 0, boleto_url: null, comprovantes: [],
 };
 
 const FaturamentoB2BTab = () => {
@@ -80,6 +88,11 @@ const FaturamentoB2BTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [chartEmpresas, setChartEmpresas] = useState<string[]>([]);
   const [chartInitDone, setChartInitDone] = useState(false);
+  const [uploadingBoleto, setUploadingBoleto] = useState(false);
+  const [uploadingComprovante, setUploadingComprovante] = useState(false);
+
+  const boletoInputRef = useRef<HTMLInputElement>(null);
+  const comprovanteInputRef = useRef<HTMLInputElement>(null);
 
   // Sorted months ascending (chronological)
   const meses = useMemo(() => {
@@ -88,23 +101,15 @@ const FaturamentoB2BTab = () => {
     return unique;
   }, [registros]);
 
-  // Descending for dropdown (newest first)
   const mesesDesc = useMemo(() => [...meses].reverse(), [meses]);
-
   const mesAtual = mesSelecionado || mesesDesc[0] || "";
 
-  // Records for selected month, sorted by data_fechamento ascending
   const registrosMes = useMemo(() => {
     const filtered = registros.filter(r => r.mes_referencia === mesAtual);
-    filtered.sort((a, b) => {
-      const dA = a.data_fechamento || "";
-      const dB = b.data_fechamento || "";
-      return dA.localeCompare(dB);
-    });
+    filtered.sort((a, b) => (a.data_fechamento || "").localeCompare(b.data_fechamento || ""));
     return filtered;
   }, [registros, mesAtual]);
 
-  // Search filter
   const registrosMesFiltrados = useMemo(() => {
     if (!searchTerm) return registrosMes;
     const term = searchTerm.toLowerCase();
@@ -113,7 +118,6 @@ const FaturamentoB2BTab = () => {
 
   const empresas = useMemo(() => [...new Set(registros.map(r => r.empresa))].sort(), [registros]);
 
-  // Initialize chart: top 10 by total_geral in current month
   useMemo(() => {
     if (!chartInitDone && mesesDesc.length > 0 && registros.length > 0) {
       const mesAtualData = registros.filter(r => r.mes_referencia === mesesDesc[0]);
@@ -141,7 +145,7 @@ const FaturamentoB2BTab = () => {
     );
   }, [registrosMes]);
 
-  // ===== Dashboard data =====
+  // Dashboard data
   const mesAnteriorKey = useMemo(() => {
     const idx = meses.indexOf(mesesDesc[0]);
     return idx > 0 ? meses[idx - 1] : "";
@@ -162,7 +166,6 @@ const FaturamentoB2BTab = () => {
     return new Set(registros.filter(r => r.mes_referencia === mesesDesc[0]).map(r => r.empresa)).size;
   }, [registros, mesesDesc]);
 
-  // Resumo do Mes cards (for Fechamento tab)
   const mediaPorEmpresa = registrosMes.length > 0 ? totais.total_geral / registrosMes.length : 0;
   const mesAnteriorTotGeral = useMemo(() => {
     if (!mesAnteriorKey) return 0;
@@ -170,13 +173,11 @@ const FaturamentoB2BTab = () => {
   }, [registros, mesAnteriorKey]);
   const variacaoMes = mesAnteriorTotGeral > 0 ? ((totais.total_geral - mesAnteriorTotGeral) / mesAnteriorTotGeral * 100) : 0;
 
-  // Growth ranking per company
   const growthData = useMemo(() => {
     if (!mesesDesc[0] || !mesAnteriorKey) return [];
     const atual = registros.filter(r => r.mes_referencia === mesesDesc[0]);
     const anterior = registros.filter(r => r.mes_referencia === mesAnteriorKey);
     const anteriorMap = new Map(anterior.map(r => [r.empresa, fmtNum(r.total_geral)]));
-
     return atual.map(r => {
       const prev = anteriorMap.get(r.empresa) || 0;
       const curr = fmtNum(r.total_geral);
@@ -188,7 +189,6 @@ const FaturamentoB2BTab = () => {
   const topCrescimento = growthData.filter(d => d.growth > 0);
   const estagnadas = growthData.filter(d => d.growth <= 0);
 
-  // Multi-line chart data (top 10 or selected companies)
   const lineChartData = useMemo(() => {
     return meses.map(mes => {
       const row: Record<string, any> = { mes: mes.substring(0, 3) + " " + mes.split(" ")[1]?.substring(2) };
@@ -200,7 +200,6 @@ const FaturamentoB2BTab = () => {
     });
   }, [registros, meses, chartEmpresas]);
 
-  // Bar chart: current vs previous month
   const barChartData = useMemo(() => {
     if (!mesesDesc[0] || !mesAnteriorKey) return [];
     return growthData.slice(0, 15).map(d => ({
@@ -210,7 +209,6 @@ const FaturamentoB2BTab = () => {
     }));
   }, [growthData, mesesDesc, mesAnteriorKey]);
 
-  // Area chart: total revenue evolution
   const areaChartData = useMemo(() => {
     return meses.map(mes => {
       const total = registros.filter(r => r.mes_referencia === mes).reduce((s, r) => s + fmtNum(r.total_geral), 0);
@@ -218,7 +216,6 @@ const FaturamentoB2BTab = () => {
     });
   }, [registros, meses]);
 
-  // Individual company evolution
   const empresaEvolucao = useMemo(() => {
     if (empresaFiltro === "all") return [];
     return meses.map(mes => {
@@ -244,14 +241,73 @@ const FaturamentoB2BTab = () => {
       qtd_linhas_smartsim: r.qtd_linhas_smartsim, valor_smartsim: r.valor_smartsim, total_smartsim: r.total_smartsim,
       qtd_linhas_linkfield: r.qtd_linhas_linkfield, valor_linkfield: r.valor_linkfield, total_linkfield: r.total_linkfield,
       qtd_linhas_arqia: r.qtd_linhas_arqia, valor_arqia: r.valor_arqia, total_arqia: r.total_arqia,
-      total_linhas: r.total_linhas, total_geral: r.total_geral, situacao: r.situacao, observacao: r.observacao || "",
+      total_linhas: r.total_linhas, total_geral: r.total_geral, situacao: r.situacao || "aberto", observacao: r.observacao || "",
+      valor_pago: r.valor_pago || 0,
+      boleto_url: r.boleto_url || null,
+      comprovantes: Array.isArray(r.comprovantes) ? r.comprovantes : [],
     });
     setEditando(r);
     setModalOpen(true);
   };
 
+  // File upload helpers
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const { error } = await supabase.storage.from("faturamento-docs").upload(fileName, file);
+    if (error) { toast.error(`Erro ao enviar arquivo: ${error.message}`); return null; }
+    const { data: urlData } = supabase.storage.from("faturamento-docs").getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
+  const handleBoletoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingBoleto(true);
+    const url = await uploadFile(file, "boletos");
+    if (url) setField("boleto_url", url);
+    setUploadingBoleto(false);
+    if (boletoInputRef.current) boletoInputRef.current.value = "";
+  };
+
+  const handleComprovanteUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingComprovante(true);
+    const newComprovantes = [...(form.comprovantes || [])];
+    for (const file of Array.from(files)) {
+      const url = await uploadFile(file, "comprovantes");
+      if (url) {
+        newComprovantes.push({ url, filename: file.name, uploaded_at: new Date().toISOString() });
+      }
+    }
+    setField("comprovantes", newComprovantes);
+    setUploadingComprovante(false);
+    if (comprovanteInputRef.current) comprovanteInputRef.current.value = "";
+  };
+
+  const removeComprovante = async (idx: number) => {
+    const comp = form.comprovantes[idx];
+    // Try to delete from storage
+    if (comp?.url) {
+      const path = comp.url.split("/faturamento-docs/")[1];
+      if (path) await supabase.storage.from("faturamento-docs").remove([path]);
+    }
+    const updated = [...form.comprovantes];
+    updated.splice(idx, 1);
+    setField("comprovantes", updated);
+  };
+
+  const removeBoleto = async () => {
+    if (form.boleto_url) {
+      const path = form.boleto_url.split("/faturamento-docs/")[1];
+      if (path) await supabase.storage.from("faturamento-docs").remove([path]);
+    }
+    setField("boleto_url", null);
+  };
+
   const salvar = async () => {
-    if (!form.empresa || !form.mes_referencia) { toast.error("Preencha empresa e mes de referencia"); return; }
+    if (!form.empresa || !form.mes_referencia) { toast.error("Preencha empresa e mês de referência"); return; }
     const payload = { ...form };
     payload.total_plataforma = Number(payload.qtd_placas) * Number(payload.valor_por_placa);
     payload.total_smartsim = Number(payload.qtd_linhas_smartsim) * Number(payload.valor_smartsim);
@@ -259,6 +315,7 @@ const FaturamentoB2BTab = () => {
     payload.total_arqia = Number(payload.qtd_linhas_arqia) * Number(payload.valor_arqia);
     payload.total_linhas = Number(payload.qtd_linhas_smartsim) + Number(payload.qtd_linhas_linkfield) + Number(payload.qtd_linhas_arqia);
     payload.total_geral = payload.total_plataforma + payload.total_smartsim + payload.total_linkfield + payload.total_arqia;
+    payload.valor_pago = Number(payload.valor_pago) || 0;
     try {
       if (editando) {
         await updateMut.mutateAsync({ id: editando.id, ...payload });
@@ -283,7 +340,7 @@ const FaturamentoB2BTab = () => {
       "Total Linkfield": r.total_linkfield, "Qtd Arqia": r.qtd_linhas_arqia,
       "Valor Arqia": r.valor_arqia, "Total Arqia": r.total_arqia,
       "Total Linhas": r.total_linhas, "Total Geral": r.total_geral,
-      "Situacao": r.situacao, "OBS": r.observacao,
+      "Valor Pago": r.valor_pago, "Situacao": r.situacao, "OBS": r.observacao,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -303,10 +360,14 @@ const FaturamentoB2BTab = () => {
   };
 
   const getSituacaoBadge = (sit: string) => {
-    const map: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pago: "default", aberto: "secondary", atrasado: "destructive", faturado: "outline",
-    };
-    return <Badge variant={map[sit?.toLowerCase()] || "secondary"}>{sit || "--"}</Badge>;
+    const config = SITUACAO_CONFIG[sit?.toLowerCase()] || SITUACAO_CONFIG.aberto;
+    const icon = sit?.toLowerCase() === "pago" ? <CheckCircle2 className="w-3 h-3 mr-0.5" /> :
+                 sit?.toLowerCase() === "atrasado" ? <AlertTriangle className="w-3 h-3 mr-0.5" /> : null;
+    return (
+      <Badge variant="outline" className={`${config.bgClass} text-[9px] font-semibold border`}>
+        {icon}{config.label}
+      </Badge>
+    );
   };
 
   const toggleChartEmpresa = (emp: string) => {
@@ -331,29 +392,11 @@ const FaturamentoB2BTab = () => {
 
         {/* ===== TAB 1: FECHAMENTO MENSAL ===== */}
         <TabsContent value="fechamento" className="space-y-4">
-          {/* Resumo do Mes - 4 metric cards */}
+          {/* Resumo do Mes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Faturamento do Mês"
-              value={fmtCompact(totais.total_geral)}
-              icon={DollarSign}
-              accent="primary"
-              subtitle={mesAtual}
-            />
-            <StatCard
-              label="Quantidade de Empresas"
-              value={registrosMes.length}
-              icon={Building2}
-              accent="success"
-              subtitle="no mês selecionado"
-            />
-            <StatCard
-              label="Média por Empresa"
-              value={fmtCompact(mediaPorEmpresa)}
-              icon={Users}
-              accent="warning"
-              subtitle="total ÷ empresas"
-            />
+            <StatCard label="Total Faturamento do Mês" value={fmtCompact(totais.total_geral)} icon={DollarSign} accent="primary" subtitle={mesAtual} />
+            <StatCard label="Quantidade de Empresas" value={registrosMes.length} icon={Building2} accent="success" subtitle="no mês selecionado" />
+            <StatCard label="Média por Empresa" value={fmtCompact(mediaPorEmpresa)} icon={Users} accent="warning" subtitle="total ÷ empresas" />
             <StatCard
               label="Comparativo Mês Anterior"
               value={`${variacaoMes >= 0 ? "+" : ""}${variacaoMes.toFixed(1)}%`}
@@ -377,12 +420,7 @@ const FaturamentoB2BTab = () => {
                 </Select>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar empresa..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-7 h-8 w-[180px] text-xs"
-                  />
+                  <Input placeholder="Buscar empresa..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-7 h-8 w-[180px] text-xs" />
                 </div>
                 <span className="text-xs text-muted-foreground">{registrosMesFiltrados.length} empresas</span>
               </div>
@@ -395,7 +433,6 @@ const FaturamentoB2BTab = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-xs" style={{ minWidth: "1700px" }}>
                 <thead>
-                  {/* Grouped column headers */}
                   <tr className="border-b bg-muted/20">
                     <th className="sticky left-0 z-20 bg-muted px-2 py-1 text-left text-[10px] font-semibold text-muted-foreground" rowSpan={2} style={{ minWidth: 90 }}>Fechamento</th>
                     <th className="sticky left-[90px] z-20 bg-muted border-r border-border/50 px-2 py-1 text-left text-[10px] font-semibold text-muted-foreground" rowSpan={2} style={{ minWidth: 160 }}>Empresa</th>
@@ -410,23 +447,18 @@ const FaturamentoB2BTab = () => {
                     <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold">Ações</th>
                   </tr>
                   <tr className="border-b bg-muted/30">
-                    {/* Plataforma sub-headers */}
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Qtd</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Vlr/Placa</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Total</th>
-                    {/* SmartSim */}
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Qtd</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Valor</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Total</th>
-                    {/* Linkfield */}
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Qtd</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Valor</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Total</th>
-                    {/* Arqia */}
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Qtd</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Valor</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Total</th>
-                    {/* Totais */}
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Linhas</th>
                     <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Geral</th>
                   </tr>
@@ -491,43 +523,13 @@ const FaturamentoB2BTab = () => {
 
         {/* ===== TAB 2: DASHBOARD CRESCIMENTO ===== */}
         <TabsContent value="dashboard" className="space-y-6">
-          {/* Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Faturamento Mês Atual"
-              value={fmtCompact(totalMesAtual)}
-              icon={DollarSign}
-              accent="primary"
-              subtitle={mesesDesc[0] || ""}
-              trend={`${Math.abs(variacao).toFixed(1)}%`}
-              trendDirection={variacao >= 0 ? "up" : "down"}
-            />
-            <StatCard
-              label="Mês Anterior"
-              value={fmtCompact(totalMesAnterior)}
-              icon={DollarSign}
-              accent="muted"
-              subtitle={mesAnteriorKey || "N/A"}
-            />
-            <StatCard
-              label="Variação"
-              value={`${variacao >= 0 ? "+" : ""}${variacao.toFixed(1)}%`}
-              icon={variacao >= 0 ? TrendingUp : TrendingDown}
-              accent={variacao >= 0 ? "success" : "destructive"}
-              trend={`${Math.abs(variacao).toFixed(1)}%`}
-              trendDirection={variacao >= 0 ? "up" : "down"}
-              subtitle="vs mês anterior"
-            />
-            <StatCard
-              label="Empresas Ativas"
-              value={empresasAtivas}
-              icon={Building2}
-              accent="primary"
-              subtitle="no mês atual"
-            />
+            <StatCard label="Faturamento Mês Atual" value={fmtCompact(totalMesAtual)} icon={DollarSign} accent="primary" subtitle={mesesDesc[0] || ""} trend={`${Math.abs(variacao).toFixed(1)}%`} trendDirection={variacao >= 0 ? "up" : "down"} />
+            <StatCard label="Mês Anterior" value={fmtCompact(totalMesAnterior)} icon={DollarSign} accent="muted" subtitle={mesAnteriorKey || "N/A"} />
+            <StatCard label="Variação" value={`${variacao >= 0 ? "+" : ""}${variacao.toFixed(1)}%`} icon={variacao >= 0 ? TrendingUp : TrendingDown} accent={variacao >= 0 ? "success" : "destructive"} trend={`${Math.abs(variacao).toFixed(1)}%`} trendDirection={variacao >= 0 ? "up" : "down"} subtitle="vs mês anterior" />
+            <StatCard label="Empresas Ativas" value={empresasAtivas} icon={Building2} accent="primary" subtitle="no mês atual" />
           </div>
 
-          {/* Area Chart: Overall revenue evolution */}
           <Card className="card-shadow p-6">
             <h3 className="text-base font-semibold mb-4">Evolução Receita Total ({meses.length} meses)</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -547,15 +549,12 @@ const FaturamentoB2BTab = () => {
             </ResponsiveContainer>
           </Card>
 
-          {/* Line Chart: Top 10 / selected companies */}
           <Card className="card-shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <h3 className="text-base font-semibold">Evolução por Empresa (máx. 10)</h3>
               <Select value="__multi__" onValueChange={(v) => { if (v !== "__multi__") toggleChartEmpresa(v); }}>
                 <SelectTrigger className="w-[280px] h-8 text-xs">
-                  <SelectValue placeholder={`${chartEmpresas.length} empresas selecionadas`}>
-                    {chartEmpresas.length} empresas selecionadas
-                  </SelectValue>
+                  <SelectValue placeholder={`${chartEmpresas.length} empresas selecionadas`}>{chartEmpresas.length} empresas selecionadas</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {empresas.map(emp => (
@@ -571,14 +570,8 @@ const FaturamentoB2BTab = () => {
             </div>
             {chartEmpresas.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3">
-                {chartEmpresas.map((emp, i) => (
-                  <Badge
-                    key={emp}
-                    variant="outline"
-                    className="text-[9px] cursor-pointer hover:bg-destructive/10"
-                    style={{ borderColor: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length], color: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length] }}
-                    onClick={() => toggleChartEmpresa(emp)}
-                  >
+                {chartEmpresas.map((emp) => (
+                  <Badge key={emp} variant="outline" className="text-[9px] cursor-pointer hover:bg-destructive/10" style={{ borderColor: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length], color: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length] }} onClick={() => toggleChartEmpresa(emp)}>
                     {emp} ✕
                   </Badge>
                 ))}
@@ -597,7 +590,6 @@ const FaturamentoB2BTab = () => {
             </ResponsiveContainer>
           </Card>
 
-          {/* Bar Chart: Current vs Previous month */}
           <Card className="card-shadow p-6">
             <h3 className="text-base font-semibold mb-4">Comparativo: {mesesDesc[0]} vs {mesAnteriorKey}</h3>
             <ResponsiveContainer width="100%" height={350}>
@@ -613,7 +605,6 @@ const FaturamentoB2BTab = () => {
             </ResponsiveContainer>
           </Card>
 
-          {/* Rankings side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="card-shadow">
               <div className="p-4 border-b">
@@ -686,7 +677,6 @@ const FaturamentoB2BTab = () => {
             </Card>
           </div>
 
-          {/* Individual company filter */}
           <Card className="card-shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
               <h3 className="text-base font-semibold">Evolução Individual</h3>
@@ -720,43 +710,149 @@ const FaturamentoB2BTab = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modal Form */}
+      {/* ===== MODAL FORM ===== */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editando ? "Editar Registro" : "Novo Registro de Faturamento"}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-3 gap-4">
-            <div><Label>Mês Referência</Label><Input value={form.mes_referencia} onChange={e => setField("mes_referencia", e.target.value.toUpperCase())} placeholder="MARCO 2026" /></div>
-            <div><Label>Data Fechamento</Label><Input type="date" value={form.data_fechamento} onChange={e => setField("data_fechamento", e.target.value)} /></div>
-            <div><Label>Empresa</Label><Input value={form.empresa} onChange={e => setField("empresa", e.target.value)} /></div>
-
-            <div><Label>Qtd Placas</Label><Input type="number" value={form.qtd_placas} onChange={e => setField("qtd_placas", Number(e.target.value))} /></div>
-            <div><Label>Valor/Placa</Label><Input type="number" step="0.01" value={form.valor_por_placa} onChange={e => setField("valor_por_placa", Number(e.target.value))} /></div>
-            <div><Label>Total Plataforma</Label><Input type="number" step="0.01" value={Number(form.qtd_placas) * Number(form.valor_por_placa)} disabled className="bg-muted" /></div>
-
-            <div><Label>Qtd SmartSim</Label><Input type="number" value={form.qtd_linhas_smartsim} onChange={e => setField("qtd_linhas_smartsim", Number(e.target.value))} /></div>
-            <div><Label>Valor SmartSim</Label><Input type="number" step="0.01" value={form.valor_smartsim} onChange={e => setField("valor_smartsim", Number(e.target.value))} /></div>
-            <div><Label>Total SmartSim</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_smartsim) * Number(form.valor_smartsim)} disabled className="bg-muted" /></div>
-
-            <div><Label>Qtd Linkfield</Label><Input type="number" value={form.qtd_linhas_linkfield} onChange={e => setField("qtd_linhas_linkfield", Number(e.target.value))} /></div>
-            <div><Label>Valor Linkfield</Label><Input type="number" step="0.01" value={form.valor_linkfield} onChange={e => setField("valor_linkfield", Number(e.target.value))} /></div>
-            <div><Label>Total Linkfield</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_linkfield) * Number(form.valor_linkfield)} disabled className="bg-muted" /></div>
-
-            <div><Label>Qtd Arqia</Label><Input type="number" value={form.qtd_linhas_arqia} onChange={e => setField("qtd_linhas_arqia", Number(e.target.value))} /></div>
-            <div><Label>Valor Arqia</Label><Input type="number" step="0.01" value={form.valor_arqia} onChange={e => setField("valor_arqia", Number(e.target.value))} /></div>
-            <div><Label>Total Arqia</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_arqia) * Number(form.valor_arqia)} disabled className="bg-muted" /></div>
-
-            <div><Label>Situação</Label>
-              <Select value={form.situacao} onValueChange={v => setField("situacao", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="aberto">Aberto</SelectItem>
-                  <SelectItem value="faturado">Faturado</SelectItem>
-                  <SelectItem value="pago">Pago</SelectItem>
-                  <SelectItem value="atrasado">Atrasado</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-6">
+            {/* Basic fields */}
+            <div className="grid grid-cols-3 gap-4">
+              <div><Label>Mês Referência</Label><Input value={form.mes_referencia} onChange={e => setField("mes_referencia", e.target.value.toUpperCase())} placeholder="MARCO 2026" /></div>
+              <div><Label>Data Fechamento</Label><Input type="date" value={form.data_fechamento} onChange={e => setField("data_fechamento", e.target.value)} /></div>
+              <div><Label>Empresa</Label><Input value={form.empresa} onChange={e => setField("empresa", e.target.value)} /></div>
             </div>
-            <div className="col-span-2"><Label>Observação</Label><Textarea value={form.observacao} onChange={e => setField("observacao", e.target.value)} rows={2} /></div>
+
+            {/* Platform fields */}
+            <div className="grid grid-cols-3 gap-4">
+              <div><Label>Qtd Placas</Label><Input type="number" value={form.qtd_placas} onChange={e => setField("qtd_placas", Number(e.target.value))} /></div>
+              <div><Label>Valor/Placa</Label><Input type="number" step="0.01" value={form.valor_por_placa} onChange={e => setField("valor_por_placa", Number(e.target.value))} /></div>
+              <div><Label>Total Plataforma</Label><Input type="number" step="0.01" value={Number(form.qtd_placas) * Number(form.valor_por_placa)} disabled className="bg-muted" /></div>
+
+              <div><Label>Qtd SmartSim</Label><Input type="number" value={form.qtd_linhas_smartsim} onChange={e => setField("qtd_linhas_smartsim", Number(e.target.value))} /></div>
+              <div><Label>Valor SmartSim</Label><Input type="number" step="0.01" value={form.valor_smartsim} onChange={e => setField("valor_smartsim", Number(e.target.value))} /></div>
+              <div><Label>Total SmartSim</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_smartsim) * Number(form.valor_smartsim)} disabled className="bg-muted" /></div>
+
+              <div><Label>Qtd Linkfield</Label><Input type="number" value={form.qtd_linhas_linkfield} onChange={e => setField("qtd_linhas_linkfield", Number(e.target.value))} /></div>
+              <div><Label>Valor Linkfield</Label><Input type="number" step="0.01" value={form.valor_linkfield} onChange={e => setField("valor_linkfield", Number(e.target.value))} /></div>
+              <div><Label>Total Linkfield</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_linkfield) * Number(form.valor_linkfield)} disabled className="bg-muted" /></div>
+
+              <div><Label>Qtd Arqia</Label><Input type="number" value={form.qtd_linhas_arqia} onChange={e => setField("qtd_linhas_arqia", Number(e.target.value))} /></div>
+              <div><Label>Valor Arqia</Label><Input type="number" step="0.01" value={form.valor_arqia} onChange={e => setField("valor_arqia", Number(e.target.value))} /></div>
+              <div><Label>Total Arqia</Label><Input type="number" step="0.01" value={Number(form.qtd_linhas_arqia) * Number(form.valor_arqia)} disabled className="bg-muted" /></div>
+            </div>
+
+            {/* Payment tracking section */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <DollarSign className="w-4 h-4" /> Controle de Pagamento
+              </h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Situação</Label>
+                  <Select value={form.situacao} onValueChange={v => setField("situacao", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SITUACAO_CONFIG).map(([key, cfg]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-2">
+                            <span className={`inline-block w-2 h-2 rounded-full ${
+                              key === "aberto" ? "bg-muted-foreground" :
+                              key === "faturado" ? "bg-blue-500" :
+                              key === "pago" ? "bg-emerald-500" :
+                              key === "atrasado" ? "bg-destructive" :
+                              "bg-yellow-500"
+                            }`} />
+                            {cfg.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Valor Pago (R$)</Label>
+                  <Input type="number" step="0.01" value={form.valor_pago} onChange={e => setField("valor_pago", Number(e.target.value))} />
+                </div>
+                <div>
+                  <Label>Total Geral (calculado)</Label>
+                  <Input type="number" value={
+                    (Number(form.qtd_placas) * Number(form.valor_por_placa)) +
+                    (Number(form.qtd_linhas_smartsim) * Number(form.valor_smartsim)) +
+                    (Number(form.qtd_linhas_linkfield) * Number(form.valor_linkfield)) +
+                    (Number(form.qtd_linhas_arqia) * Number(form.valor_arqia))
+                  } disabled className="bg-muted" />
+                </div>
+              </div>
+            </div>
+
+            {/* Boleto upload */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" /> Boleto
+              </h4>
+              {form.boleto_url ? (
+                <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30">
+                  <FileText className="w-5 h-5 text-muted-foreground" />
+                  <a href={form.boleto_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline truncate flex-1">
+                    {form.boleto_url.split("/").pop()}
+                  </a>
+                  <Button size="sm" variant="ghost" className="h-7 text-destructive hover:text-destructive" onClick={removeBoleto}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <input ref={boletoInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleBoletoUpload} />
+                  <Button size="sm" variant="outline" onClick={() => boletoInputRef.current?.click()} disabled={uploadingBoleto}>
+                    <Upload className="w-3.5 h-3.5 mr-1" /> {uploadingBoleto ? "Enviando..." : "Anexar Boleto"}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Comprovantes upload */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" /> Comprovantes de Pagamento
+              </h4>
+              {form.comprovantes?.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {form.comprovantes.map((comp: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded-md border bg-muted/30">
+                      {comp.filename?.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                        <img src={comp.url} alt={comp.filename} className="w-10 h-10 object-cover rounded" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline truncate block">
+                          {comp.filename}
+                        </a>
+                        <span className="text-[10px] text-muted-foreground">
+                          {comp.uploaded_at ? format(parseISO(comp.uploaded_at), "dd/MM/yyyy HH:mm") : ""}
+                        </span>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 text-destructive hover:text-destructive flex-shrink-0" onClick={() => removeComprovante(idx)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div>
+                <input ref={comprovanteInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple className="hidden" onChange={handleComprovanteUpload} />
+                <Button size="sm" variant="outline" onClick={() => comprovanteInputRef.current?.click()} disabled={uploadingComprovante}>
+                  <Upload className="w-3.5 h-3.5 mr-1" /> {uploadingComprovante ? "Enviando..." : "Adicionar Comprovante"}
+                </Button>
+                <span className="text-[10px] text-muted-foreground ml-2">PDF ou imagem. Múltiplos arquivos permitidos.</span>
+              </div>
+            </div>
+
+            {/* Observacao */}
+            <div>
+              <Label>Observação</Label>
+              <Textarea value={form.observacao} onChange={e => setField("observacao", e.target.value)} rows={2} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
