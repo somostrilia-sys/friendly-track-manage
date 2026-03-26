@@ -393,7 +393,7 @@ const FaturamentoB2BTab = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-[11px]" style={{ minWidth: "1800px" }}>
+              <table className="w-full text-xs" style={{ minWidth: "1700px" }}>
                 <thead>
                   {/* Grouped column headers */}
                   <tr className="border-b bg-muted/20">
