@@ -397,8 +397,8 @@ const FaturamentoB2BTab = () => {
                 <thead>
                   {/* Grouped column headers */}
                   <tr className="border-b bg-muted/20">
-                    <th className="sticky left-0 z-20 bg-muted/80 backdrop-blur" rowSpan={2} style={{ minWidth: 90 }}></th>
-                    <th className="sticky left-[90px] z-20 bg-muted/80 backdrop-blur border-r border-border/50" rowSpan={2} style={{ minWidth: 160 }}></th>
+                    <th className="sticky left-0 z-20 bg-muted" rowSpan={2} style={{ minWidth: 90 }}></th>
+                    <th className="sticky left-[90px] z-20 bg-muted border-r border-border/50" rowSpan={2} style={{ minWidth: 160 }}></th>
                     <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold text-muted-foreground" style={{ minWidth: 80 }}>Vencim.</th>
                     <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold border-b border-border/30">Plataforma</th>
                     <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold bg-sky-500/10 border-b border-sky-500/20">SmartSim</th>
@@ -434,8 +434,8 @@ const FaturamentoB2BTab = () => {
                 <tbody>
                   {registrosMesFiltrados.map((r, idx) => (
                     <tr key={r.id} className={`border-b border-border/20 hover:bg-primary/5 transition-colors ${idx % 2 === 0 ? "bg-background" : "bg-muted/15"}`}>
-                      <td className={`sticky left-0 z-10 backdrop-blur px-1.5 py-0.5 whitespace-nowrap text-xs ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`}>{fmtDate(r.data_fechamento)}</td>
-                      <td className={`sticky left-[90px] z-10 backdrop-blur px-1.5 py-0.5 font-medium border-r border-border/30 text-xs max-w-[200px] truncate ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`} title={r.empresa}>{r.empresa}</td>
+                      <td className={`sticky left-0 z-10 px-1.5 py-0.5 whitespace-nowrap text-xs ${idx % 2 === 0 ? "bg-background" : "bg-muted"}`}>{fmtDate(r.data_fechamento)}</td>
+                      <td className={`sticky left-[90px] z-10 px-1.5 py-0.5 font-medium border-r border-border/30 text-xs max-w-[200px] truncate ${idx % 2 === 0 ? "bg-background" : "bg-muted"}`} title={r.empresa || ""}>{r.empresa || "--"}</td>
                       <td className="px-1.5 py-0.5 whitespace-nowrap text-xs text-muted-foreground">{getVencimento(r.data_fechamento)}</td>
                       <td className="px-1.5 py-0.5 text-right text-xs">{fmtNum(r.qtd_placas)}</td>
                       <td className="px-1.5 py-0.5 text-right text-xs">{fmt(r.valor_por_placa)}</td>
@@ -460,8 +460,8 @@ const FaturamentoB2BTab = () => {
                   ))}
                   {registrosMes.length > 0 && (
                     <tr className="bg-muted/60 font-bold border-t-2 border-primary/30">
-                      <td className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-2 py-1.5 text-[10px]" colSpan={1}></td>
-                      <td className="sticky left-[90px] z-10 bg-muted/80 backdrop-blur px-2 py-1.5 border-r border-border/50 text-[10px]">TOTAIS</td>
+                      <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px]" colSpan={1}></td>
+                      <td className="sticky left-[90px] z-10 bg-muted px-2 py-1.5 border-r border-border/50 text-[10px]">TOTAIS</td>
                       <td className="px-2 py-1.5"></td>
                       <td className="px-2 py-1.5 text-right text-[10px]">{totais.qtd_placas}</td>
                       <td className="px-2 py-1.5"></td>
