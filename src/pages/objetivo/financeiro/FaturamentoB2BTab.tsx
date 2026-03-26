@@ -397,8 +397,8 @@ const FaturamentoB2BTab = () => {
                 <thead>
                   {/* Grouped column headers */}
                   <tr className="border-b bg-muted/20">
-                    <th className="sticky left-0 z-20 bg-muted/80 backdrop-blur" rowSpan={2} style={{ minWidth: 90 }}></th>
-                    <th className="sticky left-[90px] z-20 bg-muted/80 backdrop-blur border-r border-border/50" rowSpan={2} style={{ minWidth: 160 }}></th>
+                    <th className="sticky left-0 z-20 bg-muted" rowSpan={2} style={{ minWidth: 90 }}></th>
+                    <th className="sticky left-[90px] z-20 bg-muted border-r border-border/50" rowSpan={2} style={{ minWidth: 160 }}></th>
                     <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold text-muted-foreground" style={{ minWidth: 80 }}>Vencim.</th>
                     <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold border-b border-border/30">Plataforma</th>
                     <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold bg-sky-500/10 border-b border-sky-500/20">SmartSim</th>
