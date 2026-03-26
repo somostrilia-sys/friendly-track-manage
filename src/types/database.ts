@@ -395,6 +395,9 @@ export interface DbFaturamentoB2B {
   total_geral: number;
   situacao: string;
   observacao: string;
+  valor_pago: number;
+  boleto_url: string | null;
+  comprovantes: Array<{ url: string; filename: string; uploaded_at: string }>;
   created_at: string;
   updated_at: string;
 }
