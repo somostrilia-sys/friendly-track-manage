@@ -434,8 +434,8 @@ const FaturamentoB2BTab = () => {
                 <tbody>
                   {registrosMesFiltrados.map((r, idx) => (
                     <tr key={r.id} className={`border-b border-border/20 hover:bg-primary/5 transition-colors ${idx % 2 === 0 ? "bg-background" : "bg-muted/15"}`}>
-                      <td className={`sticky left-0 z-10 backdrop-blur px-1.5 py-0.5 whitespace-nowrap text-xs ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`}>{fmtDate(r.data_fechamento)}</td>
-                      <td className={`sticky left-[90px] z-10 backdrop-blur px-1.5 py-0.5 font-medium border-r border-border/30 text-xs max-w-[200px] truncate ${idx % 2 === 0 ? "bg-background/95" : "bg-muted/40"}`} title={r.empresa}>{r.empresa}</td>
+                      <td className={`sticky left-0 z-10 px-1.5 py-0.5 whitespace-nowrap text-xs ${idx % 2 === 0 ? "bg-background" : "bg-muted"}`}>{fmtDate(r.data_fechamento)}</td>
+                      <td className={`sticky left-[90px] z-10 px-1.5 py-0.5 font-medium border-r border-border/30 text-xs max-w-[200px] truncate ${idx % 2 === 0 ? "bg-background" : "bg-muted"}`} title={r.empresa || ""}>{r.empresa || "--"}</td>
                       <td className="px-1.5 py-0.5 whitespace-nowrap text-xs text-muted-foreground">{getVencimento(r.data_fechamento)}</td>
                       <td className="px-1.5 py-0.5 text-right text-xs">{fmtNum(r.qtd_placas)}</td>
                       <td className="px-1.5 py-0.5 text-right text-xs">{fmt(r.valor_por_placa)}</td>
