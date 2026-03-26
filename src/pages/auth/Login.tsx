@@ -38,60 +38,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* LEFT PANEL — visible on tablet (compact) and desktop (full) */}
-      <div className="hidden sm:flex lg:w-1/2 relative flex-col items-center justify-between overflow-hidden sm:h-48 lg:h-auto"
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* LEFT PANEL — brand image */}
+      <div
+        className="hidden md:block md:w-[45%] lg:w-1/2 min-h-screen"
         style={{
-          background: 'linear-gradient(160deg, #0a1929 0%, #0d3b4f 50%, #0a2a3a 100%)',
+          backgroundImage: `url('${LOGIN_BG}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
-      >
-        {/* Decorative shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-[0.07]"
-            style={{ background: 'radial-gradient(circle, #4DA8B5, transparent)' }} />
-          <div className="absolute bottom-32 -left-16 w-96 h-96 rounded-full opacity-[0.05] hidden lg:block"
-            style={{ background: 'radial-gradient(circle, #4DA8B5, transparent)' }} />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 flex flex-col items-center justify-center z-10 px-10 text-center">
-          <img src={logoImg} alt="TrackIT" className="h-10 lg:h-14 object-contain mb-4 lg:mb-8 brightness-0 invert" />
-
-          <div className="flex items-center gap-2 lg:gap-3 mb-1 lg:mb-2">
-            <MapPin className="w-6 h-6 lg:w-8 lg:h-8 text-[#4DA8B5]" />
-            <h1 className="text-2xl lg:text-4xl font-extrabold tracking-wider text-white">TRACKIT</h1>
-          </div>
-
-          <p className="text-[10px] lg:text-sm tracking-[0.3em] text-[#4DA8B5]/80 font-medium uppercase mb-0 lg:mb-10">
-            Solucoes IoT
-          </p>
-
-          {/* Desktop-only extras */}
-          <p className="hidden lg:block text-white/70 text-sm max-w-xs leading-relaxed">
-            <span className="font-normal">Sistema de </span>
-            <span className="font-bold text-white">Gestao Interno</span>
-          </p>
-
-          <div className="hidden lg:flex items-center gap-8 mt-14 text-[#4DA8B5]/30">
-            <Radio className="w-6 h-6" />
-            <div className="w-px h-6 bg-[#4DA8B5]/20" />
-            <Navigation className="w-6 h-6" />
-            <div className="w-px h-6 bg-[#4DA8B5]/20" />
-            <MapPin className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Bottom credit — desktop only */}
-        <p className="hidden lg:block z-10 pb-6 text-[11px] text-white/30 tracking-wide">
-          Desenvolvido por <span className="font-semibold text-white/40">DIGITAL LUX</span>
-        </p>
-      </div>
+      />
 
       {/* RIGHT PANEL — login form */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-10 sm:py-8 lg:px-16 lg:py-12">
-        {/* Mobile-only logo (below sm) */}
-        <div className="sm:hidden mb-8 flex flex-col items-center gap-2">
-          <img src={logoImg} alt="TrackIT" className="h-10 object-contain" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-10 md:px-16 md:py-12">
+        {/* Mobile-only branding */}
+        <div className="md:hidden mb-8 flex items-center gap-2">
+          <MapPin className="w-6 h-6 text-[#4DA8B5]" />
+          <span className="text-xl font-extrabold tracking-wider text-foreground">TRACKIT</span>
         </div>
 
         <div className="w-full max-w-sm">
