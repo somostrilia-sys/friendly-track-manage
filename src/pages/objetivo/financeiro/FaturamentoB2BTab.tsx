@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { StatCard } from "@/components/StatCard";
 import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B } from "@/hooks/useSupabaseData";
-import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { DbFaturamentoB2B } from "@/types/database";
 import * as XLSX from "xlsx";
@@ -40,10 +41,15 @@ const MONTH_ORDER: Record<string, number> = {
   JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
 };
 
-function sortMeses(a: string, b: string) {
-  const [mA, yA] = a.split(" ");
-  const [mB, yB] = b.split(" ");
-  return ((parseInt(yA) || 0) * 100 + (MONTH_ORDER[mA] || 0)) - ((parseInt(yB) || 0) * 100 + (MONTH_ORDER[mB] || 0));
+function mesParaNumero(mesRef: string): number {
+  const parts = mesRef.trim().split(/\s+/);
+  const mesNome = parts[0]?.toUpperCase() || "";
+  const ano = parseInt(parts[1]) || 0;
+  return ano * 100 + (MONTH_ORDER[mesNome] || 0);
+}
+
+function sortMesesAsc(a: string, b: string) {
+  return mesParaNumero(a) - mesParaNumero(b);
 }
 
 const emptyForm: Record<string, any> = {
@@ -63,13 +69,14 @@ const FaturamentoB2BTab = () => {
   const [editando, setEditando] = useState<DbFaturamentoB2B | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
-  const [empresasSelecionadas, setEmpresasSelecionadas] = useState<string[]>([]);
-  const [initDone, setInitDone] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [chartEmpresas, setChartEmpresas] = useState<string[]>([]);
+  const [chartInitDone, setChartInitDone] = useState(false);
 
-  // Sorted months (chronological)
+  // Sorted months ascending (chronological)
   const meses = useMemo(() => {
     const unique = [...new Set(registros.map(r => r.mes_referencia))];
-    unique.sort(sortMeses);
+    unique.sort(sortMesesAsc);
     return unique;
   }, [registros]);
 
@@ -78,20 +85,35 @@ const FaturamentoB2BTab = () => {
 
   const mesAtual = mesSelecionado || mesesDesc[0] || "";
 
-  const registrosMes = useMemo(
-    () => registros.filter(r => r.mes_referencia === mesAtual),
-    [registros, mesAtual]
-  );
+  // Records for selected month, sorted by data_fechamento ascending
+  const registrosMes = useMemo(() => {
+    const filtered = registros.filter(r => r.mes_referencia === mesAtual);
+    filtered.sort((a, b) => {
+      const dA = a.data_fechamento || "";
+      const dB = b.data_fechamento || "";
+      return dA.localeCompare(dB);
+    });
+    return filtered;
+  }, [registros, mesAtual]);
+
+  // Search filter
+  const registrosMesFiltrados = useMemo(() => {
+    if (!searchTerm) return registrosMes;
+    const term = searchTerm.toLowerCase();
+    return registrosMes.filter(r => r.empresa?.toLowerCase().includes(term));
+  }, [registrosMes, searchTerm]);
 
   const empresas = useMemo(() => [...new Set(registros.map(r => r.empresa))].sort(), [registros]);
 
-  // Initialize: select ALL companies for chart
+  // Initialize chart: top 10 by total_geral in current month
   useMemo(() => {
-    if (!initDone && empresas.length > 0) {
-      setEmpresasSelecionadas(empresas);
-      setInitDone(true);
+    if (!chartInitDone && mesesDesc.length > 0 && registros.length > 0) {
+      const mesAtualData = registros.filter(r => r.mes_referencia === mesesDesc[0]);
+      const top10 = mesAtualData.sort((a, b) => fmtNum(b.total_geral) - fmtNum(a.total_geral)).slice(0, 10).map(r => r.empresa);
+      setChartEmpresas(top10);
+      setChartInitDone(true);
     }
-  }, [empresas, initDone]);
+  }, [registros, mesesDesc, chartInitDone]);
 
   const totais = useMemo(() => {
     return registrosMes.reduce(
@@ -112,17 +134,19 @@ const FaturamentoB2BTab = () => {
   }, [registrosMes]);
 
   // ===== Dashboard data =====
-  const mesAtualIdx = meses.indexOf(mesesDesc[0]);
-  const mesAnterior = mesAtualIdx > 0 ? meses[mesAtualIdx - 1] : "";
+  const mesAnteriorKey = useMemo(() => {
+    const idx = meses.indexOf(mesesDesc[0]);
+    return idx > 0 ? meses[idx - 1] : "";
+  }, [meses, mesesDesc]);
 
   const totalMesAtual = useMemo(() => {
     return registros.filter(r => r.mes_referencia === mesesDesc[0]).reduce((s, r) => s + fmtNum(r.total_geral), 0);
   }, [registros, mesesDesc]);
 
   const totalMesAnterior = useMemo(() => {
-    if (!mesAnterior) return 0;
-    return registros.filter(r => r.mes_referencia === mesAnterior).reduce((s, r) => s + fmtNum(r.total_geral), 0);
-  }, [registros, mesAnterior]);
+    if (!mesAnteriorKey) return 0;
+    return registros.filter(r => r.mes_referencia === mesAnteriorKey).reduce((s, r) => s + fmtNum(r.total_geral), 0);
+  }, [registros, mesAnteriorKey]);
 
   const variacao = totalMesAnterior > 0 ? ((totalMesAtual - totalMesAnterior) / totalMesAnterior * 100) : 0;
 
@@ -130,11 +154,19 @@ const FaturamentoB2BTab = () => {
     return new Set(registros.filter(r => r.mes_referencia === mesesDesc[0]).map(r => r.empresa)).size;
   }, [registros, mesesDesc]);
 
+  // Resumo do Mes cards (for Fechamento tab)
+  const mediaPorEmpresa = registrosMes.length > 0 ? totais.total_geral / registrosMes.length : 0;
+  const mesAnteriorTotGeral = useMemo(() => {
+    if (!mesAnteriorKey) return 0;
+    return registros.filter(r => r.mes_referencia === mesAnteriorKey).reduce((s, r) => s + fmtNum(r.total_geral), 0);
+  }, [registros, mesAnteriorKey]);
+  const variacaoMes = mesAnteriorTotGeral > 0 ? ((totais.total_geral - mesAnteriorTotGeral) / mesAnteriorTotGeral * 100) : 0;
+
   // Growth ranking per company
   const growthData = useMemo(() => {
-    if (!mesesDesc[0] || !mesAnterior) return [];
+    if (!mesesDesc[0] || !mesAnteriorKey) return [];
     const atual = registros.filter(r => r.mes_referencia === mesesDesc[0]);
-    const anterior = registros.filter(r => r.mes_referencia === mesAnterior);
+    const anterior = registros.filter(r => r.mes_referencia === mesAnteriorKey);
     const anteriorMap = new Map(anterior.map(r => [r.empresa, fmtNum(r.total_geral)]));
 
     return atual.map(r => {
@@ -143,32 +175,32 @@ const FaturamentoB2BTab = () => {
       const growth = prev > 0 ? ((curr - prev) / prev * 100) : (curr > 0 ? 100 : 0);
       return { empresa: r.empresa, atual: curr, anterior: prev, growth };
     }).sort((a, b) => b.growth - a.growth);
-  }, [registros, mesesDesc, mesAnterior]);
+  }, [registros, mesesDesc, mesAnteriorKey]);
 
   const topCrescimento = growthData.filter(d => d.growth > 0);
   const estagnadas = growthData.filter(d => d.growth <= 0);
 
-  // Multi-line chart data (evolution per company - ALL selected)
+  // Multi-line chart data (top 10 or selected companies)
   const lineChartData = useMemo(() => {
     return meses.map(mes => {
       const row: Record<string, any> = { mes: mes.substring(0, 3) + " " + mes.split(" ")[1]?.substring(2) };
-      empresasSelecionadas.forEach(emp => {
+      chartEmpresas.forEach(emp => {
         const rec = registros.find(r => r.mes_referencia === mes && r.empresa === emp);
         row[emp] = rec ? fmtNum(rec.total_geral) : 0;
       });
       return row;
     });
-  }, [registros, meses, empresasSelecionadas]);
+  }, [registros, meses, chartEmpresas]);
 
   // Bar chart: current vs previous month
   const barChartData = useMemo(() => {
-    if (!mesesDesc[0] || !mesAnterior) return [];
+    if (!mesesDesc[0] || !mesAnteriorKey) return [];
     return growthData.slice(0, 15).map(d => ({
       empresa: d.empresa.length > 12 ? d.empresa.substring(0, 12) + "..." : d.empresa,
       "Mes Atual": d.atual,
       "Mes Anterior": d.anterior,
     }));
-  }, [growthData, mesesDesc, mesAnterior]);
+  }, [growthData, mesesDesc, mesAnteriorKey]);
 
   // Area chart: total revenue evolution
   const areaChartData = useMemo(() => {
@@ -269,9 +301,9 @@ const FaturamentoB2BTab = () => {
     return <Badge variant={map[sit?.toLowerCase()] || "secondary"}>{sit || "--"}</Badge>;
   };
 
-  const toggleEmpresa = (emp: string) => {
-    setEmpresasSelecionadas(prev =>
-      prev.includes(emp) ? prev.filter(e => e !== emp) : [...prev, emp]
+  const toggleChartEmpresa = (emp: string) => {
+    setChartEmpresas(prev =>
+      prev.includes(emp) ? prev.filter(e => e !== emp) : prev.length < 10 ? [...prev, emp] : prev
     );
   };
 
@@ -290,10 +322,44 @@ const FaturamentoB2BTab = () => {
         </TabsList>
 
         {/* ===== TAB 1: FECHAMENTO MENSAL ===== */}
-        <TabsContent value="fechamento">
+        <TabsContent value="fechamento" className="space-y-4">
+          {/* Resumo do Mes - 4 metric cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Total Faturamento do Mês"
+              value={fmtCompact(totais.total_geral)}
+              icon={DollarSign}
+              accent="primary"
+              subtitle={mesAtual}
+            />
+            <StatCard
+              label="Quantidade de Empresas"
+              value={registrosMes.length}
+              icon={Building2}
+              accent="success"
+              subtitle="no mês selecionado"
+            />
+            <StatCard
+              label="Média por Empresa"
+              value={fmtCompact(mediaPorEmpresa)}
+              icon={Users}
+              accent="warning"
+              subtitle="total ÷ empresas"
+            />
+            <StatCard
+              label="Comparativo Mês Anterior"
+              value={`${variacaoMes >= 0 ? "+" : ""}${variacaoMes.toFixed(1)}%`}
+              icon={variacaoMes >= 0 ? TrendingUp : TrendingDown}
+              accent={variacaoMes >= 0 ? "success" : "destructive"}
+              trend={`${Math.abs(variacaoMes).toFixed(1)}%`}
+              trendDirection={variacaoMes >= 0 ? "up" : "down"}
+              subtitle={`vs ${mesAnteriorKey || "N/A"}`}
+            />
+          </div>
+
           <Card className="card-shadow">
             <div className="p-3 border-b flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Label className="text-xs font-medium whitespace-nowrap">Mês:</Label>
                 <Select value={mesAtual} onValueChange={setMesSelecionado}>
                   <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="Selecione o mes" /></SelectTrigger>
@@ -301,7 +367,16 @@ const FaturamentoB2BTab = () => {
                     {mesesDesc.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <span className="text-xs text-muted-foreground">{registrosMes.length} empresas</span>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar empresa..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-7 h-8 w-[180px] text-xs"
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground">{registrosMesFiltrados.length} empresas</span>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={exportar}><Download className="w-3.5 h-3.5 mr-1" /> Exportar</Button>
@@ -310,83 +385,90 @@ const FaturamentoB2BTab = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-[11px]" style={{ minWidth: "1600px" }}>
+              <table className="w-full text-[11px]" style={{ minWidth: "1800px" }}>
                 <thead>
+                  {/* Grouped column headers */}
+                  <tr className="border-b bg-muted/20">
+                    <th className="sticky left-0 z-20 bg-muted/80 backdrop-blur" rowSpan={2} style={{ minWidth: 90 }}></th>
+                    <th className="sticky left-[90px] z-20 bg-muted/80 backdrop-blur border-r border-border/50" rowSpan={2} style={{ minWidth: 160 }}></th>
+                    <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold text-muted-foreground" style={{ minWidth: 80 }}>Vencim.</th>
+                    <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold border-b border-border/30">Plataforma</th>
+                    <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold bg-sky-500/10 border-b border-sky-500/20">SmartSim</th>
+                    <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold bg-emerald-500/10 border-b border-emerald-500/20">Linkfield</th>
+                    <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold bg-amber-500/10 border-b border-amber-500/20">Arqia</th>
+                    <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold border-b border-border/30">Totais</th>
+                    <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold">Situação</th>
+                    <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold">OBS</th>
+                    <th rowSpan={2} className="px-2 py-1 text-center text-[10px] font-semibold">Ações</th>
+                  </tr>
                   <tr className="border-b bg-muted/30">
-                    {/* Frozen columns */}
-                    <th className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-2 py-1.5 text-left font-semibold whitespace-nowrap min-w-[90px]">Data Fech.</th>
-                    <th className="sticky left-[90px] z-10 bg-muted/80 backdrop-blur px-2 py-1.5 text-left font-semibold whitespace-nowrap min-w-[140px] border-r border-border/50">Empresa</th>
-                    <th className="px-2 py-1.5 text-left font-semibold whitespace-nowrap">Vencimento</th>
-                    {/* Plataforma */}
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">Qtd Placas</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">Vlr/Placa</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">Tot. Plataforma</th>
-                    {/* SmartSim - blue bg */}
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-sky-500/10">Qtd SmartSim</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-sky-500/10">Vlr SmartSim</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-sky-500/10">Tot. SmartSim</th>
-                    {/* Linkfield - green bg */}
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-emerald-500/10">Qtd Linkfield</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-emerald-500/10">Vlr Linkfield</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-emerald-500/10">Tot. Linkfield</th>
-                    {/* Arqia - orange bg */}
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-amber-500/10">Qtd Arqia</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-amber-500/10">Vlr Arqia</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap bg-amber-500/10">Tot. Arqia</th>
-                    {/* Totals */}
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">Tot. Linhas</th>
-                    <th className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">Total Geral</th>
-                    <th className="px-2 py-1.5 text-center font-semibold whitespace-nowrap">Situação</th>
-                    <th className="px-2 py-1.5 text-left font-semibold whitespace-nowrap">OBS</th>
-                    <th className="px-2 py-1.5 text-center font-semibold whitespace-nowrap">Ações</th>
+                    {/* Plataforma sub-headers */}
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Qtd</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Vlr/Placa</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Total</th>
+                    {/* SmartSim */}
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Qtd</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Valor</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-sky-500/10">Total</th>
+                    {/* Linkfield */}
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Qtd</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Valor</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-emerald-500/10">Total</th>
+                    {/* Arqia */}
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Qtd</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Valor</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap bg-amber-500/10">Total</th>
+                    {/* Totais */}
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Linhas</th>
+                    <th className="px-2 py-1 text-right text-[10px] font-semibold whitespace-nowrap">Geral</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {registrosMes.map(r => (
-                    <tr key={r.id} className="border-b border-border/30 hover:bg-muted/40 transition-colors">
-                      <td className="sticky left-0 z-10 bg-background/95 backdrop-blur px-2 py-1 whitespace-nowrap">{fmtDate(r.data_fechamento)}</td>
-                      <td className="sticky left-[90px] z-10 bg-background/95 backdrop-blur px-2 py-1 font-medium whitespace-nowrap border-r border-border/30">{r.empresa}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">{getVencimento(r.data_fechamento)}</td>
-                      <td className="px-2 py-1 text-right">{fmtNum(r.qtd_placas)}</td>
-                      <td className="px-2 py-1 text-right">{fmt(r.valor_por_placa)}</td>
-                      <td className="px-2 py-1 text-right font-medium">{fmt(r.total_plataforma)}</td>
-                      <td className="px-2 py-1 text-right bg-sky-500/5">{fmtNum(r.qtd_linhas_smartsim)}</td>
-                      <td className="px-2 py-1 text-right bg-sky-500/5">{fmt(r.valor_smartsim)}</td>
-                      <td className="px-2 py-1 text-right font-medium bg-sky-500/5">{fmt(r.total_smartsim)}</td>
-                      <td className="px-2 py-1 text-right bg-emerald-500/5">{fmtNum(r.qtd_linhas_linkfield)}</td>
-                      <td className="px-2 py-1 text-right bg-emerald-500/5">{fmt(r.valor_linkfield)}</td>
-                      <td className="px-2 py-1 text-right font-medium bg-emerald-500/5">{fmt(r.total_linkfield)}</td>
-                      <td className="px-2 py-1 text-right bg-amber-500/5">{fmtNum(r.qtd_linhas_arqia)}</td>
-                      <td className="px-2 py-1 text-right bg-amber-500/5">{fmt(r.valor_arqia)}</td>
-                      <td className="px-2 py-1 text-right font-medium bg-amber-500/5">{fmt(r.total_arqia)}</td>
-                      <td className="px-2 py-1 text-right font-medium">{fmtNum(r.total_linhas)}</td>
-                      <td className="px-2 py-1 text-right font-bold text-primary">{fmt(r.total_geral)}</td>
+                  {registrosMesFiltrados.map((r, idx) => (
+                    <tr key={r.id} className={`border-b border-border/20 hover:bg-muted/40 transition-colors ${idx % 2 === 0 ? "" : "bg-muted/10"}`}>
+                      <td className="sticky left-0 z-10 bg-background/95 backdrop-blur px-2 py-1 whitespace-nowrap text-[10px]">{fmtDate(r.data_fechamento)}</td>
+                      <td className="sticky left-[90px] z-10 bg-background/95 backdrop-blur px-2 py-1 font-medium whitespace-nowrap border-r border-border/30 text-[10px]">{r.empresa}</td>
+                      <td className="px-2 py-1 whitespace-nowrap text-[10px] text-muted-foreground">{getVencimento(r.data_fechamento)}</td>
+                      <td className="px-2 py-1 text-right text-[10px]">{fmtNum(r.qtd_placas)}</td>
+                      <td className="px-2 py-1 text-right text-[10px]">{fmt(r.valor_por_placa)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-medium">{fmt(r.total_plataforma)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-sky-500/5">{fmtNum(r.qtd_linhas_smartsim)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-sky-500/5">{fmt(r.valor_smartsim)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-sky-500/5">{fmt(r.total_smartsim)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-emerald-500/5">{fmtNum(r.qtd_linhas_linkfield)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-emerald-500/5">{fmt(r.valor_linkfield)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-emerald-500/5">{fmt(r.total_linkfield)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-amber-500/5">{fmtNum(r.qtd_linhas_arqia)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] bg-amber-500/5">{fmt(r.valor_arqia)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-medium bg-amber-500/5">{fmt(r.total_arqia)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-medium">{fmtNum(r.total_linhas)}</td>
+                      <td className="px-2 py-1 text-right text-[10px] font-bold text-primary">{fmt(r.total_geral)}</td>
                       <td className="px-2 py-1 text-center">{getSituacaoBadge(r.situacao)}</td>
-                      <td className="px-2 py-1 max-w-[100px] truncate text-muted-foreground">{r.observacao || "--"}</td>
+                      <td className="px-2 py-1 max-w-[80px] truncate text-muted-foreground text-[10px]">{r.observacao || "--"}</td>
                       <td className="px-2 py-1 text-center">
-                        <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => abrirEditar(r)}>Editar</Button>
+                        <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => abrirEditar(r)}>Editar</Button>
                       </td>
                     </tr>
                   ))}
                   {registrosMes.length > 0 && (
                     <tr className="bg-muted/60 font-bold border-t-2 border-primary/30">
-                      <td className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-2 py-1.5" colSpan={1}></td>
-                      <td className="sticky left-[90px] z-10 bg-muted/80 backdrop-blur px-2 py-1.5 border-r border-border/50">TOTAIS</td>
+                      <td className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-2 py-1.5 text-[10px]" colSpan={1}></td>
+                      <td className="sticky left-[90px] z-10 bg-muted/80 backdrop-blur px-2 py-1.5 border-r border-border/50 text-[10px]">TOTAIS</td>
                       <td className="px-2 py-1.5"></td>
-                      <td className="px-2 py-1.5 text-right">{totais.qtd_placas}</td>
+                      <td className="px-2 py-1.5 text-right text-[10px]">{totais.qtd_placas}</td>
                       <td className="px-2 py-1.5"></td>
-                      <td className="px-2 py-1.5 text-right">{fmt(totais.total_plataforma)}</td>
-                      <td className="px-2 py-1.5 text-right bg-sky-500/10">{totais.qtd_linhas_smartsim}</td>
+                      <td className="px-2 py-1.5 text-right text-[10px]">{fmt(totais.total_plataforma)}</td>
+                      <td className="px-2 py-1.5 text-right bg-sky-500/10 text-[10px]">{totais.qtd_linhas_smartsim}</td>
                       <td className="px-2 py-1.5 bg-sky-500/10"></td>
-                      <td className="px-2 py-1.5 text-right bg-sky-500/10">{fmt(totais.total_smartsim)}</td>
-                      <td className="px-2 py-1.5 text-right bg-emerald-500/10">{totais.qtd_linhas_linkfield}</td>
+                      <td className="px-2 py-1.5 text-right bg-sky-500/10 text-[10px]">{fmt(totais.total_smartsim)}</td>
+                      <td className="px-2 py-1.5 text-right bg-emerald-500/10 text-[10px]">{totais.qtd_linhas_linkfield}</td>
                       <td className="px-2 py-1.5 bg-emerald-500/10"></td>
-                      <td className="px-2 py-1.5 text-right bg-emerald-500/10">{fmt(totais.total_linkfield)}</td>
-                      <td className="px-2 py-1.5 text-right bg-amber-500/10">{totais.qtd_linhas_arqia}</td>
+                      <td className="px-2 py-1.5 text-right bg-emerald-500/10 text-[10px]">{fmt(totais.total_linkfield)}</td>
+                      <td className="px-2 py-1.5 text-right bg-amber-500/10 text-[10px]">{totais.qtd_linhas_arqia}</td>
                       <td className="px-2 py-1.5 bg-amber-500/10"></td>
-                      <td className="px-2 py-1.5 text-right bg-amber-500/10">{fmt(totais.total_arqia)}</td>
-                      <td className="px-2 py-1.5 text-right">{totais.total_linhas}</td>
-                      <td className="px-2 py-1.5 text-right text-primary">{fmt(totais.total_geral)}</td>
+                      <td className="px-2 py-1.5 text-right bg-amber-500/10 text-[10px]">{fmt(totais.total_arqia)}</td>
+                      <td className="px-2 py-1.5 text-right text-[10px]">{totais.total_linhas}</td>
+                      <td className="px-2 py-1.5 text-right text-primary text-[10px]">{fmt(totais.total_geral)}</td>
                       <td className="px-2 py-1.5" colSpan={3}></td>
                     </tr>
                   )}
@@ -401,51 +483,40 @@ const FaturamentoB2BTab = () => {
 
         {/* ===== TAB 2: DASHBOARD CRESCIMENTO ===== */}
         <TabsContent value="dashboard" className="space-y-6">
-          {/* Metric Cards - bigger */}
+          {/* Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="card-shadow p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Faturamento Mês Atual</span>
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-2xl font-bold">{fmtCompact(totalMesAtual)}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">{mesesDesc[0] || ""}</p>
-            </Card>
-            <Card className="card-shadow p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Mês Anterior</span>
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold">{fmtCompact(totalMesAnterior)}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">{mesAnterior || "N/A"}</p>
-            </Card>
-            <Card className="card-shadow p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Variação</span>
-                {variacao >= 0
-                  ? <TrendingUp className="h-5 w-5 text-emerald-500" />
-                  : <TrendingDown className="h-5 w-5 text-destructive" />
-                }
-              </div>
-              <p className={`text-2xl font-bold ${variacao >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                {variacao >= 0 ? "+" : ""}{variacao.toFixed(1)}%
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                {variacao >= 0
-                  ? <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                  : <ArrowDownRight className="w-3 h-3 text-destructive" />
-                }
-                <span className="text-[10px] text-muted-foreground">vs mês anterior</span>
-              </div>
-            </Card>
-            <Card className="card-shadow p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Empresas Ativas</span>
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-2xl font-bold">{empresasAtivas}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">no mês atual</p>
-            </Card>
+            <StatCard
+              label="Faturamento Mês Atual"
+              value={fmtCompact(totalMesAtual)}
+              icon={DollarSign}
+              accent="primary"
+              subtitle={mesesDesc[0] || ""}
+              trend={`${Math.abs(variacao).toFixed(1)}%`}
+              trendDirection={variacao >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              label="Mês Anterior"
+              value={fmtCompact(totalMesAnterior)}
+              icon={DollarSign}
+              accent="muted"
+              subtitle={mesAnteriorKey || "N/A"}
+            />
+            <StatCard
+              label="Variação"
+              value={`${variacao >= 0 ? "+" : ""}${variacao.toFixed(1)}%`}
+              icon={variacao >= 0 ? TrendingUp : TrendingDown}
+              accent={variacao >= 0 ? "success" : "destructive"}
+              trend={`${Math.abs(variacao).toFixed(1)}%`}
+              trendDirection={variacao >= 0 ? "up" : "down"}
+              subtitle="vs mês anterior"
+            />
+            <StatCard
+              label="Empresas Ativas"
+              value={empresasAtivas}
+              icon={Building2}
+              accent="primary"
+              subtitle="no mês atual"
+            />
           </div>
 
           {/* Area Chart: Overall revenue evolution */}
@@ -468,32 +539,51 @@ const FaturamentoB2BTab = () => {
             </ResponsiveContainer>
           </Card>
 
-          {/* Line Chart: per-company evolution - ALL companies by default */}
+          {/* Line Chart: Top 10 / selected companies */}
           <Card className="card-shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <h3 className="text-base font-semibold">Evolução por Empresa</h3>
-              <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto">
-                {empresas.map((emp, i) => (
-                  <label key={emp} className="flex items-center gap-1.5 text-[10px] cursor-pointer">
-                    <Checkbox
-                      checked={empresasSelecionadas.includes(emp)}
-                      onCheckedChange={() => toggleEmpresa(emp)}
-                      className="h-3 w-3"
-                    />
-                    <span className="truncate max-w-[90px]" style={{ color: CHART_COLORS[i % CHART_COLORS.length] }}>{emp}</span>
-                  </label>
+              <h3 className="text-base font-semibold">Evolução por Empresa (máx. 10)</h3>
+              <Select value="__multi__" onValueChange={(v) => { if (v !== "__multi__") toggleChartEmpresa(v); }}>
+                <SelectTrigger className="w-[280px] h-8 text-xs">
+                  <SelectValue placeholder={`${chartEmpresas.length} empresas selecionadas`}>
+                    {chartEmpresas.length} empresas selecionadas
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {empresas.map(emp => (
+                    <SelectItem key={emp} value={emp}>
+                      <span className="flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full ${chartEmpresas.includes(emp) ? "bg-primary" : "bg-muted"}`} />
+                        {emp}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {chartEmpresas.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {chartEmpresas.map((emp, i) => (
+                  <Badge
+                    key={emp}
+                    variant="outline"
+                    className="text-[9px] cursor-pointer hover:bg-destructive/10"
+                    style={{ borderColor: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length], color: CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length] }}
+                    onClick={() => toggleChartEmpresa(emp)}
+                  >
+                    {emp} ✕
+                  </Badge>
                 ))}
               </div>
-            </div>
-            <ResponsiveContainer width="100%" height={350}>
+            )}
+            <ResponsiveContainer width="100%" height={400}>
               <LineChart data={lineChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tickFormatter={v => fmtCompact(v)} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Legend />
-                {empresasSelecionadas.map((emp) => (
-                  <Line key={emp} type="monotone" dataKey={emp} stroke={CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length]} strokeWidth={1.5} dot={false} name={emp} />
+                {chartEmpresas.map((emp) => (
+                  <Line key={emp} type="monotone" dataKey={emp} stroke={CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length]} strokeWidth={2} dot={false} name={emp} />
                 ))}
               </LineChart>
             </ResponsiveContainer>
@@ -501,7 +591,7 @@ const FaturamentoB2BTab = () => {
 
           {/* Bar Chart: Current vs Previous month */}
           <Card className="card-shadow p-6">
-            <h3 className="text-base font-semibold mb-4">Comparativo: {mesesDesc[0]} vs {mesAnterior}</h3>
+            <h3 className="text-base font-semibold mb-4">Comparativo: {mesesDesc[0]} vs {mesAnteriorKey}</h3>
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={barChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
