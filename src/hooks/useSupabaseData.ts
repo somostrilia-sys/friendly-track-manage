@@ -8,7 +8,7 @@ import type {
   DbInstalacao, DbControleKM, DbFechamentoTecnico, DbFechamentoInstalacao,
   DbChamadoSuporte, DbAgendamento, DbDespacho, DbControleUnidade,
   DbUnidadeRastreador, DbUnidadeChip, DbConfiguracaoDispositivo, DbConfigChecklist,
-  DbEscalonamento, DbFornecedor,
+  DbEscalonamento, DbFornecedor, DbFaturamentoB2B,
 } from "@/types/database";
 
 // Generic helper
