@@ -13,6 +13,7 @@ import Estoque from "@/pages/trackit/Estoque";
 import Pedidos from "@/pages/trackit/Pedidos";
 import LinhasSIM from "@/pages/trackit/LinhasSIM";
 import FinanceiroPage from "@/pages/objetivo/Financeiro";
+import FaturamentoB2BPage from "@/pages/trackit/FaturamentoB2B";
 import Tecnicos from "@/pages/objetivo/Tecnicos";
 import Servicos from "@/pages/objetivo/Servicos";
 import Manutencoes from "@/pages/objetivo/Manutencoes";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/trackit/pedidos" element={<Pedidos />} />
               <Route path="/trackit/linhas-sim" element={<LinhasSIM />} />
               <Route path="/trackit/financeiro" element={<FinanceiroPage />} />
+              <Route path="/trackit/faturamento-b2b" element={<FaturamentoB2BPage />} />
               <Route path="/objetivo/tecnicos" element={<Tecnicos />} />
               <Route path="/objetivo/servicos" element={<Servicos />} />
               <Route path="/objetivo/manutencoes" element={<Manutencoes />} />

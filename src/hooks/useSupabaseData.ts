@@ -8,7 +8,7 @@ import type {
   DbInstalacao, DbControleKM, DbFechamentoTecnico, DbFechamentoInstalacao,
   DbChamadoSuporte, DbAgendamento, DbDespacho, DbControleUnidade,
   DbUnidadeRastreador, DbUnidadeChip, DbConfiguracaoDispositivo, DbConfigChecklist,
-  DbEscalonamento, DbFornecedor,
+  DbEscalonamento, DbFornecedor, DbFaturamentoB2B,
 } from "@/types/database";
 
 // Generic helper
@@ -330,7 +330,13 @@ export const useInsertFornecedor = () => useSupabaseInsert<DbFornecedor>("fornec
 export const useUpdateFornecedor = () => useSupabaseUpdate<DbFornecedor>("fornecedores", "fornecedores");
 export const useDeleteFornecedor = () => useSupabaseDelete("fornecedores", "fornecedores");
 
-// ============ UNIDADES COM DETALHES ============
+// ============ FATURAMENTO B2B ============
+export const useFaturamentoB2B = () => useSupabaseQuery<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
+export const useInsertFaturamentoB2B = () => useSupabaseInsert<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
+export const useUpdateFaturamentoB2B = () => useSupabaseUpdate<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
+export const useDeleteFaturamentoB2B = () => useSupabaseDelete("faturamento_b2b", "faturamento_b2b");
+
+
 export const useUnidadesCompletas = () => {
   return useQuery({
     queryKey: ["unidades_completas"],
