@@ -13,6 +13,7 @@ import Estoque from "@/pages/trackit/Estoque";
 import Pedidos from "@/pages/trackit/Pedidos";
 import LinhasSIM from "@/pages/trackit/LinhasSIM";
 import FinanceiroPage from "@/pages/objetivo/Financeiro";
+import FaturamentoB2BPage from "@/pages/trackit/FaturamentoB2B";
 import Tecnicos from "@/pages/objetivo/Tecnicos";
 import Servicos from "@/pages/objetivo/Servicos";
 import Manutencoes from "@/pages/objetivo/Manutencoes";
