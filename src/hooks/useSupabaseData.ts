@@ -8,7 +8,7 @@ import type {
   DbInstalacao, DbControleKM, DbFechamentoTecnico, DbFechamentoInstalacao,
   DbChamadoSuporte, DbAgendamento, DbDespacho, DbControleUnidade,
   DbUnidadeRastreador, DbUnidadeChip, DbConfiguracaoDispositivo, DbConfigChecklist,
-  DbEscalonamento,
+  DbEscalonamento, DbFornecedor,
 } from "@/types/database";
 
 // Generic helper
@@ -323,6 +323,12 @@ export const useConfigDispositivosComChecklist = () => {
 export const useEscalonamentos = () => useSupabaseQuery<DbEscalonamento>("escalonamentos", "escalonamentos");
 export const useInsertEscalonamento = () => useSupabaseInsert<DbEscalonamento>("escalonamentos", "escalonamentos");
 export const useUpdateEscalonamento = () => useSupabaseUpdate<DbEscalonamento>("escalonamentos", "escalonamentos");
+
+// ============ FORNECEDORES ============
+export const useFornecedores = () => useSupabaseQuery<DbFornecedor>("fornecedores", "fornecedores");
+export const useInsertFornecedor = () => useSupabaseInsert<DbFornecedor>("fornecedores", "fornecedores");
+export const useUpdateFornecedor = () => useSupabaseUpdate<DbFornecedor>("fornecedores", "fornecedores");
+export const useDeleteFornecedor = () => useSupabaseDelete("fornecedores", "fornecedores");
 
 // ============ UNIDADES COM DETALHES ============
 export const useUnidadesCompletas = () => {

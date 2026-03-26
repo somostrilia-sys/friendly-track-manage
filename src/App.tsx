@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/trackit/Clientes";
+import Fornecedores from "@/pages/trackit/Fornecedores";
 import Estoque from "@/pages/trackit/Estoque";
 import Pedidos from "@/pages/trackit/Pedidos";
 import LinhasSIM from "@/pages/trackit/LinhasSIM";
@@ -54,6 +55,7 @@ const App = () => (
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trackit/clientes" element={<Clientes />} />
+              <Route path="/trackit/fornecedores" element={<Fornecedores />} />
               <Route path="/trackit/estoque" element={<Estoque />} />
               <Route path="/trackit/pedidos" element={<Pedidos />} />
               <Route path="/trackit/linhas-sim" element={<LinhasSIM />} />
