@@ -48,6 +48,8 @@ const Clientes = () => {
   const [detalhe, setDetalhe] = useState<ClienteComHistorico | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [novoContato, setNovoContato] = useState({ tipo: "", descricao: "" });
+  const [pagina, setPagina] = useState(1);
+  const porPagina = 50;
 
   const filtrado = (clientes as ClienteComHistorico[]).filter(c => {
     const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase()) || c.cnpj.includes(busca);
@@ -150,7 +152,7 @@ const Clientes = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtrado.map(c => (
+            {filtrado.slice((pagina - 1) * porPagina, pagina * porPagina).map(c => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell><Badge variant="secondary">{c.tipo === "empresa" ? "Empresa" : "Associacao"}</Badge></TableCell>
@@ -171,6 +173,20 @@ const Clientes = () => {
             ))}
           </TableBody>
         </Table>
+        {filtrado.length > porPagina && (
+          <div className="p-4 border-t flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Mostrando {((pagina - 1) * porPagina) + 1}-{Math.min(pagina * porPagina, filtrado.length)} de {filtrado.length}
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>Anterior</Button>
+              <Button size="sm" variant="outline" disabled={pagina * porPagina >= filtrado.length} onClick={() => setPagina(p => p + 1)}>Proximo</Button>
+            </div>
+          </div>
+        )}
+        <div className="p-4 border-t">
+          <span className="text-sm text-muted-foreground">Total: {filtrado.length} clientes</span>
+        </div>
       </Card>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
