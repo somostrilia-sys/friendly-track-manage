@@ -374,6 +374,31 @@ export interface DbFornecedor {
   updated_at: string;
 }
 
+export interface DbFaturamentoB2B {
+  id: string;
+  mes_referencia: string;
+  data_fechamento: string;
+  empresa: string;
+  qtd_placas: number;
+  valor_por_placa: number;
+  total_plataforma: number;
+  qtd_linhas_smartsim: number;
+  valor_smartsim: number;
+  total_smartsim: number;
+  qtd_linhas_linkfield: number;
+  valor_linkfield: number;
+  total_linkfield: number;
+  qtd_linhas_arqia: number;
+  valor_arqia: number;
+  total_arqia: number;
+  total_linhas: number;
+  total_geral: number;
+  situacao: string;
+  observacao: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DbEscalonamento {
   id: string;
   codigo: string;
