@@ -9,16 +9,44 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B } from "@/hooks/useSupabaseData";
-import { Plus, Download, BarChart3, Calendar } from "lucide-react";
+import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
 import type { DbFaturamentoB2B } from "@/types/database";
 import * as XLSX from "xlsx";
 import { addDays, format, parseISO } from "date-fns";
+import {
+  LineChart, Line, BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+
+const CHART_COLORS = [
+  "hsl(var(--primary))", "#22d3ee", "#f59e0b", "#10b981", "#ef4444",
+  "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16", "#f97316",
+  "#6366f1", "#14b8a6", "#e11d48", "#a855f7", "#0ea5e9",
+];
 
 const fmt = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toFixed(2)}` : "R$ 0,00";
 const fmtNum = (v: number | null | undefined) => v != null ? Number(v) : 0;
+const fmtCompact = (v: number) => {
+  if (v >= 1000000) return `R$ ${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000) return `R$ ${(v / 1000).toFixed(1)}K`;
+  return `R$ ${v.toFixed(2)}`;
+};
+
+const MONTH_ORDER: Record<string, number> = {
+  JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
+  JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
+};
+
+function sortMeses(a: string, b: string) {
+  const [mA, yA] = a.split(" ");
+  const [mB, yB] = b.split(" ");
+  return ((parseInt(yA) || 0) * 100 + (MONTH_ORDER[mA] || 0)) - ((parseInt(yB) || 0) * 100 + (MONTH_ORDER[mB] || 0));
+}
 
 const emptyForm: Record<string, any> = {
   mes_referencia: "", data_fechamento: "", empresa: "", qtd_placas: 0, valor_por_placa: 0,
@@ -36,31 +64,36 @@ const FaturamentoB2BPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<DbFaturamentoB2B | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
+  const [empresasSelecionadas, setEmpresasSelecionadas] = useState<string[]>([]);
 
+  // Sorted months (chronological)
   const meses = useMemo(() => {
     const unique = [...new Set(registros.map(r => r.mes_referencia))];
-    // Sort chronologically - parse month names
-    const monthOrder: Record<string, number> = {
-      JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
-      JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
-    };
-    unique.sort((a, b) => {
-      const [mA, yA] = a.split(" ");
-      const [mB, yB] = b.split(" ");
-      const dateA = (parseInt(yA) || 0) * 100 + (monthOrder[mA] || 0);
-      const dateB = (parseInt(yB) || 0) * 100 + (monthOrder[mB] || 0);
-      return dateB - dateA;
-    });
+    unique.sort(sortMeses);
     return unique;
   }, [registros]);
 
-  // Auto-select latest month
-  const mesAtual = mesSelecionado || meses[0] || "";
+  // Descending for dropdown
+  const mesesDesc = useMemo(() => [...meses].reverse(), [meses]);
+
+  const mesAtual = mesSelecionado || mesesDesc[0] || "";
 
   const registrosMes = useMemo(
     () => registros.filter(r => r.mes_referencia === mesAtual),
     [registros, mesAtual]
   );
+
+  const empresas = useMemo(() => [...new Set(registros.map(r => r.empresa))].sort(), [registros]);
+
+  // Initialize selected companies (top 5 by latest total)
+  useMemo(() => {
+    if (empresasSelecionadas.length === 0 && empresas.length > 0 && mesesDesc[0]) {
+      const latest = registros.filter(r => r.mes_referencia === mesesDesc[0]);
+      const top5 = latest.sort((a, b) => fmtNum(b.total_geral) - fmtNum(a.total_geral)).slice(0, 5).map(r => r.empresa);
+      setEmpresasSelecionadas(top5);
+    }
+  }, [empresas, mesesDesc, registros]);
 
   const totais = useMemo(() => {
     return registrosMes.reduce(
@@ -79,6 +112,96 @@ const FaturamentoB2BPage = () => {
       { qtd_placas: 0, total_plataforma: 0, qtd_linhas_smartsim: 0, total_smartsim: 0, qtd_linhas_linkfield: 0, total_linkfield: 0, qtd_linhas_arqia: 0, total_arqia: 0, total_linhas: 0, total_geral: 0 }
     );
   }, [registrosMes]);
+
+  // ===== Dashboard data =====
+  const mesAtualIdx = meses.indexOf(mesesDesc[0]);
+  const mesAnterior = mesAtualIdx > 0 ? meses[mesAtualIdx - 1] : "";
+
+  const totalMesAtual = useMemo(() => {
+    return registros.filter(r => r.mes_referencia === mesesDesc[0]).reduce((s, r) => s + fmtNum(r.total_geral), 0);
+  }, [registros, mesesDesc]);
+
+  const totalMesAnterior = useMemo(() => {
+    if (!mesAnterior) return 0;
+    return registros.filter(r => r.mes_referencia === mesAnterior).reduce((s, r) => s + fmtNum(r.total_geral), 0);
+  }, [registros, mesAnterior]);
+
+  const variacao = totalMesAnterior > 0 ? ((totalMesAtual - totalMesAnterior) / totalMesAnterior * 100) : 0;
+
+  const empresasAtivas = useMemo(() => {
+    return new Set(registros.filter(r => r.mes_referencia === mesesDesc[0]).map(r => r.empresa)).size;
+  }, [registros, mesesDesc]);
+
+  // Growth ranking per company
+  const growthData = useMemo(() => {
+    if (!mesesDesc[0] || !mesAnterior) return [];
+    const atual = registros.filter(r => r.mes_referencia === mesesDesc[0]);
+    const anterior = registros.filter(r => r.mes_referencia === mesAnterior);
+    const anteriorMap = new Map(anterior.map(r => [r.empresa, fmtNum(r.total_geral)]));
+
+    return atual.map(r => {
+      const prev = anteriorMap.get(r.empresa) || 0;
+      const curr = fmtNum(r.total_geral);
+      const growth = prev > 0 ? ((curr - prev) / prev * 100) : (curr > 0 ? 100 : 0);
+      return { empresa: r.empresa, atual: curr, anterior: prev, growth };
+    }).sort((a, b) => b.growth - a.growth);
+  }, [registros, mesesDesc, mesAnterior]);
+
+  const topCrescimento = growthData.filter(d => d.growth > 0);
+  const estagnadas = growthData.filter(d => d.growth <= 0);
+
+  // Multi-line chart data (evolution per company)
+  const lineChartData = useMemo(() => {
+    const filtered = empresasSelecionadas.length > 0
+      ? registros.filter(r => empresasSelecionadas.includes(r.empresa))
+      : registros;
+
+    return meses.map(mes => {
+      const row: Record<string, any> = { mes: mes.substring(0, 3) + " " + mes.split(" ")[1]?.substring(2) };
+      empresasSelecionadas.forEach(emp => {
+        const rec = filtered.find(r => r.mes_referencia === mes && r.empresa === emp);
+        row[emp] = rec ? fmtNum(rec.total_geral) : 0;
+      });
+      return row;
+    });
+  }, [registros, meses, empresasSelecionadas]);
+
+  // Bar chart: current vs previous month
+  const barChartData = useMemo(() => {
+    if (!mesesDesc[0] || !mesAnterior) return [];
+    return growthData.slice(0, 15).map(d => ({
+      empresa: d.empresa.length > 12 ? d.empresa.substring(0, 12) + "..." : d.empresa,
+      "Mes Atual": d.atual,
+      "Mes Anterior": d.anterior,
+    }));
+  }, [growthData, mesesDesc, mesAnterior]);
+
+  // Area chart: total revenue evolution
+  const areaChartData = useMemo(() => {
+    return meses.map(mes => {
+      const total = registros.filter(r => r.mes_referencia === mes).reduce((s, r) => s + fmtNum(r.total_geral), 0);
+      return {
+        mes: mes.substring(0, 3) + " " + mes.split(" ")[1]?.substring(2),
+        total,
+      };
+    });
+  }, [registros, meses]);
+
+  // Individual company evolution
+  const empresaEvolucao = useMemo(() => {
+    if (empresaFiltro === "all") return [];
+    return meses.map(mes => {
+      const rec = registros.find(r => r.mes_referencia === mes && r.empresa === empresaFiltro);
+      return {
+        mes: mes.substring(0, 3) + " " + mes.split(" ")[1]?.substring(2),
+        placas: rec ? fmtNum(rec.qtd_placas) : 0,
+        smartsim: rec ? fmtNum(rec.qtd_linhas_smartsim) : 0,
+        linkfield: rec ? fmtNum(rec.qtd_linhas_linkfield) : 0,
+        arqia: rec ? fmtNum(rec.qtd_linhas_arqia) : 0,
+        total: rec ? fmtNum(rec.total_geral) : 0,
+      };
+    });
+  }, [registros, meses, empresaFiltro]);
 
   const setField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -99,14 +222,12 @@ const FaturamentoB2BPage = () => {
   const salvar = async () => {
     if (!form.empresa || !form.mes_referencia) { toast.error("Preencha empresa e mes de referencia"); return; }
     const payload = { ...form };
-    // Auto-calculate totals
     payload.total_plataforma = Number(payload.qtd_placas) * Number(payload.valor_por_placa);
     payload.total_smartsim = Number(payload.qtd_linhas_smartsim) * Number(payload.valor_smartsim);
     payload.total_linkfield = Number(payload.qtd_linhas_linkfield) * Number(payload.valor_linkfield);
     payload.total_arqia = Number(payload.qtd_linhas_arqia) * Number(payload.valor_arqia);
     payload.total_linhas = Number(payload.qtd_linhas_smartsim) + Number(payload.qtd_linhas_linkfield) + Number(payload.qtd_linhas_arqia);
     payload.total_geral = payload.total_plataforma + payload.total_smartsim + payload.total_linkfield + payload.total_arqia;
-
     try {
       if (editando) {
         await updateMut.mutateAsync({ id: editando.id, ...payload });
@@ -116,33 +237,21 @@ const FaturamentoB2BPage = () => {
         toast.success("Registro criado!");
       }
       setModalOpen(false);
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const exportar = () => {
     const rows = registrosMes.map(r => ({
-      "Mes Referencia": r.mes_referencia,
-      "Data Fechamento": r.data_fechamento,
+      "Mes Referencia": r.mes_referencia, "Data Fechamento": r.data_fechamento,
       "Vencimento": r.data_fechamento ? format(addDays(parseISO(r.data_fechamento), 3), "dd/MM/yyyy") : "",
-      "Empresa": r.empresa,
-      "Qtd Placas": r.qtd_placas,
-      "Valor/Placa": r.valor_por_placa,
-      "Total Plataforma": r.total_plataforma,
-      "Qtd SmartSim": r.qtd_linhas_smartsim,
-      "Valor SmartSim": r.valor_smartsim,
-      "Total SmartSim": r.total_smartsim,
-      "Qtd Linkfield": r.qtd_linhas_linkfield,
-      "Valor Linkfield": r.valor_linkfield,
-      "Total Linkfield": r.total_linkfield,
-      "Qtd Arqia": r.qtd_linhas_arqia,
-      "Valor Arqia": r.valor_arqia,
-      "Total Arqia": r.total_arqia,
-      "Total Linhas": r.total_linhas,
-      "Total Geral": r.total_geral,
-      "Situacao": r.situacao,
-      "OBS": r.observacao,
+      "Empresa": r.empresa, "Qtd Placas": r.qtd_placas, "Valor/Placa": r.valor_por_placa,
+      "Total Plataforma": r.total_plataforma, "Qtd SmartSim": r.qtd_linhas_smartsim,
+      "Valor SmartSim": r.valor_smartsim, "Total SmartSim": r.total_smartsim,
+      "Qtd Linkfield": r.qtd_linhas_linkfield, "Valor Linkfield": r.valor_linkfield,
+      "Total Linkfield": r.total_linkfield, "Qtd Arqia": r.qtd_linhas_arqia,
+      "Valor Arqia": r.valor_arqia, "Total Arqia": r.total_arqia,
+      "Total Linhas": r.total_linhas, "Total Geral": r.total_geral,
+      "Situacao": r.situacao, "OBS": r.observacao,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -163,6 +272,12 @@ const FaturamentoB2BPage = () => {
     return <Badge variant={map[sit?.toLowerCase()] || "secondary"}>{sit || "--"}</Badge>;
   };
 
+  const toggleEmpresa = (emp: string) => {
+    setEmpresasSelecionadas(prev =>
+      prev.includes(emp) ? prev.filter(e => e !== emp) : [...prev, emp]
+    );
+  };
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
@@ -177,9 +292,10 @@ const FaturamentoB2BPage = () => {
       <Tabs defaultValue="fechamento" className="w-full">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="fechamento"><Calendar className="w-4 h-4 mr-1" /> Fechamento Mensal</TabsTrigger>
-          <TabsTrigger value="resumo"><BarChart3 className="w-4 h-4 mr-1" /> Resumo</TabsTrigger>
+          <TabsTrigger value="dashboard"><BarChart3 className="w-4 h-4 mr-1" /> Dashboard Crescimento</TabsTrigger>
         </TabsList>
 
+        {/* ===== TAB 1: FECHAMENTO MENSAL ===== */}
         <TabsContent value="fechamento">
           <Card className="card-shadow">
             <div className="p-4 border-b flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
@@ -188,7 +304,7 @@ const FaturamentoB2BPage = () => {
                 <Select value={mesAtual} onValueChange={setMesSelecionado}>
                   <SelectTrigger className="w-[220px]"><SelectValue placeholder="Selecione o mes" /></SelectTrigger>
                   <SelectContent>
-                    {meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    {mesesDesc.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -248,7 +364,6 @@ const FaturamentoB2BPage = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {/* Summary row */}
                   {registrosMes.length > 0 && (
                     <TableRow className="bg-muted/50 font-bold border-t-2">
                       <TableCell colSpan={3} className="text-right">TOTAIS</TableCell>
@@ -278,47 +393,209 @@ const FaturamentoB2BPage = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="resumo">
+        {/* ===== TAB 2: DASHBOARD CRESCIMENTO ===== */}
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Faturamento Mes Atual"
+              value={fmtCompact(totalMesAtual)}
+              icon={DollarSign}
+              accent="primary"
+              subtitle={mesesDesc[0] || ""}
+            />
+            <StatCard
+              label="Faturamento Mes Anterior"
+              value={fmtCompact(totalMesAnterior)}
+              icon={DollarSign}
+              accent="muted"
+              subtitle={mesAnterior || "N/A"}
+            />
+            <StatCard
+              label="Variacao"
+              value={`${variacao >= 0 ? "+" : ""}${variacao.toFixed(1)}%`}
+              icon={variacao >= 0 ? TrendingUp : TrendingDown}
+              accent={variacao >= 0 ? "success" : "destructive"}
+              trend={`${Math.abs(variacao).toFixed(1)}%`}
+              trendDirection={variacao >= 0 ? "up" : "down"}
+            />
+            <StatCard
+              label="Empresas Ativas"
+              value={empresasAtivas}
+              icon={Building2}
+              accent="primary"
+              subtitle="no mes atual"
+            />
+          </div>
+
+          {/* Area Chart: Overall revenue evolution */}
           <Card className="card-shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Resumo por Mes</h3>
-            <div className="overflow-x-auto">
+            <h3 className="text-lg font-semibold mb-4">Evolucao Receita Total (23 meses)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={areaChartData}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tickFormatter={v => fmtCompact(v)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="url(#colorTotal)" strokeWidth={2} name="Total Geral" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Line Chart: per-company evolution */}
+          <Card className="card-shadow p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <h3 className="text-lg font-semibold">Evolucao por Empresa</h3>
+              <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto">
+                {empresas.map((emp, i) => (
+                  <label key={emp} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <Checkbox
+                      checked={empresasSelecionadas.includes(emp)}
+                      onCheckedChange={() => toggleEmpresa(emp)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="truncate max-w-[100px]" style={{ color: CHART_COLORS[i % CHART_COLORS.length] }}>{emp}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={lineChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tickFormatter={v => fmtCompact(v)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Legend />
+                {empresasSelecionadas.map((emp, i) => (
+                  <Line key={emp} type="monotone" dataKey={emp} stroke={CHART_COLORS[empresas.indexOf(emp) % CHART_COLORS.length]} strokeWidth={2} dot={false} name={emp} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Bar Chart: Current vs Previous month */}
+          <Card className="card-shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Comparativo: {mesesDesc[0]} vs {mesAnterior}</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={barChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="empresa" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-30} textAnchor="end" height={60} />
+                <YAxis tickFormatter={v => fmtCompact(v)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Legend />
+                <Bar dataKey="Mes Anterior" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Mes Atual" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Rankings side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Crescimento */}
+            <Card className="card-shadow">
+              <div className="p-4 border-b">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-emerald-500" /> Top Empresas em Crescimento
+                </h3>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mes</TableHead>
-                    <TableHead className="text-right">Empresas</TableHead>
-                    <TableHead className="text-right">Total Plataforma</TableHead>
-                    <TableHead className="text-right">Total SmartSim</TableHead>
-                    <TableHead className="text-right">Total Linkfield</TableHead>
-                    <TableHead className="text-right">Total Arqia</TableHead>
-                    <TableHead className="text-right">Total Geral</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead className="text-right">Mes Anterior</TableHead>
+                    <TableHead className="text-right">Mes Atual</TableHead>
+                    <TableHead className="text-right">Crescimento</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {meses.map(mes => {
-                    const regs = registros.filter(r => r.mes_referencia === mes);
-                    const t = regs.reduce((a, r) => ({
-                      plat: a.plat + fmtNum(r.total_plataforma),
-                      ss: a.ss + fmtNum(r.total_smartsim),
-                      lf: a.lf + fmtNum(r.total_linkfield),
-                      aq: a.aq + fmtNum(r.total_arqia),
-                      total: a.total + fmtNum(r.total_geral),
-                    }), { plat: 0, ss: 0, lf: 0, aq: 0, total: 0 });
-                    return (
-                      <TableRow key={mes} className="cursor-pointer hover:bg-muted/50" onClick={() => { setMesSelecionado(mes); }}>
-                        <TableCell className="font-medium">{mes}</TableCell>
-                        <TableCell className="text-right">{regs.length}</TableCell>
-                        <TableCell className="text-right">{fmt(t.plat)}</TableCell>
-                        <TableCell className="text-right">{fmt(t.ss)}</TableCell>
-                        <TableCell className="text-right">{fmt(t.lf)}</TableCell>
-                        <TableCell className="text-right">{fmt(t.aq)}</TableCell>
-                        <TableCell className="text-right font-bold text-primary">{fmt(t.total)}</TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {topCrescimento.slice(0, 10).map(d => (
+                    <TableRow key={d.empresa}>
+                      <TableCell className="font-medium">{d.empresa}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{fmt(d.anterior)}</TableCell>
+                      <TableCell className="text-right text-sm">{fmt(d.atual)}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">+{d.growth.toFixed(1)}%</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {topCrescimento.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Sem dados</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
+            </Card>
+
+            {/* Estagnadas */}
+            <Card className="card-shadow">
+              <div className="p-4 border-b">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                  <ArrowDownRight className="w-4 h-4 text-destructive" /> Empresas Estagnadas / Queda
+                </h3>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead className="text-right">Mes Anterior</TableHead>
+                    <TableHead className="text-right">Mes Atual</TableHead>
+                    <TableHead className="text-right">Variacao</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {estagnadas.slice(0, 10).map(d => (
+                    <TableRow key={d.empresa}>
+                      <TableCell className="font-medium">{d.empresa}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{fmt(d.anterior)}</TableCell>
+                      <TableCell className="text-right text-sm">{fmt(d.atual)}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="destructive">{d.growth.toFixed(1)}%</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {estagnadas.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Sem dados</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+
+          {/* Individual company filter */}
+          <Card className="card-shadow p-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+              <h3 className="text-lg font-semibold">Evolucao Individual</h3>
+              <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
+                <SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione uma empresa" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Selecione uma empresa</SelectItem>
+                  {empresas.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+            {empresaFiltro !== "all" && empresaEvolucao.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={empresaEvolucao}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tickFormatter={v => String(v)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="placas" stroke="hsl(var(--primary))" strokeWidth={2} name="Placas" />
+                  <Line type="monotone" dataKey="smartsim" stroke="#22d3ee" strokeWidth={2} name="SmartSim" />
+                  <Line type="monotone" dataKey="linkfield" stroke="#f59e0b" strokeWidth={2} name="Linkfield" />
+                  <Line type="monotone" dataKey="arqia" stroke="#10b981" strokeWidth={2} name="Arqia" />
+                  <Line type="monotone" dataKey="total" stroke="#ef4444" strokeWidth={2} name="Total (R$)" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">Selecione uma empresa para ver a evolucao detalhada</p>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
