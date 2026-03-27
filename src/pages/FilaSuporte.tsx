@@ -12,6 +12,7 @@ import type { DbChamadoSuporte } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, Headphones, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const origemMap: Record<string, string> = { cobranca: "Cobrança", comercial: "Comercial", tecnico: "Técnico", cliente: "Cliente" };
