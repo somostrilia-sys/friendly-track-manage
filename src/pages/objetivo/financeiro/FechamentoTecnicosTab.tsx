@@ -12,6 +12,7 @@ import { useFinanceiroCompleto, useInsertFinanceiro, useUpdateFinanceiro, useTec
 import type { DbFinanceiro, DbFinanceiroServico } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, CheckCircle, Clock, Plus, Upload, Eye } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusStyles: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
