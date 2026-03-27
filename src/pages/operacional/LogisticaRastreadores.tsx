@@ -13,6 +13,7 @@ import type { DbDespacho } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Package, Truck, CheckCircle, Clock, Plus, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 interface RastreadorImport { id: string; imei: string; simNumber: string; modelo: string; usuarioDestino: string; dataCadastro: string; }
