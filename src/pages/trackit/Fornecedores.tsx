@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useFornecedores, useInsertFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2, Upload, Download } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { DbFornecedor } from "@/types/database";
 import * as XLSX from "xlsx";
