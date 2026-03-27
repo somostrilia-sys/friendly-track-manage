@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTarefas, useInsertTarefa, useUpdateTarefa } from "@/hooks/useSupabaseData";
 import type { DbTarefa } from "@/types/database";
-import { Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { Plus, CheckCircle, Clock, Loader2, Inbox } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const prioridadeStyles: Record<string, string> = {
