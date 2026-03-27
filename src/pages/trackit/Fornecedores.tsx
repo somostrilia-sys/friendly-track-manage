@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useFornecedores, useInsertFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/useSupabaseData";
-import { Plus, Search, Eye, Pencil, Trash2, Upload, Download } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Trash2, Upload, Download, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -24,6 +24,19 @@ const emptyForm: Record<string, any> = {
   nome: "", razao_social: "", cnpj_cpf: "", tipo_fornecimento: "", valor_chip: "",
   endereco: "", telefone: "", email: "", responsavel: "", status: "ativo",
 };
+
+function getAvatarColor(name: string): string {
+  const colors = [
+    "bg-primary/15 text-primary",
+    "bg-success/15 text-success",
+    "bg-warning/15 text-warning",
+    "bg-destructive/15 text-destructive",
+    "bg-accent/15 text-accent",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
 
 const Fornecedores = () => {
   const { data: fornecedores = [], isLoading } = useFornecedores();
@@ -133,14 +146,14 @@ const Fornecedores = () => {
 
   if (isLoading) return (
     <div className="space-y-8">
-      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores" />
-      <TableSkeleton rows={6} cols={8} />
+      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores e parceiros" />
+      <TableSkeleton rows={6} cols={7} />
     </div>
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores">
+      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores e parceiros">
         <div className="flex gap-2">
           <Button variant="outline" onClick={downloadTemplate}><Download className="w-4 h-4 mr-2" /> Template</Button>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar</Button>
@@ -150,7 +163,7 @@ const Fornecedores = () => {
       </PageHeader>
 
       <Card className="card-shadow">
-        <div className="p-4 border-b flex flex-col md:flex-row gap-3">
+        <div className="p-4 border-b border-border/30 flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome ou CNPJ/CPF..." className="pl-9" value={busca} onChange={e => setBusca(e.target.value)} />
@@ -163,36 +176,66 @@ const Fornecedores = () => {
             ))}
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead><TableHead>Razao Social</TableHead><TableHead>CNPJ/CPF</TableHead>
-              <TableHead>Tipo Fornecimento</TableHead><TableHead>Telefone</TableHead><TableHead>Email</TableHead>
-              <TableHead>Status</TableHead><TableHead>Acoes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrado.map(f => (
-              <TableRow key={f.id}>
-                <TableCell className="font-medium">{f.nome}</TableCell>
-                <TableCell className="text-sm">{f.razao_social || "--"}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{f.cnpj_cpf}</TableCell>
-                <TableCell><Badge variant="secondary">{f.tipo_fornecimento || "--"}</Badge></TableCell>
-                <TableCell className="text-sm">{f.telefone || "--"}</TableCell>
-                <TableCell className="text-sm">{f.email || "--"}</TableCell>
-                <TableCell><Badge variant={f.status === "ativo" ? "default" : "secondary"}>{f.status === "ativo" ? "Ativo" : "Inativo"}</Badge></TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setDetalhe(f)}><Eye className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => abrirEditar(f)}><Pencil className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => excluir(f.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                  </div>
-                </TableCell>
+
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>CNPJ/CPF</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <div className="p-4 border-t">
+            </TableHeader>
+            <TableBody>
+              {filtrado.map(f => (
+                <TableRow key={f.id} className="group">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ${getAvatarColor(f.nome)}`}>
+                        {f.nome.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{f.nome}</p>
+                        {f.razao_social && <p className="text-xs text-muted-foreground">{f.razao_social}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{f.cnpj_cpf}</TableCell>
+                  <TableCell>
+                    {f.tipo_fornecimento ? (
+                      <span className="rounded-full px-2.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground">{f.tipo_fornecimento}</span>
+                    ) : "--"}
+                  </TableCell>
+                  <TableCell className="text-sm">{f.telefone || "--"}</TableCell>
+                  <TableCell className="text-sm">{f.email || "--"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${f.status === "ativo" ? "bg-success" : "bg-muted-foreground"}`} />
+                      <span className="text-sm">{f.status === "ativo" ? "Ativo" : "Inativo"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end row-actions opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="icon" variant="ghost" onClick={() => setDetalhe(f)}><Eye className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => abrirEditar(f)}><Pencil className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => excluir(f.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+        <div className="p-4 border-t border-border/30">
           <span className="text-sm text-muted-foreground">Total: {filtrado.length} fornecedores</span>
         </div>
       </Card>
@@ -233,18 +276,25 @@ const Fornecedores = () => {
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
-              <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
+              <SheetHeader>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${getAvatarColor(detalhe.nome)}`}>
+                    {detalhe.nome.substring(0, 2).toUpperCase()}
+                  </div>
+                  <SheetTitle>{detalhe.nome}</SheetTitle>
+                </div>
+              </SheetHeader>
               <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted-foreground">Razao Social</span><p className="font-medium">{detalhe.razao_social || "--"}</p></div>
-                  <div><span className="text-muted-foreground">CNPJ/CPF</span><p className="font-medium">{detalhe.cnpj_cpf}</p></div>
-                  <div><span className="text-muted-foreground">Tipo Fornecimento</span><p><Badge variant="secondary">{detalhe.tipo_fornecimento || "--"}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Valor por Chip</span><p className="font-medium">{detalhe.valor_chip != null ? `R$ ${Number(detalhe.valor_chip).toFixed(2)}` : "--"}</p></div>
-                  <div><span className="text-muted-foreground">Status</span><p><Badge variant={detalhe.status === "ativo" ? "default" : "secondary"}>{detalhe.status}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel || "--"}</p></div>
-                  <div><span className="text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone || "--"}</p></div>
-                  <div><span className="text-muted-foreground">Email</span><p className="font-medium">{detalhe.email || "--"}</p></div>
-                  <div className="col-span-2"><span className="text-muted-foreground">Endereco</span><p className="font-medium">{detalhe.endereco || "--"}</p></div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Razao Social</span><p className="font-medium">{detalhe.razao_social || "--"}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">CNPJ/CPF</span><p className="font-medium">{detalhe.cnpj_cpf}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Tipo Fornecimento</span><p><span className="rounded-full px-2.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground">{detalhe.tipo_fornecimento || "--"}</span></p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Valor por Chip</span><p className="font-medium">{detalhe.valor_chip != null ? `R$ ${Number(detalhe.valor_chip).toFixed(2)}` : "--"}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Status</span><p className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${detalhe.status === "ativo" ? "bg-success" : "bg-muted-foreground"}`} />{detalhe.status === "ativo" ? "Ativo" : "Inativo"}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel || "--"}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Telefone</span><p className="font-medium">{detalhe.telefone || "--"}</p></div>
+                  <div className="space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Email</span><p className="font-medium">{detalhe.email || "--"}</p></div>
+                  <div className="col-span-2 space-y-1"><span className="text-xs uppercase tracking-wider text-muted-foreground">Endereco</span><p className="font-medium">{detalhe.endereco || "--"}</p></div>
                 </div>
               </div>
             </>
