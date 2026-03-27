@@ -10,6 +10,7 @@ import type { DbControleUnidade, DbUnidadeRastreador, DbUnidadeChip, DbDespacho 
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Building2, Cpu, Smartphone, DollarSign, Truck, Package } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 const meses = ["01/2024", "02/2024", "03/2024"];
 
