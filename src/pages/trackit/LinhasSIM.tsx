@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLinhasSIM, useInsertLinhaSIM, useClientes } from "@/hooks/useSupabaseData";
 import type { DbLinhaSIM } from "@/types/database";
-import { Plus, Settings, Wifi, WifiOff, Upload, Download } from "lucide-react";
+import { Plus, Settings, Wifi, WifiOff, Upload, Download, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const fornecedores = ["SmartSim", "Linkfield", "Arqia", "Alcon"];
@@ -99,10 +100,15 @@ const LinhasSIM = () => {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Linhas SIM" subtitle="Status das linhas por empresa, ICCID e fornecedor" />
+      <TableSkeleton rows={6} cols={8} />
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader title="Linhas SIM" subtitle="Status das linhas por empresa, ICCID e fornecedor">
         <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template</Button>
         <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar</Button>
@@ -132,43 +138,49 @@ const LinhasSIM = () => {
         </Select>
       </div>
 
-      <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ICCID</TableHead>
-              <TableHead>Operadora</TableHead>
-              <TableHead>Numero</TableHead>
-              <TableHead>Fornecedor</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Veiculo</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ultima Conexao</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrado.map(l => (
-              <TableRow key={l.id}>
-                <TableCell className="font-mono text-sm">{l.iccid}</TableCell>
-                <TableCell>{l.operadora}</TableCell>
-                <TableCell>{l.numero}</TableCell>
-                <TableCell><Badge variant="outline">{l.fornecedor || "--"}</Badge></TableCell>
-                <TableCell>{l.empresa_nome}</TableCell>
-                <TableCell className="font-medium">{l.veiculo}</TableCell>
-                <TableCell>
-                  <Badge variant={l.status === "online" ? "default" : "secondary"}>
-                    <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${l.status === "online" ? "bg-success" : "bg-destructive"}`} />
-                    {l.status === "online" ? "Online" : "Offline"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{l.ultima_conexao}</TableCell>
+      <Card className="card-shadow overflow-hidden">
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ICCID</TableHead>
+                <TableHead>Operadora</TableHead>
+                <TableHead>Numero</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Veiculo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ultima Conexao</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtrado.map(l => (
+                <TableRow key={l.id}>
+                  <TableCell className="font-mono text-sm">{l.iccid}</TableCell>
+                  <TableCell>{l.operadora}</TableCell>
+                  <TableCell>{l.numero}</TableCell>
+                  <TableCell><Badge variant="outline">{l.fornecedor || "--"}</Badge></TableCell>
+                  <TableCell>{l.empresa_nome}</TableCell>
+                  <TableCell className="font-medium">{l.veiculo}</TableCell>
+                  <TableCell>
+                    <Badge variant={l.status === "online" ? "default" : "secondary"}>
+                      <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${l.status === "online" ? "bg-success" : "bg-destructive"}`} />
+                      {l.status === "online" ? "Online" : "Offline"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{l.ultima_conexao}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
 
-      {/* Modal Nova Linha */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nova Linha SIM</DialogTitle></DialogHeader>
@@ -209,7 +221,6 @@ const LinhasSIM = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal API */}
       <Dialog open={apiOpen} onOpenChange={setApiOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Painel de Integracao API</DialogTitle></DialogHeader>

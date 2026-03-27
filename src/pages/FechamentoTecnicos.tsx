@@ -9,6 +9,7 @@ import type { DbFechamentoTecnico, DbFechamentoInstalacao } from "@/types/databa
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, FileText, Send, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
@@ -48,7 +49,12 @@ const FechamentoTecnicosPage = () => {
     toast.success("Etiqueta copiada para área de transferência!");
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Fechamento Técnicos" subtitle="Fechamento financeiro por prestador" />
+      <TableSkeleton rows={5} cols={9} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -10,6 +10,7 @@ import { useServicos, useInsertServico, useTecnicos, useClientes } from "@/hooks
 import type { DbServico } from "@/types/database";
 import { MapPin, Navigation, ExternalLink, Plus, Copy, Check } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; class: string }> = {
@@ -61,7 +62,12 @@ const Servicos = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Serviços Agendados" subtitle="Ordens de serviço e acompanhamento" />
+      <TableSkeleton rows={5} cols={6} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

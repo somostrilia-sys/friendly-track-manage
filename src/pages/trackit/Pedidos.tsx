@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { usePedidosCompletos, useInsertPedido, useInsertPedidoItem, useInsertParcela, useClientes } from "@/hooks/useSupabaseData";
 import type { DbPedido, DbPedidoItem, DbParcela } from "@/types/database";
-import { Plus, Eye, Package } from "lucide-react";
+import { Plus, Eye, Package, Inbox } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; class: string }> = {
@@ -93,7 +94,6 @@ const Pedidos = () => {
         codigo_rastreio: "",
       });
 
-      // Insert items
       const itens: { produto_id: string; nome: string; quantidade: number; valor_unitario: number }[] = [];
       if (combo) {
         itens.push({ produto_id: "combo", nome: "Combo Rastreador + Linha + Plataforma", quantidade: qtd, valor_unitario: 350 + 15 + 29.90 });
@@ -111,7 +111,6 @@ const Pedidos = () => {
         await insertItem.mutateAsync({ pedido_id: pedido.id, ...item });
       }
 
-      // Insert parcelas
       const valorParcela = Math.floor(valorTotal / numParcelas);
       for (let i = 0; i < numParcelas; i++) {
         await insertParcela.mutateAsync({
@@ -131,47 +130,61 @@ const Pedidos = () => {
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Pedidos" subtitle="Acompanhamento de pedidos e parcelas" />
+      <TableSkeleton rows={5} cols={7} />
+    </div>
+  );
 
   const peds = pedidos as PedidoCompleto[];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader title="Pedidos" subtitle="Acompanhamento de pedidos e parcelas">
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Pedido</Button>
       </PageHeader>
 
-      <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Pedido</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Itens</TableHead>
-              <TableHead>Valor Total</TableHead>
-              <TableHead>Parcelas</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Acoes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {peds.map(p => (
-              <TableRow key={p.id}>
-                <TableCell className="font-mono font-medium">{p.codigo}</TableCell>
-                <TableCell>{p.cliente_nome}</TableCell>
-                <TableCell className="text-sm">{p.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ")}</TableCell>
-                <TableCell>R$ {p.valor_total.toLocaleString("pt-BR")}</TableCell>
-                <TableCell className="text-sm">{p.parcelas.length}x</TableCell>
-                <TableCell>
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[p.status]?.class}`}>{statusMap[p.status]?.label}</span>
-                </TableCell>
-                <TableCell>
-                  <Button size="icon" variant="ghost" onClick={() => setDetalhe(p)}><Eye className="w-4 h-4" /></Button>
-                </TableCell>
+      <Card className="card-shadow overflow-hidden">
+        {peds.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum pedido encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pedido</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Itens</TableHead>
+                <TableHead>Valor Total</TableHead>
+                <TableHead>Parcelas</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Acoes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {peds.map(p => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-mono font-medium">{p.codigo}</TableCell>
+                  <TableCell>{p.cliente_nome}</TableCell>
+                  <TableCell className="text-sm">{p.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ")}</TableCell>
+                  <TableCell>R$ {p.valor_total.toLocaleString("pt-BR")}</TableCell>
+                  <TableCell className="text-sm">{p.parcelas.length}x</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[p.status]?.class}`}>{statusMap[p.status]?.label}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="row-actions">
+                      <Button size="icon" variant="ghost" onClick={() => setDetalhe(p)}><Eye className="w-4 h-4" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
 
       {/* Modal Novo Pedido */}
@@ -219,10 +232,6 @@ const Pedidos = () => {
             </div>
 
             <div><Label>Observacao</Label><Textarea value={observacao} onChange={e => setObservacao(e.target.value)} rows={2} placeholder="Notas sobre o pedido..." /></div>
-
-            <div className="p-3 rounded-lg bg-muted text-sm">
-              <p className="text-muted-foreground text-xs mb-1">Upload de contrato (PDF) sera disponibilizado apos integracao com storage.</p>
-            </div>
 
             {valorTotal > 0 && (
               <div className="p-3 rounded-lg bg-muted text-sm">

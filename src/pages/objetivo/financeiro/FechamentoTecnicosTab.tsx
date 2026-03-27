@@ -12,6 +12,7 @@ import { useFinanceiroCompleto, useInsertFinanceiro, useUpdateFinanceiro, useTec
 import type { DbFinanceiro, DbFinanceiroServico } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, CheckCircle, Clock, Plus, Upload, Eye } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusStyles: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -68,7 +69,7 @@ const FechamentoTecnicosTab = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return <TableSkeleton rows={5} cols={10} />;
 
   return (
     <div className="space-y-6">

@@ -12,6 +12,7 @@ import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -62,7 +63,12 @@ const AcompanhamentoInstalacoes = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Acompanhamento de Instalações" subtitle="Controle de instalações em campo" />
+      <TableSkeleton rows={6} cols={9} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

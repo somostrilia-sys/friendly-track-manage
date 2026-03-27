@@ -196,13 +196,18 @@ const Clientes = () => {
                   <TableCell className="text-sm text-muted-foreground">{c.tipo_servico || "--"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{c.filial || "--"}</TableCell>
                   <TableCell>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                      c.status_acesso === "ativo" ? "bg-success/10 text-success" :
-                      c.status_acesso === "credenciais_enviadas" ? "bg-primary/10 text-primary" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {statusAcessoMap[c.status_acesso]?.label}
-                    </span>
+                    {(() => {
+                      const acesso = (!c.status_acesso || c.status_acesso === "pendente") ? (c.status === "ativo" ? "ativo" : "pendente") : c.status_acesso;
+                      return (
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                          acesso === "ativo" ? "bg-success/10 text-success" :
+                          acesso === "credenciais_enviadas" ? "bg-primary/10 text-primary" :
+                          "bg-muted text-muted-foreground"
+                        }`}>
+                          {statusAcessoMap[acesso]?.label || acesso}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-sm">{c.veiculos_ativos}</TableCell>
                   <TableCell>

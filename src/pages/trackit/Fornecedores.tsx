@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useFornecedores, useInsertFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2, Upload, Download } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { DbFornecedor } from "@/types/database";
 import * as XLSX from "xlsx";
@@ -130,7 +131,12 @@ const Fornecedores = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores" />
+      <TableSkeleton rows={6} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

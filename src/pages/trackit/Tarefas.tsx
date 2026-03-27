@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTarefas, useInsertTarefa, useUpdateTarefa } from "@/hooks/useSupabaseData";
 import type { DbTarefa } from "@/types/database";
-import { Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { Plus, CheckCircle, Clock, Loader2, Inbox } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const prioridadeStyles: Record<string, string> = {
@@ -57,7 +58,12 @@ const Tarefas = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Tarefas" subtitle="Gestão de tarefas por prioridade" />
+      <TableSkeleton rows={4} cols={4} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

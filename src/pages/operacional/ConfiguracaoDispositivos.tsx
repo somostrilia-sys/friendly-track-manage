@@ -10,6 +10,7 @@ import type { DbConfiguracaoDispositivo, DbConfigChecklist } from "@/types/datab
 import { StatCard } from "@/components/StatCard";
 import { Settings, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
@@ -53,7 +54,12 @@ const ConfiguracaoDispositivos = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Configuracao de Dispositivos" subtitle="Registro tecnico e checklist de rastreadores" />
+      <TableSkeleton rows={5} cols={7} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

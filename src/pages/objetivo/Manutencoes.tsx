@@ -11,6 +11,7 @@ import type { DbManutencao } from "@/types/database";
 import { AlertTriangle, Send, WifiOff, Shield, Clock } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const problemaMap: Record<string, string> = { offline: "Offline", falha_gps: "Falha GPS", sem_sinal: "Sem Sinal", bateria_baixa: "Bateria Baixa", violacao: "Violacao" };
@@ -65,7 +66,12 @@ const Manutencoes = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha" />
+      <TableSkeleton rows={6} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

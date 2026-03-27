@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useEquipamentosCompletos, useInsertEquipamento, useInsertMovimentacao, useInsertComodato, useTecnicos } from "@/hooks/useSupabaseData";
 import type { DbEquipamento, DbMovimentacao, DbComodato } from "@/types/database";
-import { Plus, Package, CheckCircle, AlertTriangle, XCircle, Eye, Search, Upload, Download } from "lucide-react";
+import { Plus, Package, CheckCircle, AlertTriangle, XCircle, Eye, Search, Upload, Download, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -130,10 +131,15 @@ const Estoque = () => {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Estoque" subtitle="Rastreadores, sensores e equipamentos" />
+      <TableSkeleton rows={6} cols={9} />
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader title="Estoque" subtitle="Rastreadores, sensores e equipamentos">
         <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
         <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
@@ -156,42 +162,49 @@ const Estoque = () => {
         </div>
       </Card>
 
-      <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Marca</TableHead>
-              <TableHead>Modelo</TableHead>
-              <TableHead>Serial</TableHead>
-              <TableHead>IMEI</TableHead>
-              <TableHead>SIM/ICCID</TableHead>
-              <TableHead>Qtd</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Acoes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrado.map(e => (
-              <TableRow key={e.id}>
-                <TableCell><Badge variant="secondary">{tipoMap[e.tipo] || e.tipo}</Badge></TableCell>
-                <TableCell>{e.marca}</TableCell>
-                <TableCell className="font-medium">{e.modelo}</TableCell>
-                <TableCell className="text-sm text-muted-foreground font-mono">{e.serial}</TableCell>
-                <TableCell className="text-sm text-muted-foreground font-mono">{e.imei || "--"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground font-mono">{e.iccid || e.sim_card || "--"}</TableCell>
-                <TableCell>{e.quantidade}</TableCell>
-                <TableCell><Badge variant={statusMap[e.status]?.variant}>{statusMap[e.status]?.label}</Badge></TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setDetalhe(e)}><Eye className="w-4 h-4" /></Button>
-                    <Button size="sm" variant="outline" onClick={() => abrirComodato(e.id)}>Comodato</Button>
-                  </div>
-                </TableCell>
+      <Card className="card-shadow overflow-hidden">
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum registro encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Marca</TableHead>
+                <TableHead>Modelo</TableHead>
+                <TableHead>Serial</TableHead>
+                <TableHead>IMEI</TableHead>
+                <TableHead>SIM/ICCID</TableHead>
+                <TableHead>Qtd</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Acoes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtrado.map(e => (
+                <TableRow key={e.id}>
+                  <TableCell><Badge variant="secondary">{tipoMap[e.tipo] || e.tipo}</Badge></TableCell>
+                  <TableCell>{e.marca}</TableCell>
+                  <TableCell className="font-medium">{e.modelo}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground font-mono">{e.serial}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground font-mono">{e.imei || "--"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground font-mono">{e.iccid || e.sim_card || "--"}</TableCell>
+                  <TableCell>{e.quantidade}</TableCell>
+                  <TableCell><Badge variant={statusMap[e.status]?.variant}>{statusMap[e.status]?.label}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 row-actions">
+                      <Button size="icon" variant="ghost" onClick={() => setDetalhe(e)}><Eye className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="outline" onClick={() => abrirComodato(e.id)}>Comodato</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
 
       {/* Add Product Modal */}

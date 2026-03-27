@@ -13,6 +13,7 @@ import type { DbDespacho } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Package, Truck, CheckCircle, Clock, Plus, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 interface RastreadorImport { id: string; imei: string; simNumber: string; modelo: string; usuarioDestino: string; dataCadastro: string; }
@@ -107,7 +108,12 @@ const LogisticaRastreadores = () => {
     toast.success("CSV para plataforma gerado!");
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Logistica de Rastreadores" subtitle="Controle de despacho, entrega e importacao de dispositivos" />
+      <TableSkeleton rows={5} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

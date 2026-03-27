@@ -12,6 +12,7 @@ import type { DbControleKM } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, MapPin, Route, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 interface InstalacaoDia { endereco: string; horario: string; kmTrecho: number; }
@@ -70,7 +71,12 @@ const ControleKMPage = () => {
     toast.success(`${count} instalacao(es) registrada(s) - Total: ${kmTotalForm} km`);
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Controle de KM" subtitle="Registre todas as instalacoes do dia com KM total automatico" />
+      <TableSkeleton rows={5} cols={5} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
