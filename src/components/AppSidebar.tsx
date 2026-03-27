@@ -21,7 +21,6 @@ const trackitItems = [
   { title: "Pedidos", url: "/trackit/pedidos", icon: ShoppingCart },
   { title: "Linhas SIM", url: "/trackit/linhas-sim", icon: Smartphone },
   { title: "Financeiro", url: "/trackit/financeiro", icon: DollarSign },
-  
 ];
 
 const objetivoItems = [
@@ -54,8 +53,8 @@ function NavSection({ label, items, open, onOpenChange, collapsed }: NavSectionP
     <SidebarGroup className="py-0">
       <Collapsible open={open} onOpenChange={onOpenChange}>
         <CollapsibleTrigger className="w-full">
-          <SidebarGroupLabel className="cursor-pointer flex items-center justify-between px-4 py-2 text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">{label}</span>
+          <SidebarGroupLabel className="cursor-pointer flex items-center justify-between px-3 py-2 text-sidebar-foreground/35 hover:text-sidebar-foreground/60 transition-colors">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em]">{label}</span>
             {!collapsed && (
               <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
             )}
@@ -69,11 +68,11 @@ function NavSection({ label, items, open, onOpenChange, collapsed }: NavSectionP
                   <SidebarMenuButton asChild className="h-9">
                     <NavLink
                       to={item.url}
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
-                      className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
+                      activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                      className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/40 py-2.5 px-3"
                     >
-                      <item.icon className="h-[15px] w-[15px] shrink-0" />
-                      {!collapsed && <span className="text-[13px]">{item.title}</span>}
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="text-sm font-medium">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -95,10 +94,10 @@ export function AppSidebar() {
   const [operacionalOpen, setOperacionalOpen] = useState(true);
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/30">
       <SidebarContent className="pt-0 pb-2 flex flex-col">
         {/* Logo */}
-        <div className="-ml-2 pr-4 -mb-1">
+        <div className="-ml-2 pr-4 -mb-1 border-b border-sidebar-border/20 pb-1">
           {!collapsed ? (
             <img
               src={logoTrackit}
@@ -114,7 +113,7 @@ export function AppSidebar() {
         </div>
 
         {/* Dashboard */}
-        <SidebarGroup className="py-0">
+        <SidebarGroup className="py-0 mt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -122,11 +121,11 @@ export function AppSidebar() {
                   <NavLink
                     to="/"
                     end
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
-                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
+                    activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/40 py-2.5 px-3"
                   >
-                    <LayoutDashboard className="h-[15px] w-[15px] shrink-0" />
-                    {!collapsed && <span className="text-[13px]">Dashboard</span>}
+                    <LayoutDashboard className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="text-sm font-medium">Dashboard</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -134,12 +133,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Separator */}
+        <div className="mx-3 my-1.5 border-t border-sidebar-border/15" />
+
         {/* Navigation Sections */}
         <NavSection label="Trackit" items={trackitItems} open={trackitOpen} onOpenChange={setTrackitOpen} collapsed={collapsed} />
+        <div className="mx-3 my-0.5 border-t border-sidebar-border/10" />
         <NavSection label="Gestao" items={objetivoItems} open={objetivoOpen} onOpenChange={setObjetivoOpen} collapsed={collapsed} />
+        <div className="mx-3 my-0.5 border-t border-sidebar-border/10" />
         <NavSection label="Operacional" items={operacionalItems} open={operacionalOpen} onOpenChange={setOperacionalOpen} collapsed={collapsed} />
 
-        <div className="mx-4 my-2 border-t border-sidebar-border/30" />
+        <div className="mx-3 my-2 border-t border-sidebar-border/20" />
 
         {/* Relatorios */}
         <SidebarGroup className="py-0">
@@ -149,11 +153,11 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild className="h-9">
                   <NavLink
                     to="/relatorios"
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
-                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/60"
+                    activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium border-l-2 border-l-sidebar-primary"
+                    className="transition-all duration-150 rounded-lg hover:bg-sidebar-accent/40 py-2.5 px-3"
                   >
-                    <FileText className="h-[15px] w-[15px] shrink-0" />
-                    {!collapsed && <span className="text-[13px]">Relatorios</span>}
+                    <FileText className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="text-sm font-medium">Relatorios</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -168,23 +172,23 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="h-9 cursor-pointer text-sidebar-foreground/60 hover:text-destructive"
+                    className="h-9 cursor-pointer text-sidebar-foreground/50 hover:text-destructive transition-colors rounded-lg"
                     onClick={() => {
                       import('@/integrations/supabase/client').then(({ supabase }) => {
                         supabase.auth.signOut();
                       });
                     }}
                   >
-                    <LogOut className="h-[15px] w-[15px] shrink-0" />
-                    {!collapsed && <span className="text-[13px]">Sair</span>}
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="text-sm font-medium">Sair</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
           {!collapsed && (
-            <div className="px-5 pb-4 pt-2">
-              <p className="text-[9px] text-sidebar-foreground/25 tracking-wide">
+            <div className="px-4 pb-4 pt-2">
+              <p className="text-[9px] text-sidebar-foreground/20 tracking-wide">
                 &copy; 2026 Trackit - v1.0
               </p>
             </div>
