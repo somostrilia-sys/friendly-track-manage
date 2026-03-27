@@ -12,6 +12,7 @@ import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
