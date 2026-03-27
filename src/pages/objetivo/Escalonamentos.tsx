@@ -12,6 +12,7 @@ import type { DbEscalonamento } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { ArrowUpCircle, Clock, CheckCircle, AlertTriangle, Plus } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
