@@ -14,6 +14,7 @@ import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Users, Star, Package, Plus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
