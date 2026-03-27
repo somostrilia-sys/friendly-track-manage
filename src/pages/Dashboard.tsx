@@ -168,10 +168,8 @@ const Dashboard = () => {
           value={`R$ ${faturamentoMesAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
           icon={DollarSign}
           accent="success"
-          trend={faturamentoMesAnterior > 0 ? {
-            value: Math.abs(Math.round(faturamentoVariacao)),
-            direction: faturamentoVariacao >= 0 ? "up" as const : "down" as const,
-          } : undefined}
+          trend={faturamentoMesAnterior > 0 ? `${Math.abs(Math.round(faturamentoVariacao))}%` : undefined}
+          trendDirection={faturamentoVariacao >= 0 ? "up" : "down"}
         />
         <StatCard
           label="A Receber"
