@@ -66,7 +66,12 @@ const Manutencoes = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha" />
+      <TableSkeleton rows={6} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

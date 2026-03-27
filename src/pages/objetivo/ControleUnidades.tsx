@@ -42,7 +42,12 @@ const ControleUnidades = () => {
   const estoque = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "estoque").length, 0);
   const ativos = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "instalado").length, 0);
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Controle de Unidades" subtitle="Fechamento mensal por unidade Objetivo Auto Truck" />
+      <TableSkeleton rows={6} cols={10} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

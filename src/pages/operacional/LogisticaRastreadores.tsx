@@ -108,7 +108,12 @@ const LogisticaRastreadores = () => {
     toast.success("CSV para plataforma gerado!");
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Logistica de Rastreadores" subtitle="Controle de despacho, entrega e importacao de dispositivos" />
+      <TableSkeleton rows={5} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

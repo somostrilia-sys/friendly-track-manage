@@ -69,7 +69,7 @@ const FechamentoTecnicosTab = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return <TableSkeleton rows={5} cols={10} />;
 
   return (
     <div className="space-y-6">

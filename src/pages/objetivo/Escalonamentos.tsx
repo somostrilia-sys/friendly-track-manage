@@ -55,7 +55,12 @@ const Escalonamentos = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Escalonamentos" subtitle="Demandas escalonadas pelos tecnicos ao gestor" />
+      <TableSkeleton rows={5} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

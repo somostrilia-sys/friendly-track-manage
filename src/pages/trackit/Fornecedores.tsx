@@ -131,7 +131,12 @@ const Fornecedores = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Fornecedores" subtitle="Gerenciamento de fornecedores" />
+      <TableSkeleton rows={6} cols={8} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

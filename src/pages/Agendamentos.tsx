@@ -79,7 +79,12 @@ const Agendamentos = () => {
     toast.success(`Associado atribuido ao tecnico ${tec?.nome}`);
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Agendamentos" subtitle="Calendario de instalacoes, manutencoes e retiradas" />
+      <TableSkeleton rows={5} cols={6} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

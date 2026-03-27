@@ -63,7 +63,12 @@ const AcompanhamentoInstalacoes = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Acompanhamento de Instalações" subtitle="Controle de instalações em campo" />
+      <TableSkeleton rows={6} cols={9} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

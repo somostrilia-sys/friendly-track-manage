@@ -58,7 +58,12 @@ const Tarefas = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (isLoading) return (
+    <div className="space-y-8">
+      <PageHeader title="Tarefas" subtitle="Gestão de tarefas por prioridade" />
+      <TableSkeleton rows={4} cols={4} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
