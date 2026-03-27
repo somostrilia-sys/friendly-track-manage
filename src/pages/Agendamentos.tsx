@@ -12,6 +12,7 @@ import type { DbAgendamento } from "@/types/database";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users } from "lucide-react";
 import { toast } from "sonner";
 
