@@ -12,27 +12,27 @@ export function Layout() {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b border-border/40 bg-card/50 backdrop-blur-md px-5 gap-4 sticky top-0 z-10">
-            <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+          <header className="h-14 flex items-center border-b border-border/30 bg-background/80 backdrop-blur-xl px-6 gap-4 sticky top-0 z-10">
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
 
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
               <Input
                 placeholder="Buscar..."
-                className="pl-9 h-9 bg-secondary/50 border-border/50 rounded-xl text-sm focus:bg-secondary/80"
+                className="pl-9 h-9 bg-muted/30 border-border/30 rounded-lg text-sm"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground/50 bg-muted/50 px-1.5 py-0.5 rounded font-mono">
                 ⌘K
               </kbd>
             </div>
 
             {/* Right actions */}
             <div className="ml-auto flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground rounded-xl">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Settings className="h-4 w-4" />
               </Button>
               <ThemeToggle />
@@ -41,7 +41,7 @@ export function Layout() {
               </div>
             </div>
           </header>
-          <main className="flex-1 p-5 md:p-6 overflow-auto">
+          <main className="flex-1 px-6 py-6 md:px-8 md:py-6 overflow-auto">
             <Outlet />
           </main>
         </div>
