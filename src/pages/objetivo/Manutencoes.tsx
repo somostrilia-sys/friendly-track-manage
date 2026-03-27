@@ -11,6 +11,7 @@ import type { DbManutencao } from "@/types/database";
 import { AlertTriangle, Send, WifiOff, Shield, Clock } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const problemaMap: Record<string, string> = { offline: "Offline", falha_gps: "Falha GPS", sem_sinal: "Sem Sinal", bateria_baixa: "Bateria Baixa", violacao: "Violacao" };
