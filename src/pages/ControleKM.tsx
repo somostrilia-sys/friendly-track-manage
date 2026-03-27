@@ -12,6 +12,7 @@ import type { DbControleKM } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, MapPin, Route, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 interface InstalacaoDia { endereco: string; horario: string; kmTrecho: number; }
