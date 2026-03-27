@@ -10,6 +10,7 @@ import type { DbConfiguracaoDispositivo, DbConfigChecklist } from "@/types/datab
 import { StatCard } from "@/components/StatCard";
 import { Settings, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
