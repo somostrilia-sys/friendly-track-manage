@@ -22,7 +22,13 @@ const tipoLabels: Record<string, string> = { instalacao: "Instalacao", manutenca
 const envioLabels: Record<string, string> = { nao_enviado: "Nao Enviado", enviado: "Enviado", entregue: "Entregue" };
 const envioVariants: Record<string, "outline" | "secondary" | "default"> = { nao_enviado: "outline", enviado: "secondary", entregue: "default" };
 
-const erpAssociados: { id: string; numero: string; nome: string; modeloVeiculo: string; placa: string; produto: string }[] = [];
+const erpAssociados: { id: string; numero: string; nome: string; modeloVeiculo: string; placa: string; produto: string }[] = [
+  { id: "erp-1", numero: "45832", nome: "Transportes Bandeirantes Ltda", modeloVeiculo: "Volkswagen Delivery 9.170", placa: "ABC-1D34", produto: "Positron Duoblock" },
+  { id: "erp-2", numero: "51290", nome: "Distribuidora Paulista de Alimentos", modeloVeiculo: "Fiat Ducato Cargo", placa: "DEF-2E78", produto: "Sascar ST300" },
+  { id: "erp-3", numero: "38471", nome: "Logística Anhanguera S/A", modeloVeiculo: "Mercedes-Benz Accelo 815", placa: "GHI-3F12", produto: "Quant Q900" },
+  { id: "erp-4", numero: "62105", nome: "Construtora ABC Engenharia", modeloVeiculo: "Ford Cargo 1723", placa: "JKL-4G56", produto: "Positron Duoblock" },
+  { id: "erp-5", numero: "29867", nome: "Supermercados Paulistão Ltda", modeloVeiculo: "Iveco Daily 70C17", placa: "MNO-5H90", produto: "Sascar ST300" },
+];
 
 const Agendamentos = () => {
   const { data: agendamentos = [], isLoading } = useAgendamentos();
@@ -36,7 +42,7 @@ const Agendamentos = () => {
 
   const [erpDataInicio, setErpDataInicio] = useState("");
   const [erpDataFim, setErpDataFim] = useState("");
-  const [erpFiltrado, setErpFiltrado] = useState(erpAssociados);
+  const [erpFiltrado, setErpFiltrado] = useState<typeof erpAssociados>([]);
   const [atribuicoes, setAtribuicoes] = useState<Record<string, string>>({});
 
   const salvar = async () => {

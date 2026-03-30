@@ -26,6 +26,7 @@ import AcompanhamentoInstalacoes from "@/pages/AcompanhamentoInstalacoes";
 import ControleKMPage from "@/pages/ControleKM";
 import FilaSuporte from "@/pages/FilaSuporte";
 import Agendamentos from "@/pages/Agendamentos";
+import FechamentoTecnicos from "@/pages/FechamentoTecnicos";
 import LogisticaRastreadores from "@/pages/operacional/LogisticaRastreadores";
 import ConfiguracaoDispositivos from "@/pages/operacional/ConfiguracaoDispositivos";
 import Login from "@/pages/auth/Login";
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/controle-km" element={<ControleKMPage />} />
               <Route path="/suporte" element={<FilaSuporte />} />
               <Route path="/agendamentos" element={<Agendamentos />} />
+              <Route path="/fechamento-tecnicos" element={<FechamentoTecnicos />} />
               <Route path="/logistica-rastreadores" element={<LogisticaRastreadores />} />
               <Route path="/config-dispositivos" element={<ConfiguracaoDispositivos />} />
               <Route path="/relatorios" element={<Relatorios />} />

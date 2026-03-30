@@ -35,6 +35,7 @@ const operacionalItems = [
   { title: "Acomp. Instalacoes", url: "/instalacoes", icon: ClipboardCheck },
   { title: "Controle de KM", url: "/controle-km", icon: Route },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarDays },
+  { title: "Fechamento Tecnicos", url: "/fechamento-tecnicos", icon: DollarSign },
   { title: "Fila de Suporte", url: "/suporte", icon: Headphones },
   { title: "Logistica Rastreadores", url: "/logistica-rastreadores", icon: Truck },
   { title: "Config. Dispositivos", url: "/config-dispositivos", icon: Settings },
