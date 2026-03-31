@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLinhasSIM, useInsertLinhaSIM, useClientes } from "@/hooks/useSupabaseData";
+import { useLinhasSIM, useInsertLinhaSIM, useUpdateLinhaSIM, useDeleteLinhaSIM, useClientes, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbLinhaSIM } from "@/types/database";
 import { Plus, Settings, Wifi, WifiOff, Upload, Download, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
@@ -21,6 +21,10 @@ const LinhasSIM = () => {
   const { data: linhas = [], isLoading } = useLinhasSIM();
   const { data: clientes = [] } = useClientes();
   const insertLinha = useInsertLinhaSIM();
+  const updateLinha = useUpdateLinhaSIM();
+  const deleteLinha = useDeleteLinhaSIM();
+
+  useRealtimeSubscription("linhas_sim", ["linhas_sim"]);
 
   const [filtro, setFiltro] = useState<"all" | "online" | "offline">("all");
   const [filtroCliente, setFiltroCliente] = useState("all");

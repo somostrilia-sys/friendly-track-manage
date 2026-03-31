@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useEquipamentosCompletos, useInsertEquipamento, useInsertMovimentacao, useInsertComodato, useTecnicos } from "@/hooks/useSupabaseData";
+import { useEquipamentosCompletos, useInsertEquipamento, useUpdateEquipamento, useDeleteEquipamento, useInsertMovimentacao, useInsertComodato, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbEquipamento, DbMovimentacao, DbComodato } from "@/types/database";
 import { Plus, Package, CheckCircle, AlertTriangle, XCircle, Eye, Search, Upload, Download, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
@@ -32,8 +32,12 @@ const Estoque = () => {
   const { data: equipamentos = [], isLoading } = useEquipamentosCompletos();
   const { data: tecnicos = [] } = useTecnicos();
   const insertEquipamento = useInsertEquipamento();
+  const updateEquipamento = useUpdateEquipamento();
+  const deleteEquipamento = useDeleteEquipamento();
   const insertMovimentacao = useInsertMovimentacao();
   const insertComodato = useInsertComodato();
+
+  useRealtimeSubscription("equipamentos", ["equipamentos", "equipamentos_completos"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [comodatoModal, setComodatoModal] = useState(false);
@@ -42,6 +46,8 @@ const Estoque = () => {
   const [buscaImei, setBuscaImei] = useState("");
   const [comodatoForm, setComodatoForm] = useState({ destino_tipo: "tecnico" as "tecnico" | "filial", destino_nome: "", quantidade: 1, codigo_rastreio: "" });
   const [comodatoEquipId, setComodatoEquipId] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const eqs = equipamentos as EquipComDetalhes[];
@@ -54,14 +60,38 @@ const Estoque = () => {
     ? eqs.filter(e => e.imei?.includes(buscaImei) || e.serial.includes(buscaImei) || e.iccid?.includes(buscaImei))
     : eqs;
 
+  const abrirEdicao = (eq: EquipComDetalhes) => {
+    setForm({ tipo: eq.tipo, modelo: eq.modelo, marca: eq.marca, serial: eq.serial, imei: eq.imei || "", sim_card: eq.sim_card || "", iccid: eq.iccid || "", custo: eq.custo, preco: eq.preco, quantidade: eq.quantidade, status: eq.status, localizacao: eq.localizacao });
+    setEditId(eq.id);
+    setEditMode(true);
+    setModalOpen(true);
+    setDetalhe(null);
+  };
+
+  const excluir = async (id: string) => {
+    if (!confirm("Excluir este equipamento?")) return;
+    try {
+      await deleteEquipamento.mutateAsync(id);
+      setDetalhe(null);
+      toast.success("Equipamento excluido!");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const salvar = async () => {
     if (!form.modelo || !form.marca) { toast.error("Preencha modelo e marca"); return; }
     try {
-      const serial = form.serial || `${form.tipo.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-4)}`;
-      await insertEquipamento.mutateAsync({ ...form, serial });
+      if (editMode && editId) {
+        await updateEquipamento.mutateAsync({ id: editId, ...form } as any);
+        toast.success("Equipamento atualizado!");
+      } else {
+        const serial = form.serial || `${form.tipo.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+        await insertEquipamento.mutateAsync({ ...form, serial });
+        toast.success("Produto adicionado ao estoque!");
+      }
       setForm(emptyForm);
+      setEditMode(false);
+      setEditId(null);
       setModalOpen(false);
-      toast.success("Produto adicionado ao estoque!");
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -143,7 +173,7 @@ const Estoque = () => {
       <PageHeader title="Estoque" subtitle="Rastreadores, sensores e equipamentos">
         <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
         <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
-        <Button onClick={() => { setForm(emptyForm); setModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Adicionar Produto</Button>
+        <Button onClick={() => { setForm(emptyForm); setEditMode(false); setEditId(null); setModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Adicionar Produto</Button>
       </PageHeader>
       <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
 
@@ -210,7 +240,7 @@ const Estoque = () => {
       {/* Add Product Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Adicionar Produto ao Estoque</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editMode ? "Editar Produto" : "Adicionar Produto ao Estoque"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Tipo</Label>
               <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as DbEquipamento["tipo"] }))}>
@@ -230,8 +260,8 @@ const Estoque = () => {
             <div className="col-span-2"><Label>Localizacao</Label><Input value={form.localizacao} onChange={e => setForm(f => ({ ...f, localizacao: e.target.value }))} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={salvar}>Adicionar</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setEditMode(false); setEditId(null); }}>Cancelar</Button>
+            <Button onClick={salvar}>{editMode ? "Salvar" : "Adicionar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -272,7 +302,15 @@ const Estoque = () => {
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
-              <SheetHeader><SheetTitle>{detalhe.marca} {detalhe.modelo}</SheetTitle></SheetHeader>
+              <SheetHeader>
+                <div className="flex items-center justify-between">
+                  <SheetTitle>{detalhe.marca} {detalhe.modelo}</SheetTitle>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => abrirEdicao(detalhe)}>Editar</Button>
+                    <Button size="sm" variant="destructive" onClick={() => excluir(detalhe.id)}>Excluir</Button>
+                  </div>
+                </div>
+              </SheetHeader>
               <div className="mt-6 space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-3">
                   <div><span className="text-muted-foreground">Tipo</span><p className="font-medium">{tipoMap[detalhe.tipo]}</p></div>
