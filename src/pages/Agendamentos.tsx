@@ -116,47 +116,51 @@ const Agendamentos = () => {
             <StatCard label="Total" value={agendamentos.length} icon={Calendar} accent="primary" />
           </div>
           <div className="space-y-4">
-            {datasOrdenadas.length === 0 ? (
-              <div className="empty-state empty-state-border">
-                <Inbox className="empty-state-icon" />
-                <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado</p>
-              </div>
-            ) : (
-              datasOrdenadas.map(data => (
-                <Card key={data} className="p-4 card-shadow">
-                  <h3 className="font-semibold mb-3 text-sm text-muted-foreground">{data}</h3>
-                  <div className="space-y-2">
-                    {porData[data].map(a => (
-                      <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                        <div className={`w-3 h-3 rounded-full ${statusColors[a.status]}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-medium text-sm">{a.placa}</span>
-                            <Badge variant="secondary" className="text-xs">{tipoLabels[a.tipo]}</Badge>
-                            <span className="text-xs text-muted-foreground">{a.horario}</span>
-                            {a.rastreador_serial && (
-                              <Badge variant={envioVariants[a.status_envio_rastreador]} className="text-xs">
-                                <Truck className="w-3 h-3 mr-1" /> {a.rastreador_serial} - {envioLabels[a.status_envio_rastreador]}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">{a.associado} - {a.endereco}, {a.cidade}</p>
-                          {a.endereco_instalacao && <p className="text-xs text-primary/70">Local: {a.endereco_instalacao}</p>}
-                          <p className="text-xs text-muted-foreground">Tecnico: {a.tecnico_nome} {a.tentativas > 0 && `- ${a.tentativas} tentativa(s)`}</p>
-                        </div>
-                        <Badge variant={a.status === "realizado" ? "default" : a.status === "sem_retorno" ? "destructive" : "outline"}>{statusLabels[a.status]}</Badge>
-                        {a.status === "agendado" && (
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline" onClick={() => registrarTentativa(a)}>Tentativa</Button>
-                            <Button size="sm" onClick={() => concluir(a.id)}>Concluir</Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+            {datasOrdenadas.length === 0 && (
+              <Card className="p-0">
+                <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
+                  <div className="rounded-full bg-muted/60 p-4">
+                    <Inbox className="h-7 w-7 text-muted-foreground" />
                   </div>
-                </Card>
-              ))
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum agendamento encontrado</p>
+                  <p className="text-xs text-muted-foreground/60">Crie um novo agendamento para começar</p>
+                </div>
+              </Card>
             )}
+            {datasOrdenadas.map(data => (
+              <Card key={data} className="p-4 card-shadow">
+                <h3 className="font-semibold mb-3 text-sm text-muted-foreground">{data}</h3>
+                <div className="space-y-2">
+                  {porData[data].map(a => (
+                    <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                      <div className={`w-3 h-3 rounded-full ${statusColors[a.status]}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-medium text-sm">{a.placa}</span>
+                          <Badge variant="secondary" className="text-xs">{tipoLabels[a.tipo]}</Badge>
+                          <span className="text-xs text-muted-foreground">{a.horario}</span>
+                          {a.rastreador_serial && (
+                            <Badge variant={envioVariants[a.status_envio_rastreador]} className="text-xs">
+                              <Truck className="w-3 h-3 mr-1" /> {a.rastreador_serial} - {envioLabels[a.status_envio_rastreador]}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">{a.associado} - {a.endereco}, {a.cidade}</p>
+                        {a.endereco_instalacao && <p className="text-xs text-primary/70">Local: {a.endereco_instalacao}</p>}
+                        <p className="text-xs text-muted-foreground">Tecnico: {a.tecnico_nome} {a.tentativas > 0 && `- ${a.tentativas} tentativa(s)`}</p>
+                      </div>
+                      <Badge variant={a.status === "realizado" ? "default" : a.status === "sem_retorno" ? "destructive" : "outline"}>{statusLabels[a.status]}</Badge>
+                      {a.status === "agendado" && (
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => registrarTentativa(a)}>Tentativa</Button>
+                          <Button size="sm" onClick={() => concluir(a.id)}>Concluir</Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
           </div>
         </TabsContent>
         <TabsContent value="erp" className="space-y-6">

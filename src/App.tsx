@@ -28,6 +28,7 @@ import FilaSuporte from "@/pages/FilaSuporte";
 import Agendamentos from "@/pages/Agendamentos";
 import FechamentoTecnicos from "@/pages/FechamentoTecnicos";
 import LogisticaRastreadores from "@/pages/operacional/LogisticaRastreadores";
+import Rastreadores from "@/pages/operacional/Rastreadores";
 import ConfiguracaoDispositivos from "@/pages/operacional/ConfiguracaoDispositivos";
 import Login from "@/pages/auth/Login";
 import Registro from "@/pages/auth/Registro";
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/suporte" element={<FilaSuporte />} />
               <Route path="/agendamentos" element={<Agendamentos />} />
               <Route path="/fechamento-tecnicos" element={<FechamentoTecnicos />} />
+              <Route path="/rastreadores" element={<Rastreadores />} />
               <Route path="/logistica-rastreadores" element={<LogisticaRastreadores />} />
               <Route path="/config-dispositivos" element={<ConfiguracaoDispositivos />} />
               <Route path="/relatorios" element={<Relatorios />} />

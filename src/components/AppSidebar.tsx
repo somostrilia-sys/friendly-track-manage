@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays,
-  LogOut, Truck, Building2, Settings,
+  LogOut, Truck, Building2, Settings, Radio,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
@@ -32,6 +32,7 @@ const objetivoItems = [
 ];
 
 const operacionalItems = [
+  { title: "Rastreadores", url: "/rastreadores", icon: Radio },
   { title: "Acomp. Instalacoes", url: "/instalacoes", icon: ClipboardCheck },
   { title: "Controle de KM", url: "/controle-km", icon: Route },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarDays },

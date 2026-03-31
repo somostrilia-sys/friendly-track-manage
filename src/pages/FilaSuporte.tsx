@@ -76,42 +76,48 @@ const FilaSuporte = () => {
             </button>
           ))}
         </div>
-        {filtrado.length === 0 ? (
-          <div className="empty-state empty-state-border m-4">
-            <Inbox className="empty-state-icon" />
-            <p className="text-sm text-muted-foreground">Nenhum chamado encontrado</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead><TableHead>Origem</TableHead><TableHead>Tipo</TableHead><TableHead>Cliente</TableHead>
+              <TableHead>Descrição</TableHead><TableHead>Prioridade</TableHead><TableHead>Responsável</TableHead>
+              <TableHead>Status</TableHead><TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtrado.length === 0 && (
               <TableRow>
-                <TableHead>ID</TableHead><TableHead>Origem</TableHead><TableHead>Tipo</TableHead><TableHead>Cliente</TableHead>
-                <TableHead>Descrição</TableHead><TableHead>Prioridade</TableHead><TableHead>Responsável</TableHead>
-                <TableHead>Status</TableHead><TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtrado.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-mono text-sm">{c.codigo}</TableCell>
-                  <TableCell><Badge variant="secondary">{origemMap[c.origem]}</Badge></TableCell>
-                  <TableCell className="text-sm">{tipoMap[c.tipo]}</TableCell>
-                  <TableCell className="font-medium">{c.cliente_nome}</TableCell>
-                  <TableCell className="text-sm max-w-[200px] truncate">{c.descricao}</TableCell>
-                  <TableCell><Badge variant={c.prioridade === "urgente" ? "destructive" : "outline"}>{c.prioridade === "urgente" ? "Urgente" : "Normal"}</Badge></TableCell>
-                  <TableCell>{c.responsavel}</TableCell>
-                  <TableCell><Badge variant={statusMap[c.status]?.variant}>{statusMap[c.status]?.label}</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {c.status === "aberto" && <Button size="sm" variant="outline" onClick={() => atualizar(c.id, "em_atendimento")}>Atender</Button>}
-                      {c.status === "em_atendimento" && <Button size="sm" onClick={() => atualizar(c.id, "resolvido")}>Resolver</Button>}
+                <TableCell colSpan={9}>
+                  <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
+                    <div className="rounded-full bg-muted/60 p-3">
+                      <Inbox className="h-6 w-6 text-muted-foreground" />
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+                    <p className="text-sm font-medium text-muted-foreground">Nenhum chamado na fila</p>
+                    <p className="text-xs text-muted-foreground/60">Abra um novo chamado para começar</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {filtrado.map(c => (
+              <TableRow key={c.id}>
+                <TableCell className="font-mono text-sm">{c.codigo}</TableCell>
+                <TableCell><Badge variant="secondary">{origemMap[c.origem]}</Badge></TableCell>
+                <TableCell className="text-sm">{tipoMap[c.tipo]}</TableCell>
+                <TableCell className="font-medium">{c.cliente_nome}</TableCell>
+                <TableCell className="text-sm max-w-[200px] truncate">{c.descricao}</TableCell>
+                <TableCell><Badge variant={c.prioridade === "urgente" ? "destructive" : "outline"}>{c.prioridade === "urgente" ? "Urgente" : "Normal"}</Badge></TableCell>
+                <TableCell>{c.responsavel}</TableCell>
+                <TableCell><Badge variant={statusMap[c.status]?.variant}>{statusMap[c.status]?.label}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    {c.status === "aberto" && <Button size="sm" variant="outline" onClick={() => atualizar(c.id, "em_atendimento")}>Atender</Button>}
+                    {c.status === "em_atendimento" && <Button size="sm" onClick={() => atualizar(c.id, "resolvido")}>Resolver</Button>}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">

@@ -83,45 +83,51 @@ const Manutencoes = () => {
         <StatCard label="Tempo Medio" value="12 dias" icon={Clock} accent="muted" />
       </div>
       <Card className="card-shadow">
-        {ordenadas.length === 0 ? (
-          <div className="empty-state empty-state-border m-4">
-            <Inbox className="empty-state-icon" />
-            <p className="text-sm text-muted-foreground">Nenhuma manutenção encontrada</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead><TableHead>Veiculo/Placa</TableHead><TableHead>Cliente</TableHead>
+              <TableHead>Problema</TableHead><TableHead>Classificacao</TableHead><TableHead>Tecnico</TableHead>
+              <TableHead>Status</TableHead><TableHead>Acao</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ordenadas.length === 0 && (
               <TableRow>
-                <TableHead>ID</TableHead><TableHead>Veiculo/Placa</TableHead><TableHead>Cliente</TableHead>
-                <TableHead>Problema</TableHead><TableHead>Classificacao</TableHead><TableHead>Tecnico</TableHead>
-                <TableHead>Status</TableHead><TableHead>Acao</TableHead>
+                <TableCell colSpan={8}>
+                  <div className="flex flex-col items-center justify-center py-12 space-y-2 text-center">
+                    <div className="rounded-full bg-muted/60 p-3">
+                      <Inbox className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">Nenhuma manutenção registrada</p>
+                    <p className="text-xs text-muted-foreground/60">Rastreadores com problema aparecerão aqui</p>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ordenadas.map(m => {
-                const prio = classificarPrioridade(m.data_abertura);
-                return (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-mono text-sm">{m.codigo}</TableCell>
-                    <TableCell className="font-medium">{m.veiculo} - {m.placa}</TableCell>
-                    <TableCell>{m.cliente_nome}</TableCell>
-                    <TableCell>{problemaMap[m.problema]}</TableCell>
-                    <TableCell><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span></TableCell>
-                    <TableCell>{m.tecnico_designado || "--"}</TableCell>
-                    <TableCell><Badge variant={statusMap[m.status]?.variant}>{statusMap[m.status]?.label}</Badge></TableCell>
-                    <TableCell>
-                      {m.status === "aberto" && (
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => setDespacharId(m.id)}>
-                          <Send className="w-3 h-3 mr-1" /> Despachar
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+            )}
+            {ordenadas.map(m => {
+              const prio = classificarPrioridade(m.data_abertura);
+              return (
+                <TableRow key={m.id}>
+                  <TableCell className="font-mono text-sm">{m.codigo}</TableCell>
+                  <TableCell className="font-medium">{m.veiculo} - {m.placa}</TableCell>
+                  <TableCell>{m.cliente_nome}</TableCell>
+                  <TableCell>{problemaMap[m.problema]}</TableCell>
+                  <TableCell><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span></TableCell>
+                  <TableCell>{m.tecnico_designado || "--"}</TableCell>
+                  <TableCell><Badge variant={statusMap[m.status]?.variant}>{statusMap[m.status]?.label}</Badge></TableCell>
+                  <TableCell>
+                    {m.status === "aberto" && (
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => setDespacharId(m.id)}>
+                        <Send className="w-3 h-3 mr-1" /> Despachar
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </Card>
       <Dialog open={!!despacharId} onOpenChange={() => setDespacharId(null)}>
         <DialogContent>
