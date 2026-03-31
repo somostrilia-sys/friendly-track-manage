@@ -91,10 +91,10 @@ const Rastreadores = () => {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard title="Total" value={total} icon={<Radio className="h-4 w-4" />} />
-        <StatCard title="Ativos" value={ativos} icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} />
-        <StatCard title="Inativos" value={inativos} icon={<XCircle className="h-4 w-4 text-slate-400" />} />
-        <StatCard title="Cidades" value={new Set(rastreadores.map(r => r.cidade)).size} icon={<MapPin className="h-4 w-4" />} />
+        <StatCard label="Total" value={total} icon={Radio} />
+        <StatCard label="Ativos" value={ativos} icon={CheckCircle2} accent="success" />
+        <StatCard label="Inativos" value={inativos} icon={XCircle} accent="muted" />
+        <StatCard label="Cidades" value={new Set(rastreadores.map(r => r.cidade)).size} icon={MapPin} />
       </div>
 
       <Card className="p-0 overflow-hidden">

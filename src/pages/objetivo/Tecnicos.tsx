@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useTecnicosCompletos, useInsertTecnico } from "@/hooks/useSupabaseData";
+import { useTecnicosCompletos, useInsertTecnico, useUpdateTecnico, useServicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbTecnico, DbTecnicoEstoque } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
-import { Users, Star, Package, Plus, Inbox } from "lucide-react";
+import { Users, Star, Package, Plus, Inbox, Copy, Pencil, Link } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -26,25 +26,23 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 
 const tipoLabels: Record<string, string> = { avulso: "Avulso", parceiro: "Parceiro", proprio: "Proprio" };
 
-// Static chart data (will be replaced by aggregated queries later)
-const instalacoesPorMes = [
-  { mes: "Out", instalacoes: 65 },
-  { mes: "Nov", instalacoes: 72 },
-  { mes: "Dez", instalacoes: 80 },
-  { mes: "Jan", instalacoes: 68 },
-  { mes: "Fev", instalacoes: 85 },
-  { mes: "Mar", instalacoes: 102 },
-];
-
 const emptyForm = { nome: "", cpf: "", telefone: "", email: "", cidade: "", estado: "", especialidade: "", regiao_atuacao: "", status_ativo: "ativo" as "ativo" | "inativo", valor_servico: 200, periodo_pagamento: "quinzenal" as "quinzenal" | "mensal", chave_pix: "", banco: "", tipo_tecnico: "avulso" as "avulso" | "parceiro" | "proprio", valor_instalacao: 200, adicional_km: 1.2 };
+
+const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 type TecnicoComEstoque = DbTecnico & { estoque: DbTecnicoEstoque[] };
 
 const Tecnicos = () => {
   const { data: tecnicos = [], isLoading } = useTecnicosCompletos();
+  const { data: servicos = [] } = useServicos();
   const insertTecnico = useInsertTecnico();
+  const updateTecnico = useUpdateTecnico();
+
+  useRealtimeSubscription("tecnicos", ["tecnicos", "tecnicos_completos"]);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<TecnicoComEstoque | null>(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -54,22 +52,64 @@ const Tecnicos = () => {
   const mediaAvaliacao = total > 0 ? (tecs.reduce((a, t) => a + t.avaliacao, 0) / total).toFixed(1) : "0";
   const totalInstalacoes = tecs.reduce((a, t) => a + t.instalacoes_mes, 0);
 
+  // Build chart data from real services
+  const instalacoesPorMes = useMemo(() => {
+    const now = new Date();
+    const months: { mes: string; instalacoes: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const count = servicos.filter(s => s.tipo === "instalacao" && s.status === "concluido" && s.data?.startsWith(key)).length;
+      months.push({ mes: mesesNomes[d.getMonth()], instalacoes: count });
+    }
+    return months;
+  }, [servicos]);
+
+  const registroLink = `${window.location.origin}/registro-tecnico`;
+
+  const abrirEdicao = (t: TecnicoComEstoque) => {
+    setForm({
+      nome: t.nome, cpf: t.cpf, telefone: t.telefone, email: t.email,
+      cidade: t.cidade, estado: t.estado, especialidade: t.especialidade,
+      regiao_atuacao: t.regiao_atuacao || "", status_ativo: t.status_ativo as "ativo" | "inativo",
+      valor_servico: t.valor_servico || 200, periodo_pagamento: t.periodo_pagamento as "quinzenal" | "mensal",
+      chave_pix: t.chave_pix || "", banco: t.banco || "",
+      tipo_tecnico: t.tipo_tecnico as "avulso" | "parceiro" | "proprio",
+      valor_instalacao: t.valor_instalacao, adicional_km: t.adicional_km,
+    });
+    setEditId(t.id);
+    setEditMode(true);
+    setModalOpen(true);
+  };
+
   const salvar = async () => {
     if (!form.nome || !form.cpf) { toast.error("Preencha nome e CPF"); return; }
     const prazoPadrao: Record<string, string> = { avulso: "2 dias uteis", parceiro: "5 dias uteis", proprio: "Conforme contrato" };
     try {
-      await insertTecnico.mutateAsync({
-        ...form,
-        avaliacao: 0,
-        instalacoes_mes: 0,
-        equipamentos_em_estoque: 0,
-        saldo_aberto: 0,
-        status: form.status_ativo === "ativo" ? "disponivel" : "indisponivel",
-        prazo_pagamento: prazoPadrao[form.tipo_tecnico],
-      });
+      if (editMode && editId) {
+        await updateTecnico.mutateAsync({
+          id: editId,
+          ...form,
+          status: form.status_ativo === "ativo" ? "disponivel" : "indisponivel",
+          prazo_pagamento: prazoPadrao[form.tipo_tecnico],
+        } as any);
+        toast.success("Tecnico atualizado!");
+      } else {
+        await insertTecnico.mutateAsync({
+          ...form,
+          avaliacao: 0,
+          instalacoes_mes: 0,
+          equipamentos_em_estoque: 0,
+          saldo_aberto: 0,
+          status: form.status_ativo === "ativo" ? "disponivel" : "indisponivel",
+          prazo_pagamento: prazoPadrao[form.tipo_tecnico],
+        });
+        toast.success("Tecnico cadastrado!");
+      }
       setModalOpen(false);
+      setEditMode(false);
+      setEditId(null);
       setForm(emptyForm);
-      toast.success("Tecnico cadastrado!");
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -85,7 +125,14 @@ const Tecnicos = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Tecnicos" subtitle="Rede de tecnicos em todo o Brasil">
-        <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo Tecnico</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { navigator.clipboard.writeText(registroLink); toast.success("Link copiado!"); }}>
+            <Link className="w-4 h-4 mr-2" /> Link Cadastro
+          </Button>
+          <Button onClick={() => { setEditMode(false); setEditId(null); setForm(emptyForm); setModalOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Novo Tecnico
+          </Button>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -150,7 +197,7 @@ const Tecnicos = () => {
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Novo Tecnico</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editMode ? "Editar Tecnico" : "Novo Tecnico"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><Label>Nome Completo</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
             <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} placeholder="000.000.000-00" /></div>
@@ -188,8 +235,8 @@ const Tecnicos = () => {
             <div><Label>Banco</Label><Input value={form.banco} onChange={e => setForm(f => ({ ...f, banco: e.target.value }))} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={salvar}>Cadastrar</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setEditMode(false); setEditId(null); setForm(emptyForm); }}>Cancelar</Button>
+            <Button onClick={salvar}>{editMode ? "Salvar" : "Cadastrar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -198,7 +245,14 @@ const Tecnicos = () => {
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
             <>
-              <SheetHeader><SheetTitle>{detalhe.nome}</SheetTitle></SheetHeader>
+              <SheetHeader>
+                <div className="flex items-center justify-between">
+                  <SheetTitle>{detalhe.nome}</SheetTitle>
+                  <Button size="sm" variant="outline" onClick={() => { abrirEdicao(detalhe); setDetalhe(null); }}>
+                    <Pencil className="w-3 h-3 mr-1" /> Editar
+                  </Button>
+                </div>
+              </SheetHeader>
               <div className="mt-6 space-y-5 text-sm">
                 <div className="grid grid-cols-2 gap-3">
                   <div><span className="text-muted-foreground">Tipo</span><p className="font-medium capitalize">{tipoLabels[detalhe.tipo_tecnico]}</p></div>

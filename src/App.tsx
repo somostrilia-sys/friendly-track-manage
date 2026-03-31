@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/trackit/Clientes";
 import Fornecedores from "@/pages/trackit/Fornecedores";
@@ -22,6 +23,7 @@ import ControleUnidades from "@/pages/objetivo/ControleUnidades";
 import Relatorios from "@/pages/Relatorios";
 import TecnicoLink from "@/pages/servico/TecnicoLink";
 import ClienteLink from "@/pages/servico/ClienteLink";
+import TecnicoRegistro from "@/pages/servico/TecnicoRegistro";
 import AcompanhamentoInstalacoes from "@/pages/AcompanhamentoInstalacoes";
 import ControleKMPage from "@/pages/ControleKM";
 import FilaSuporte from "@/pages/FilaSuporte";
@@ -53,9 +55,10 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/servico/tecnico/:id" element={<TecnicoLink />} />
             <Route path="/servico/cliente/:id" element={<ClienteLink />} />
+            <Route path="/registro-tecnico" element={<TecnicoRegistro />} />
 
             {/* Protected routes */}
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route element={<ProtectedRoute><ErrorBoundary><Layout /></ErrorBoundary></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trackit/clientes" element={<Clientes />} />
               <Route path="/trackit/fornecedores" element={<Fornecedores />} />

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type {
@@ -115,6 +116,7 @@ export const useInsertComodato = () => useSupabaseInsert<DbComodato>("comodatos"
 export const usePedidos = () => useSupabaseQuery<DbPedido>("pedidos", "pedidos");
 export const useInsertPedido = () => useSupabaseInsert<DbPedido>("pedidos", "pedidos");
 export const useUpdatePedido = () => useSupabaseUpdate<DbPedido>("pedidos", "pedidos");
+export const useDeletePedido = () => useSupabaseDelete("pedidos", "pedidos");
 
 export const usePedidoItens = (pedidoId?: string) => {
   return useQuery<DbPedidoItem[]>({
@@ -253,6 +255,9 @@ export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos_
 
 // ============ CONTROLE UNIDADES ============
 export const useControleUnidades = () => useSupabaseQuery<DbControleUnidade>("controle_unidades", "controle_unidades");
+export const useInsertControleUnidade = () => useSupabaseInsert<DbControleUnidade>("controle_unidades", "controle_unidades");
+export const useUpdateControleUnidade = () => useSupabaseUpdate<DbControleUnidade>("controle_unidades", "controle_unidades");
+export const useDeleteControleUnidade = () => useSupabaseDelete("controle_unidades", "controle_unidades");
 
 export const useUnidadeRastreadores = (unidadeId?: string) => {
   return useQuery<DbUnidadeRastreador[]>({
@@ -506,3 +511,33 @@ export const useClientesCompletos = () => {
     },
   });
 };
+
+// ============ REALTIME SUBSCRIPTIONS ============
+export function useRealtimeSubscription(table: string, queryKeys: string[]) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel(`realtime-${table}`)
+      .on("postgres_changes", { event: "*", schema: "public", table }, () => {
+        queryKeys.forEach(key => qc.invalidateQueries({ queryKey: [key] }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [table, qc]);
+}
+
+// ============ MISSING CRUD HOOKS ============
+export const useDeleteTecnico = () => useSupabaseDelete("tecnicos", "tecnicos");
+export const useDeleteServico = () => useSupabaseDelete("servicos_agendados", "servicos_agendados");
+export const useDeleteManutencao = () => useSupabaseDelete("manutencoes", "manutencoes");
+export const useInsertFechamentoTecnico = () => useSupabaseInsert<DbFechamentoTecnico>("fechamento_tecnicos", "fechamento_tecnicos");
+export const useInsertFechamentoInstalacao = () => useSupabaseInsert<DbFechamentoInstalacao>("fechamento_instalacoes", "fechamento_instalacoes");
+export const useInsertUnidadeRastreador = () => useSupabaseInsert<DbUnidadeRastreador>("unidade_rastreadores", "unidade_rastreadores");
+export const useInsertUnidadeChip = () => useSupabaseInsert<DbUnidadeChip>("unidade_chips", "unidade_chips");
+export const useInsertConfiguracaoDispositivo = () => useSupabaseInsert<DbConfiguracaoDispositivo>("configuracao_dispositivos", "configuracao_dispositivos");
+export const useUpdateControleKM = () => useSupabaseUpdate<DbControleKM>("controle_km", "controle_km");
+export const useDeleteControleKM = () => useSupabaseDelete("controle_km", "controle_km");
+export const useDeleteChamadoSuporte = () => useSupabaseDelete("chamados_suporte", "chamados_suporte");
+export const useDeleteAgendamento = () => useSupabaseDelete("agendamentos", "agendamentos");
+export const useDeleteDespacho = () => useSupabaseDelete("despachos_rastreadores", "despachos_rastreadores");
+export const useDeleteInstalacao = () => useSupabaseDelete("instalacoes", "instalacoes");
