@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useFornecedores, useInsertFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/useSupabaseData";
+import { useFornecedores, useInsertFornecedor, useUpdateFornecedor, useDeleteFornecedor, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2, Upload, Download, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -44,6 +44,8 @@ const Fornecedores = () => {
   const updateFornecedor = useUpdateFornecedor();
   const deleteFornecedor = useDeleteFornecedor();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useRealtimeSubscription("fornecedores", ["fornecedores"]);
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");

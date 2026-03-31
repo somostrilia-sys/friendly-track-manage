@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/StatCard";
 import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, Download, XCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useLinhasSIM } from "@/hooks/useSupabaseData";
+import { useLinhasSIM, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import * as XLSX from "xlsx";
 
 interface LinhaConferencia {
@@ -22,6 +22,7 @@ const ConferenciaFornecedorTab = () => {
   const [nomeArquivo, setNomeArquivo] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: linhasSIM = [] } = useLinhasSIM();
+  useRealtimeSubscription("linhas_sim", ["linhas_sim"]);
 
   // Dados internos: valor esperado por ICCID
   const dadosInternos = useMemo(() => {

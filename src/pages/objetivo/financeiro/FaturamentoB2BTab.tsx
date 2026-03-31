@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatCard } from "@/components/StatCard";
-import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B } from "@/hooks/useSupabaseData";
+import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users, CheckCircle2, AlertTriangle, Upload, Trash2, FileText, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -77,6 +77,7 @@ const emptyForm: Record<string, any> = {
 
 const FaturamentoB2BTab = () => {
   const { data: registros = [], isLoading } = useFaturamentoB2B();
+  useRealtimeSubscription("faturamento_b2b", ["faturamento_b2b"]);
   const insertMut = useInsertFaturamentoB2B();
   const updateMut = useUpdateFaturamentoB2B();
 

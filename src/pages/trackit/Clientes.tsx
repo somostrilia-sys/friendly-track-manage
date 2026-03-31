@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useClientesCompletos, useInsertCliente, useUpdateCliente, useDeleteCliente, useInsertHistoricoContato } from "@/hooks/useSupabaseData";
+import { useClientesCompletos, useInsertCliente, useUpdateCliente, useDeleteCliente, useInsertHistoricoContato, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -54,6 +54,8 @@ const Clientes = () => {
   const updateCliente = useUpdateCliente();
   const deleteCliente = useDeleteCliente();
   const insertContato = useInsertHistoricoContato();
+
+  useRealtimeSubscription("clientes", ["clientes", "clientes_completos"]);
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
