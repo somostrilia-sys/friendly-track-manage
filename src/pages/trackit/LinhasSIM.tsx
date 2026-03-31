@@ -6,16 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLinhasSIM, useInsertLinhaSIM, useUpdateLinhaSIM, useDeleteLinhaSIM, useClientes, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbLinhaSIM } from "@/types/database";
-import { Plus, Settings, Wifi, WifiOff, Upload, Download, Inbox } from "lucide-react";
+import { consultarLinha, enviarComandoSMS, ativarLinha, desativarLinha } from "@/lib/arqia";
+import { Plus, Wifi, WifiOff, Upload, Download, Inbox, Pencil, Trash2, Radio, Send, Power, PowerOff, Search, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-
-const fornecedores = ["SmartSim", "Linkfield", "Arqia", "Alcon"];
 
 const LinhasSIM = () => {
   const { data: linhas = [], isLoading } = useLinhasSIM();
@@ -29,12 +30,24 @@ const LinhasSIM = () => {
   const [filtro, setFiltro] = useState<"all" | "online" | "offline">("all");
   const [filtroCliente, setFiltroCliente] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [apiOpen, setApiOpen] = useState(false);
-  const [apiUrl, setApiUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DbLinhaSIM | null>(null);
+  const [gerenciamentoOpen, setGerenciamentoOpen] = useState(false);
+  const [gerenciamentoLinha, setGerenciamentoLinha] = useState<DbLinhaSIM | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({ iccid: "", operadora: "Vivo", numero: "", empresa_id: "", veiculo: "", fornecedor: "SmartSim" });
+  const emptyForm = { iccid: "", operadora: "Vivo", numero: "", empresa_id: "", veiculo: "", fornecedor: "", status: "offline" as "online" | "offline" };
+  const [form, setForm] = useState(emptyForm);
+
+  // Gerenciamento de Linha state
+  const [consultaResult, setConsultaResult] = useState<Record<string, unknown> | null>(null);
+  const [consultaLoading, setConsultaLoading] = useState(false);
+  const [smsComando, setSmsComando] = useState("");
+  const [smsLoading, setSmsLoading] = useState(false);
+  const [ativarLoading, setAtivarLoading] = useState(false);
+  const [desativarLoading, setDesativarLoading] = useState(false);
 
   const filtrado = linhas.filter(l => {
     if (filtro !== "all" && l.status !== filtro) return false;
@@ -44,21 +57,143 @@ const LinhasSIM = () => {
   const online = linhas.filter(l => l.status === "online").length;
   const offline = linhas.filter(l => l.status === "offline").length;
 
+  const openCreate = () => {
+    setEditMode(false);
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
+
+  const openEdit = (linha: DbLinhaSIM) => {
+    setEditMode(true);
+    setEditId(linha.id);
+    setForm({
+      iccid: linha.iccid,
+      operadora: linha.operadora,
+      numero: linha.numero,
+      empresa_id: linha.empresa_id || "",
+      veiculo: linha.veiculo,
+      fornecedor: linha.fornecedor || "",
+      status: linha.status,
+    });
+    setModalOpen(true);
+  };
+
+  const openGerenciamento = (linha: DbLinhaSIM) => {
+    setGerenciamentoLinha(linha);
+    setConsultaResult(null);
+    setSmsComando("");
+    setGerenciamentoOpen(true);
+  };
+
   const salvar = async () => {
     if (!form.iccid || !form.empresa_id) { toast.error("Preencha ICCID e empresa"); return; }
     const empresa = clientes.find(c => c.id === form.empresa_id);
+
     try {
-      await insertLinha.mutateAsync({
-        ...form,
-        status: "offline",
-        empresa_nome: empresa?.nome || "",
-        ultima_conexao: "Nunca",
-      });
+      if (editMode && editId) {
+        await updateLinha.mutateAsync({
+          id: editId,
+          iccid: form.iccid,
+          operadora: form.operadora,
+          numero: form.numero,
+          fornecedor: form.fornecedor,
+          empresa_id: form.empresa_id,
+          empresa_nome: empresa?.nome || "",
+          veiculo: form.veiculo,
+          status: form.status,
+        });
+        toast.success("Linha atualizada!");
+      } else {
+        await insertLinha.mutateAsync({
+          ...form,
+          status: form.status,
+          empresa_nome: empresa?.nome || "",
+          ultima_conexao: "Nunca",
+        });
+        toast.success("Linha SIM adicionada!");
+      }
       setModalOpen(false);
-      setForm({ iccid: "", operadora: "Vivo", numero: "", empresa_id: "", veiculo: "", fornecedor: "SmartSim" });
-      toast.success("Linha SIM adicionada!");
+      setForm(emptyForm);
     } catch (e: any) {
       toast.error(e.message);
+    }
+  };
+
+  const confirmarDelete = (linha: DbLinhaSIM) => {
+    setDeleteTarget(linha);
+    setDeleteConfirmOpen(true);
+  };
+
+  const executarDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteLinha.mutateAsync(deleteTarget.id);
+      toast.success("Linha removida!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setDeleteConfirmOpen(false);
+    setDeleteTarget(null);
+  };
+
+  // Gerenciamento actions
+  const handleConsultar = async () => {
+    if (!gerenciamentoLinha) return;
+    setConsultaLoading(true);
+    try {
+      const result = await consultarLinha(gerenciamentoLinha.iccid);
+      setConsultaResult(result);
+      toast.success("Consulta realizada!");
+    } catch (e: any) {
+      toast.error(`Erro ao consultar: ${e.message}`);
+    } finally {
+      setConsultaLoading(false);
+    }
+  };
+
+  const handleEnviarSMS = async () => {
+    if (!gerenciamentoLinha || !smsComando.trim()) {
+      toast.error("Digite o comando para enviar");
+      return;
+    }
+    setSmsLoading(true);
+    try {
+      await enviarComandoSMS(gerenciamentoLinha.iccid, smsComando.trim());
+      toast.success("Comando SMS enviado!");
+      setSmsComando("");
+    } catch (e: any) {
+      toast.error(`Erro ao enviar SMS: ${e.message}`);
+    } finally {
+      setSmsLoading(false);
+    }
+  };
+
+  const handleAtivar = async () => {
+    if (!gerenciamentoLinha) return;
+    setAtivarLoading(true);
+    try {
+      await ativarLinha(gerenciamentoLinha.iccid);
+      await updateLinha.mutateAsync({ id: gerenciamentoLinha.id, status: "online" });
+      toast.success("Linha ativada!");
+    } catch (e: any) {
+      toast.error(`Erro ao ativar: ${e.message}`);
+    } finally {
+      setAtivarLoading(false);
+    }
+  };
+
+  const handleDesativar = async () => {
+    if (!gerenciamentoLinha) return;
+    setDesativarLoading(true);
+    try {
+      await desativarLinha(gerenciamentoLinha.iccid);
+      await updateLinha.mutateAsync({ id: gerenciamentoLinha.id, status: "offline" });
+      toast.success("Linha desativada!");
+    } catch (e: any) {
+      toast.error(`Erro ao desativar: ${e.message}`);
+    } finally {
+      setDesativarLoading(false);
     }
   };
 
@@ -88,7 +223,7 @@ const LinhasSIM = () => {
             iccid: cols[0]?.trim() || "",
             operadora: cols[1]?.trim() || "Vivo",
             numero: cols[2]?.trim() || "",
-            fornecedor: cols[3]?.trim() || "SmartSim",
+            fornecedor: cols[3]?.trim() || "",
             empresa_id: cols[4]?.trim() || "",
             empresa_nome: empresa?.nome || "",
             veiculo: cols[5]?.trim() || "",
@@ -116,8 +251,7 @@ const LinhasSIM = () => {
       <PageHeader title="Linhas SIM" subtitle="Status das linhas por empresa, ICCID e fornecedor">
         <Button variant="outline" onClick={baixarTemplate}><Download className="w-4 h-4 mr-2" /> Template</Button>
         <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" /> Importar</Button>
-        <Button variant="outline" onClick={() => setApiOpen(true)}><Settings className="w-4 h-4 mr-2" /> API</Button>
-        <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Linha</Button>
+        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Nova Linha</Button>
       </PageHeader>
       <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={importarCSV} />
 
@@ -160,6 +294,7 @@ const LinhasSIM = () => {
                 <TableHead>Veiculo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ultima Conexao</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -178,6 +313,19 @@ const LinhasSIM = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{l.ultima_conexao}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openGerenciamento(l)} title="Gerenciamento de Linha">
+                        <Radio className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(l)} title="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => confirmarDelete(l)} title="Excluir">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -185,9 +333,10 @@ const LinhasSIM = () => {
         )}
       </Card>
 
+      {/* Dialog: Nova / Editar Linha */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nova Linha SIM</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editMode ? "Editar Linha SIM" : "Nova Linha SIM"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>ICCID</Label><Input value={form.iccid} onChange={e => setForm(f => ({ ...f, iccid: e.target.value }))} placeholder="89550312345678900XX" /></div>
             <div className="grid grid-cols-2 gap-4">
@@ -202,11 +351,13 @@ const LinhasSIM = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Empresa Fornecedora</Label>
-                <Select value={form.fornecedor} onValueChange={v => setForm(f => ({ ...f, fornecedor: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{fornecedores.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                </Select>
+              <div>
+                <Label>Fornecedor</Label>
+                <Input
+                  value={form.fornecedor}
+                  onChange={e => setForm(f => ({ ...f, fornecedor: e.target.value }))}
+                  placeholder="Ex: Arqia, SmartSim, Linkfield..."
+                />
               </div>
             </div>
             <div><Label>Numero</Label><Input value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} /></div>
@@ -217,26 +368,114 @@ const LinhasSIM = () => {
               </Select>
             </div>
             <div><Label>Veiculo (Placa)</Label><Input value={form.veiculo} onChange={e => setForm(f => ({ ...f, veiculo: e.target.value }))} /></div>
+            {editMode && (
+              <div><Label>Status</Label>
+                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v as "online" | "offline" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="offline">Offline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={salvar}>Adicionar</Button>
+            <Button onClick={salvar}>{editMode ? "Salvar" : "Adicionar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={apiOpen} onOpenChange={setApiOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Painel de Integracao API</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Configure a conexao com o sistema externo de gerenciamento de linhas SIM.</p>
-          <div className="space-y-4">
-            <div><Label>URL da API</Label><Input value={apiUrl} onChange={e => setApiUrl(e.target.value)} placeholder="https://api.operadora.com.br/v1" /></div>
-            <div><Label>Chave de API</Label><Input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-..." /></div>
+      {/* AlertDialog: Confirmar exclusao */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusao</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja realmente excluir a linha <strong className="font-mono">{deleteTarget?.iccid}</strong>? Esta acao nao pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executarDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog: Gerenciamento de Linha (Arqia) */}
+      <Dialog open={gerenciamentoOpen} onOpenChange={setGerenciamentoOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Gerenciamento de Linha</DialogTitle>
+            {gerenciamentoLinha && (
+              <p className="text-sm text-muted-foreground mt-1">
+                ICCID: <span className="font-mono">{gerenciamentoLinha.iccid}</span>
+                {gerenciamentoLinha.numero && <> &middot; {gerenciamentoLinha.numero}</>}
+              </p>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Consultar Status */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Search className="w-4 h-4" /> Consultar Status
+              </Label>
+              <p className="text-xs text-muted-foreground">Busca informacoes da linha na operadora Arqia.</p>
+              <Button variant="outline" size="sm" onClick={handleConsultar} disabled={consultaLoading}>
+                {consultaLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+                Consultar
+              </Button>
+              {consultaResult && (
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40 mt-2">
+                  {JSON.stringify(consultaResult, null, 2)}
+                </pre>
+              )}
+            </div>
+
+            <hr />
+
+            {/* Enviar Comando SMS */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Send className="w-4 h-4" /> Enviar Comando SMS
+              </Label>
+              <p className="text-xs text-muted-foreground">Envia um comando via SMS para o dispositivo vinculado a esta linha.</p>
+              <Textarea
+                value={smsComando}
+                onChange={e => setSmsComando(e.target.value)}
+                placeholder="Digite o comando..."
+                rows={2}
+              />
+              <Button variant="outline" size="sm" onClick={handleEnviarSMS} disabled={smsLoading || !smsComando.trim()}>
+                {smsLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                Enviar SMS
+              </Button>
+            </div>
+
+            <hr />
+
+            {/* Ativar / Desativar */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Power className="w-4 h-4" /> Ativar / Desativar Linha
+              </Label>
+              <p className="text-xs text-muted-foreground">Ativa ou desativa esta linha na operadora. O status local sera atualizado automaticamente.</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleAtivar} disabled={ativarLoading} className="text-green-600 border-green-300 hover:bg-green-50">
+                  {ativarLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Power className="w-4 h-4 mr-2" />}
+                  Ativar
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDesativar} disabled={desativarLoading} className="text-red-600 border-red-300 hover:bg-red-50">
+                  {desativarLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PowerOff className="w-4 h-4 mr-2" />}
+                  Desativar
+                </Button>
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApiOpen(false)}>Cancelar</Button>
-            <Button onClick={() => { toast.success("Configuracao salva!"); setApiOpen(false); }}>Salvar</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

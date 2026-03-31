@@ -87,6 +87,18 @@ export const useInsertEquipamento = () => useSupabaseInsert<DbEquipamento>("equi
 export const useUpdateEquipamento = () => useSupabaseUpdate<DbEquipamento>("equipamentos", "equipamentos");
 export const useDeleteEquipamento = () => useSupabaseDelete("equipamentos", "equipamentos");
 
+export const useBulkInsertEquipamentos = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: Partial<DbEquipamento>[]) => {
+      const { data, error } = await supabase.from("equipamentos").insert(items as any).select();
+      if (error) throw error;
+      return data as DbEquipamento[];
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["equipamentos"] }),
+  });
+};
+
 export const useMovimentacoes = (equipamentoId?: string) => {
   return useQuery<DbMovimentacao[]>({
     queryKey: ["movimentacoes_equipamento", equipamentoId],
@@ -544,6 +556,8 @@ export const useInsertFechamentoInstalacao = () => useSupabaseInsert<DbFechament
 export const useInsertUnidadeRastreador = () => useSupabaseInsert<DbUnidadeRastreador>("unidade_rastreadores", "unidade_rastreadores");
 export const useInsertUnidadeChip = () => useSupabaseInsert<DbUnidadeChip>("unidade_chips", "unidade_chips");
 export const useInsertConfiguracaoDispositivo = () => useSupabaseInsert<DbConfiguracaoDispositivo>("configuracao_dispositivos", "configuracao_dispositivos");
+export const useDeleteConfiguracaoDispositivo = () => useSupabaseDelete("configuracao_dispositivos", "configuracao_dispositivos");
+export const useInsertConfigChecklist = () => useSupabaseInsert<DbConfigChecklist>("config_checklist", "config_checklist");
 export const useUpdateControleKM = () => useSupabaseUpdate<DbControleKM>("controle_km", "controle_km");
 export const useDeleteControleKM = () => useSupabaseDelete("controle_km", "controle_km");
 export const useDeleteChamadoSuporte = () => useSupabaseDelete("chamados_suporte", "chamados_suporte");

@@ -1,93 +1,44 @@
 /**
- * Arqia API Integration
- * Portal: https://portal.api.ip101.cloud/
+ * Arqia API Integration (via Supabase Edge Function proxy)
  *
- * IMPORTANT: In production, all API calls should go through Supabase Edge Functions
- * to protect credentials. This client is for reference and structure.
- *
- * Capabilities:
- * - Query SIM line status by ICCID
- * - Send SMS commands to devices
- * - Activate/deactivate lines
- * - Get line consumption data
+ * All calls go through the "arqia-proxy" edge function to avoid CORS
+ * and protect credentials server-side.
  */
 
-const ARQIA_PORTAL_URL = "https://portal.api.ip101.cloud";
+import { supabase } from "@/integrations/supabase/client";
 
-interface ArqiaConfig {
-  email: string;
-  senha: string;
-  authToken?: string;
-}
-
-const defaultConfig: ArqiaConfig = {
-  email: "alexander@holdingwalk.com.br",
-  senha: "Arqia123#",
-};
-
-// Authentication
-export async function arqiaLogin(config: ArqiaConfig = defaultConfig): Promise<string> {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: config.email, password: config.senha }),
+async function callArqiaProxy(action: string, params: Record<string, unknown> = {}) {
+  const { data, error } = await supabase.functions.invoke("arqia-proxy", {
+    body: { action, params },
   });
 
-  if (!response.ok) throw new Error("Arqia auth failed");
-  const data = await response.json();
-  return data.token || data.access_token;
+  if (error) throw new Error(error.message || "Erro ao chamar proxy Arqia");
+  if (data?.error) throw new Error(data.data?.message || data.error || "Erro na Arqia");
+
+  return data?.data ?? data;
 }
 
 // Query line status by ICCID
-export async function consultarLinha(iccid: string, token: string) {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/lines/${iccid}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Arqia line query failed: ${response.status}`);
-  return response.json();
+export async function consultarLinha(iccid: string) {
+  return callArqiaProxy("consultar_linha", { iccid });
 }
 
 // Send SMS command to device
-export async function enviarComandoSMS(iccid: string, comando: string, token: string) {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/sms/send`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ iccid, message: comando }),
-  });
-  if (!response.ok) throw new Error(`Arqia SMS failed: ${response.status}`);
-  return response.json();
+export async function enviarComandoSMS(iccid: string, message: string) {
+  return callArqiaProxy("enviar_sms", { iccid, message });
 }
 
 // Activate line
-export async function ativarLinha(iccid: string, token: string) {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/lines/${iccid}/activate`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Arqia activate failed: ${response.status}`);
-  return response.json();
+export async function ativarLinha(iccid: string) {
+  return callArqiaProxy("ativar_linha", { iccid });
 }
 
 // Deactivate line
-export async function desativarLinha(iccid: string, token: string) {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/lines/${iccid}/deactivate`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Arqia deactivate failed: ${response.status}`);
-  return response.json();
+export async function desativarLinha(iccid: string) {
+  return callArqiaProxy("desativar_linha", { iccid });
 }
 
 // List all lines
-export async function listarLinhas(token: string) {
-  const response = await fetch(`${ARQIA_PORTAL_URL}/api/lines`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Arqia list lines failed: ${response.status}`);
-  return response.json();
+export async function listarLinhas() {
+  return callArqiaProxy("listar_linhas");
 }
-
-export { defaultConfig };
