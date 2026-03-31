@@ -2,25 +2,47 @@ import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useUnidadesCompletas, useDespachos } from "@/hooks/useSupabaseData";
+import { useUnidadesCompletas, useDespachos, useInsertControleUnidade, useUpdateControleUnidade, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbControleUnidade, DbUnidadeRastreador, DbUnidadeChip, DbDespacho } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
-import { Building2, Cpu, Smartphone, DollarSign, Truck, Package } from "lucide-react";
+import { Building2, Cpu, Smartphone, DollarSign, Truck, Package, Plus, Download } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/skeleton";
-
-const meses = ["01/2024", "02/2024", "03/2024"];
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 type UnidadeCompleta = DbControleUnidade & { rastreadores: DbUnidadeRastreador[]; chips: DbUnidadeChip[] };
+
+// Generate dynamic months
+const generateMeses = (): string[] => {
+  const meses: string[] = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    meses.push(`${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`);
+  }
+  return meses;
+};
 
 const ControleUnidades = () => {
   const { data: unidades = [], isLoading } = useUnidadesCompletas();
   const { data: allDespachos = [] } = useDespachos();
+  const insertUnidade = useInsertControleUnidade();
+  const updateUnidade = useUpdateControleUnidade();
+
+  useRealtimeSubscription("controle_unidades", ["controle_unidades", "unidades_completas"]);
+
+  const meses = useMemo(() => generateMeses(), []);
   const [detalhe, setDetalhe] = useState<UnidadeCompleta | null>(null);
-  const [mesSelecionado, setMesSelecionado] = useState("03/2024");
+  const [mesSelecionado, setMesSelecionado] = useState(meses[meses.length - 1]);
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [novaForm, setNovaForm] = useState({ unidade: "", responsavel: "", cidade: "", estado: "", valor_mensal: 0 });
 
   const uns = unidades as UnidadeCompleta[];
   const totalRastreadores = uns.reduce((a, u) => a + u.total_rastreadores, 0);
@@ -30,6 +52,7 @@ const ControleUnidades = () => {
   const enviosPorUnidade = useMemo(() => {
     const map: Record<string, number> = {};
     allDespachos.forEach((d: DbDespacho) => {
+      if (!d.data_envio) return;
       const mes = d.data_envio.substring(5, 7) + "/" + d.data_envio.substring(0, 4);
       if (mes === mesSelecionado) {
         map[d.unidade_destino] = (map[d.unidade_destino] || 0) + 1;
@@ -41,6 +64,54 @@ const ControleUnidades = () => {
   const rastreadoresEnviados = Object.values(enviosPorUnidade).reduce((a, b) => a + b, 0);
   const estoque = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "estoque").length, 0);
   const ativos = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "instalado").length, 0);
+
+  const criarUnidade = async () => {
+    if (!novaForm.unidade || !novaForm.cidade) { toast.error("Preencha unidade e cidade"); return; }
+    try {
+      await insertUnidade.mutateAsync({
+        ...novaForm,
+        total_rastreadores: 0,
+        total_chips: 0,
+        acesso_plataforma: "pendente",
+      });
+      setNovaOpen(false);
+      setNovaForm({ unidade: "", responsavel: "", cidade: "", estado: "", valor_mensal: 0 });
+      toast.success("Unidade criada!");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const exportarXLSX = () => {
+    const data = uns.map(u => ({
+      Unidade: u.unidade,
+      Responsavel: u.responsavel,
+      "Cidade/UF": `${u.cidade}/${u.estado}`,
+      Rastreadores: u.total_rastreadores,
+      "Em Estoque": u.rastreadores.filter(r => r.status === "estoque").length,
+      Ativos: u.rastreadores.filter(r => r.status === "instalado").length,
+      Chips: u.total_chips,
+      "Envios no Mes": enviosPorUnidade[u.unidade] || 0,
+      Acesso: u.acesso_plataforma,
+      "Valor Mensal": u.valor_mensal,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Unidades");
+
+    // Add summary sheet
+    const summary = [
+      { Metrica: "Total Rastreadores", Valor: totalRastreadores },
+      { Metrica: "Ativos/Instalados", Valor: ativos },
+      { Metrica: "Em Estoque", Valor: estoque },
+      { Metrica: "Total Chips", Valor: totalChips },
+      { Metrica: "Enviados no Mes", Valor: rastreadoresEnviados },
+      { Metrica: "Faturamento Mensal", Valor: valorTotal },
+    ];
+    const ws2 = XLSX.utils.json_to_sheet(summary);
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumo");
+
+    XLSX.writeFile(wb, `controle-unidades-${mesSelecionado.replace("/", "-")}.xlsx`);
+    toast.success("Planilha exportada!");
+  };
 
   if (isLoading) return (
     <div className="space-y-8">
@@ -58,8 +129,11 @@ const ControleUnidades = () => {
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>{meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
           </Select>
+          <Button variant="outline" onClick={exportarXLSX}><Download className="w-4 h-4 mr-2" /> Exportar XLSX</Button>
+          <Button onClick={() => setNovaOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Unidade</Button>
         </div>
       </PageHeader>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Unidades" value={uns.length} icon={Building2} accent="primary" />
         <StatCard label="Rastreadores Ativos" value={ativos} icon={Cpu} accent="success" />
@@ -68,8 +142,9 @@ const ControleUnidades = () => {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Total Chips" value={totalChips} icon={Smartphone} accent="muted" />
-        <StatCard label="Valor Mensal Total" value={`R$ ${valorTotal}`} icon={DollarSign} accent="success" />
+        <StatCard label="Valor Mensal Total" value={`R$ ${valorTotal.toLocaleString("pt-BR")}`} icon={DollarSign} accent="success" />
       </div>
+
       <Card className="card-shadow">
         <Table>
           <TableHeader>
@@ -91,21 +166,44 @@ const ControleUnidades = () => {
                 <TableCell>{u.total_chips}</TableCell>
                 <TableCell><Badge variant="outline">{enviosPorUnidade[u.unidade] || 0}</Badge></TableCell>
                 <TableCell><Badge variant={u.acesso_plataforma === "ativo" ? "default" : u.acesso_plataforma === "pendente" ? "secondary" : "destructive"} className="capitalize">{u.acesso_plataforma}</Badge></TableCell>
-                <TableCell className="font-medium">R$ {u.valor_mensal}</TableCell>
+                <TableCell className="font-medium">R$ {u.valor_mensal.toLocaleString("pt-BR")}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Card>
+
       <Card className="p-6 card-shadow">
         <h3 className="font-semibold mb-4">Resumo Consolidado - {mesSelecionado}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{totalRastreadores}</p><p className="text-xs text-muted-foreground">Total Rastreadores</p></div>
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{ativos}</p><p className="text-xs text-muted-foreground">Ativos/Instalados</p></div>
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{estoque}</p><p className="text-xs text-muted-foreground">Em Estoque</p></div>
-          <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold text-primary">R$ {valorTotal}</p><p className="text-xs text-muted-foreground">Faturamento Mensal</p></div>
+          <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold text-primary">R$ {valorTotal.toLocaleString("pt-BR")}</p><p className="text-xs text-muted-foreground">Faturamento Mensal</p></div>
         </div>
       </Card>
+
+      {/* Nova Unidade */}
+      <Dialog open={novaOpen} onOpenChange={setNovaOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova Unidade</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Nome da Unidade</Label><Input value={novaForm.unidade} onChange={e => setNovaForm(f => ({ ...f, unidade: e.target.value }))} placeholder="Objetivo Campinas" /></div>
+            <div><Label>Responsavel</Label><Input value={novaForm.responsavel} onChange={e => setNovaForm(f => ({ ...f, responsavel: e.target.value }))} /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Cidade</Label><Input value={novaForm.cidade} onChange={e => setNovaForm(f => ({ ...f, cidade: e.target.value }))} /></div>
+              <div><Label>Estado</Label><Input value={novaForm.estado} onChange={e => setNovaForm(f => ({ ...f, estado: e.target.value }))} placeholder="SP" /></div>
+            </div>
+            <div><Label>Valor Mensal (R$)</Label><Input type="number" value={novaForm.valor_mensal || ""} onChange={e => setNovaForm(f => ({ ...f, valor_mensal: +e.target.value }))} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaOpen(false)}>Cancelar</Button>
+            <Button onClick={criarUnidade}>Criar Unidade</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalhe */}
       <Sheet open={!!detalhe} onOpenChange={() => setDetalhe(null)}>
         <SheetContent className="w-[520px] overflow-y-auto">
           {detalhe && (
@@ -116,33 +214,35 @@ const ControleUnidades = () => {
                   <div><span className="text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">Acesso Plataforma</span><p><Badge variant={detalhe.acesso_plataforma === "ativo" ? "default" : "secondary"} className="capitalize">{detalhe.acesso_plataforma}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Valor Mensal</span><p className="font-semibold text-primary">R$ {detalhe.valor_mensal}</p></div>
+                  <div><span className="text-muted-foreground">Valor Mensal</span><p className="font-semibold text-primary">R$ {detalhe.valor_mensal.toLocaleString("pt-BR")}</p></div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Rastreadores ({detalhe.rastreadores.length})</h4>
-                  <div className="space-y-1">
+                  <div className="space-y-1 max-h-[200px] overflow-y-auto">
                     {detalhe.rastreadores.map((r, i) => (
                       <div key={i} className="flex justify-between p-2 rounded bg-muted/50">
                         <span className="font-mono text-xs">{r.serial} - {r.modelo}</span>
                         <Badge variant="outline" className="capitalize text-xs">{r.status}</Badge>
                       </div>
                     ))}
+                    {detalhe.rastreadores.length === 0 && <p className="text-muted-foreground">Nenhum rastreador.</p>}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Chips ({detalhe.chips.length})</h4>
-                  <div className="space-y-1">
+                  <div className="space-y-1 max-h-[200px] overflow-y-auto">
                     {detalhe.chips.map((c, i) => (
                       <div key={i} className="flex justify-between p-2 rounded bg-muted/50">
                         <span className="font-mono text-xs">{c.iccid} ({c.operadora})</span>
                         <Badge variant={c.status === "ativo" ? "default" : "destructive"} className="text-xs capitalize">{c.status}</Badge>
                       </div>
                     ))}
+                    {detalhe.chips.length === 0 && <p className="text-muted-foreground">Nenhum chip.</p>}
                   </div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Envios Recentes</h4>
-                  {allDespachos.filter((d: DbDespacho) => d.unidade_destino === detalhe.unidade).map((d: DbDespacho) => (
+                  {allDespachos.filter((d: DbDespacho) => d.unidade_destino === detalhe.unidade).slice(0, 10).map((d: DbDespacho) => (
                     <div key={d.id} className="flex justify-between p-2 rounded bg-muted/50 mb-1">
                       <div><p className="font-mono text-xs">{d.serial} - {d.rastreador_modelo}</p><p className="text-xs text-muted-foreground">{d.data_envio}</p></div>
                       <Badge variant="outline" className="text-xs capitalize">{d.status_entrega.replace("_", " ")}</Badge>
@@ -150,8 +250,8 @@ const ControleUnidades = () => {
                   ))}
                 </div>
                 <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground font-medium">Base de Cobranca</p>
-                  <p className="text-sm mt-1">{detalhe.total_rastreadores} rastreador(es) + {detalhe.total_chips} chip(s) + plataforma = <strong>R$ {detalhe.valor_mensal}/mes</strong></p>
+                  <p className="text-xs text-muted-foreground font-medium">Regra: 1 rastreador = 1 chip</p>
+                  <p className="text-sm mt-1">{detalhe.total_rastreadores} rastreador(es) + {detalhe.total_chips} chip(s) = <strong>R$ {detalhe.valor_mensal.toLocaleString("pt-BR")}/mes</strong></p>
                 </div>
               </div>
             </>

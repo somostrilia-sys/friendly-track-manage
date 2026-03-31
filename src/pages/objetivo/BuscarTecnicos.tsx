@@ -1,46 +1,103 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Phone, Mail, UserPlus, Check, Inbox } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, MapPin, Phone, Mail, UserPlus, Check, Inbox, Navigation, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { StatCard } from "@/components/StatCard";
+import { useTecnicos, useInsertServico } from "@/hooks/useSupabaseData";
 import { toast } from "sonner";
-
-interface Resultado {
-  id: string; nome: string; cnpj: string; cnae: string; cidade: string; estado: string; telefone: string; email: string; endereco: string;
-}
-
-const resultadosMock: Resultado[] = [];
 
 const estados = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
 
+interface GoogleResult {
+  id: string;
+  nome: string;
+  endereco: string;
+  cidade: string;
+  estado: string;
+  telefone: string;
+  tipo: string;
+}
+
 const BuscarTecnicos = () => {
+  const { data: tecnicos = [] } = useTecnicos();
+  const insertServico = useInsertServico();
+
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
   const [buscou, setBuscou] = useState(false);
-  const [adicionados, setAdicionados] = useState<Set<string>>(new Set());
+  const [googleResults, setGoogleResults] = useState<GoogleResult[]>([]);
+  const [buscandoGoogle, setBuscandoGoogle] = useState(false);
 
-  const resultados = buscou
-    ? resultadosMock.filter(r => {
-        const matchCidade = !cidade || r.cidade.toLowerCase().includes(cidade.toLowerCase());
-        const matchEstado = !estado || r.estado === estado;
-        return matchCidade && matchEstado;
-      })
-    : [];
+  // Search registered technicians by city/state
+  const tecnicosFiltrados = useMemo(() => {
+    if (!buscou) return [];
+    return tecnicos.filter(t => {
+      const matchCidade = !cidade || t.cidade?.toLowerCase().includes(cidade.toLowerCase());
+      const matchEstado = !estado || t.estado === estado;
+      return matchCidade && matchEstado && t.status === "disponivel";
+    });
+  }, [buscou, tecnicos, cidade, estado]);
 
-  const handleBuscar = () => setBuscou(true);
+  const handleBuscar = async () => {
+    setBuscou(true);
 
-  const adicionarLead = (r: Resultado) => {
-    setAdicionados(prev => new Set(prev).add(r.id));
-    toast.success(`${r.nome} adicionado como lead de técnico!`);
+    // If no registered technicians found, search Google Places
+    const found = tecnicos.filter(t => {
+      const matchCidade = !cidade || t.cidade?.toLowerCase().includes(cidade.toLowerCase());
+      const matchEstado = !estado || t.estado === estado;
+      return matchCidade && matchEstado && t.status === "disponivel";
+    });
+
+    if (found.length === 0 && cidade) {
+      setBuscandoGoogle(true);
+      try {
+        const query = `autoeletrica+instalador+rastreador+${cidade}+${estado}`;
+        // Note: Google Places API requires a proxy for CORS. For now, show placeholder
+        // In production, this would go through a Supabase Edge Function
+        toast.info("Nenhum tecnico cadastrado encontrado. Busque no Google abaixo.");
+      } catch {
+        toast.error("Erro ao buscar no Google");
+      }
+      setBuscandoGoogle(false);
+    }
+  };
+
+  const criarOSRapida = async (tecnicoId: string, tecnicoNome: string) => {
+    try {
+      await insertServico.mutateAsync({
+        codigo: `OS-${Date.now()}`,
+        tecnico_id: tecnicoId,
+        tecnico_nome: tecnicoNome,
+        cliente_nome: "",
+        veiculo: "",
+        tipo: "instalacao",
+        endereco: "",
+        cidade: cidade,
+        estado: estado,
+        data: new Date().toISOString().split("T")[0],
+        horario: "",
+        valor_servico: 0,
+        status: "agendado",
+      });
+      toast.success(`OS criada para ${tecnicoNome}!`);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Buscar Técnicos" subtitle="Busca por CNAE na Receita Federal (4321-5/00, 4530-7/03, 4541-2/06) + Google" />
+      <PageHeader title="Buscar Tecnicos" subtitle="Busca nos tecnicos cadastrados + Google Places para autoeletrica e oficinas" />
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Tecnicos Cadastrados" value={tecnicos.length} icon={Wrench} accent="primary" />
+        <StatCard label="Disponiveis" value={tecnicos.filter(t => t.status === "disponivel").length} icon={Check} accent="success" />
+        <StatCard label="Resultados" value={tecnicosFiltrados.length} icon={Search} accent="muted" />
+      </div>
 
       <Card className="p-6 card-shadow">
         <div className="flex flex-col md:flex-row gap-4">
@@ -62,60 +119,82 @@ const BuscarTecnicos = () => {
       </Card>
 
       {buscou && (
-        <Card className="card-shadow">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold">Resultados encontrados: {resultados.length}</h3>
-            <p className="text-xs text-muted-foreground">CNAEs: 4321-5/00, 4530-7/03, 4541-2/06</p>
-          </div>
-          {resultados.length === 0 ? (
-            <div className="empty-state empty-state-border m-4">
-              <Inbox className="empty-state-icon" />
-              <p className="text-sm text-muted-foreground">Nenhum técnico encontrado para os critérios informados</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>CNPJ</TableHead>
-                  <TableHead>CNAE</TableHead>
-                  <TableHead>Endereço</TableHead>
-                  <TableHead>Cidade/UF</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Ação</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resultados.map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{r.cnpj}</TableCell>
-                    <TableCell><Badge variant="secondary">{r.cnae}</Badge></TableCell>
-                    <TableCell className="text-sm">{r.endereco}</TableCell>
-                    <TableCell>{r.cidade}/{r.estado}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{r.telefone}</span>
-                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {adicionados.has(r.id) ? (
-                        <Button size="sm" variant="outline" className="text-xs" disabled>
-                          <Check className="w-3 h-3 mr-1" /> Adicionado
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => adicionarLead(r)}>
-                          <UserPlus className="w-3 h-3 mr-1" /> Cadastrar Lead
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </Card>
+        <Tabs defaultValue="cadastrados" className="w-full">
+          <TabsList>
+            <TabsTrigger value="cadastrados">Tecnicos Cadastrados ({tecnicosFiltrados.length})</TabsTrigger>
+            <TabsTrigger value="google">Busca Google / Externo</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="cadastrados">
+            <Card className="card-shadow">
+              {tecnicosFiltrados.length === 0 ? (
+                <div className="empty-state empty-state-border m-4">
+                  <Inbox className="empty-state-icon" />
+                  <p className="text-sm text-muted-foreground">Nenhum tecnico cadastrado encontrado nesta regiao</p>
+                  <p className="text-xs text-muted-foreground/60">Tente a aba "Busca Google" para encontrar oficinas e autoeletricas proximas</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Cidade/UF</TableHead>
+                      <TableHead>Especialidade</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Valor/Inst.</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Acao</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tecnicosFiltrados.map(t => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">{t.nome}</TableCell>
+                        <TableCell><Badge variant="secondary" className="capitalize">{t.tipo_tecnico}</Badge></TableCell>
+                        <TableCell>{t.cidade}/{t.estado}</TableCell>
+                        <TableCell className="text-sm">{t.especialidade}</TableCell>
+                        <TableCell className="text-sm">{t.telefone}</TableCell>
+                        <TableCell className="font-medium">R$ {t.valor_instalacao}</TableCell>
+                        <TableCell><Badge variant="default">Disponivel</Badge></TableCell>
+                        <TableCell>
+                          <Button size="sm" onClick={() => criarOSRapida(t.id, t.nome)}>
+                            <Navigation className="w-3 h-3 mr-1" /> Criar OS
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="google">
+            <Card className="p-6 card-shadow">
+              <div className="text-center space-y-4">
+                <MapPin className="w-12 h-12 text-muted-foreground mx-auto" />
+                <h3 className="font-semibold">Busca no Google Places</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Busca autoeletricas, oficinas e instaladores de rastreadores proximos a <strong>{cidade || "cidade"} {estado && `- ${estado}`}</strong>
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const query = encodeURIComponent(`autoeletrica instalador rastreador ${cidade} ${estado}`);
+                    window.open(`https://www.google.com/maps/search/${query}`, "_blank");
+                    toast.info("Busca aberta no Google Maps");
+                  }}
+                >
+                  <Search className="w-4 h-4 mr-2" /> Abrir no Google Maps
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  A integracao direta com Google Places API sera ativada em breve via Edge Function
+                </p>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
