@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useClientes, useManutencoes, useDespachos, useAgendamentos, useTecnicos, useFaturamentoB2B, usePedidosCompletos } from "@/hooks/useSupabaseData";
+import { useClientes, useManutencoes, useDespachos, useAgendamentos, useTecnicos, useFaturamentoB2B, usePedidosCompletos, useRealtimeSubscription, useServicos } from "@/hooks/useSupabaseData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
@@ -54,6 +54,15 @@ const Dashboard = () => {
   const { data: agendamentos = [] } = useAgendamentos();
   const { data: tecnicos = [] } = useTecnicos();
   const { data: faturamentoB2B = [] } = useFaturamentoB2B();
+  const { data: servicos = [] } = useServicos();
+
+  // Realtime subscriptions for dashboard
+  useRealtimeSubscription("clientes", ["clientes"]);
+  useRealtimeSubscription("faturamento_b2b", ["faturamento_b2b"]);
+  useRealtimeSubscription("agendamentos", ["agendamentos"]);
+  useRealtimeSubscription("tecnicos", ["tecnicos"]);
+  useRealtimeSubscription("manutencoes", ["manutencoes"]);
+  useRealtimeSubscription("servicos_agendados", ["servicos_agendados"]);
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -143,10 +152,12 @@ const Dashboard = () => {
   const tecnicosDisponiveis = tecnicos.filter((t: any) => t.status === "disponivel").length;
 
   // Trackit Operational KPIs (real data from Supabase)
-  const instalacoesSemana = (() => {
+  const instalacoesSemana = useMemo(() => {
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-    return agendamentos.filter((a: any) => a.status === "realizado" && new Date(a.data) >= weekAgo).length;
-  })();
+    const fromAgendamentos = agendamentos.filter((a: any) => a.status === "realizado" && new Date(a.data) >= weekAgo).length;
+    const fromServicos = servicos.filter((s: any) => s.tipo === "instalacao" && s.status === "concluido" && new Date(s.data) >= weekAgo).length;
+    return Math.max(fromAgendamentos, fromServicos);
+  }, [agendamentos, servicos]);
   const rastreadoresAtivos = clientes.reduce((sum: number, c: any) => sum + (Number(c.veiculos_ativos) || 0), 0);
   const manutencoesPendentes = manutencoesAbertas;
   const tecnicosOnline = tecnicosDisponiveis;

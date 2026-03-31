@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useManutencoes, useUpdateManutencao, useTecnicos } from "@/hooks/useSupabaseData";
+import { useManutencoes, useInsertManutencao, useUpdateManutencao, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbManutencao } from "@/types/database";
-import { AlertTriangle, Send, WifiOff, Shield, Clock, Inbox } from "lucide-react";
+import { AlertTriangle, Send, WifiOff, Shield, Clock, Inbox, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -36,10 +37,15 @@ const statusMap: Record<string, { label: string; variant: "destructive" | "secon
 const Manutencoes = () => {
   const { data: manutencoes = [], isLoading } = useManutencoes();
   const { data: tecnicos = [] } = useTecnicos();
+  const insertManutencao = useInsertManutencao();
   const updateManutencao = useUpdateManutencao();
+
+  useRealtimeSubscription("manutencoes", ["manutencoes"]);
 
   const [despacharId, setDespacharId] = useState<string | null>(null);
   const [tecnicoId, setTecnicoId] = useState("");
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [novaForm, setNovaForm] = useState({ veiculo: "", placa: "", cliente_nome: "", problema: "offline" as string });
 
   const ordenadas = useMemo(() => {
     return [...manutencoes].sort((a, b) => {
@@ -54,6 +60,35 @@ const Manutencoes = () => {
     const dias = Math.floor((new Date().getTime() - new Date(m.data_abertura).getTime()) / (1000 * 60 * 60 * 24));
     return dias > 30;
   }).length;
+
+  const tempoMedio = useMemo(() => {
+    const abertosComTempo = manutencoes.filter(m => m.status !== "resolvido");
+    if (abertosComTempo.length === 0) return "0 dias";
+    const totalDias = abertosComTempo.reduce((sum, m) => {
+      return sum + Math.floor((new Date().getTime() - new Date(m.data_abertura).getTime()) / (1000 * 60 * 60 * 24));
+    }, 0);
+    return `${Math.round(totalDias / abertosComTempo.length)} dias`;
+  }, [manutencoes]);
+
+  const criarManutencao = async () => {
+    if (!novaForm.placa || !novaForm.cliente_nome) { toast.error("Preencha placa e cliente"); return; }
+    try {
+      await insertManutencao.mutateAsync({
+        codigo: `MAN-${String(manutencoes.length + 1).padStart(3, "0")}`,
+        veiculo: novaForm.veiculo,
+        placa: novaForm.placa,
+        cliente_nome: novaForm.cliente_nome,
+        problema: novaForm.problema,
+        status: "aberto",
+        data_abertura: new Date().toISOString().split("T")[0],
+        tecnico_designado: "",
+        dias_offline: 0,
+      });
+      setNovaOpen(false);
+      setNovaForm({ veiculo: "", placa: "", cliente_nome: "", problema: "offline" });
+      toast.success("Manutencao criada!");
+    } catch (e: any) { toast.error(e.message); }
+  };
 
   const despachar = async () => {
     if (!tecnicoId) { toast.error("Selecione um tecnico"); return; }
@@ -75,12 +110,14 @@ const Manutencoes = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha - ordenados por tempo offline" />
+      <PageHeader title="Manutencoes" subtitle="Rastreadores offline e com falha - ordenados por tempo offline">
+        <Button onClick={() => setNovaOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Manutencao</Button>
+      </PageHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Chamados Abertos" value={abertos} icon={WifiOff} accent="destructive" />
         <StatCard label="Criticos (>30 dias)" value={criticos} icon={AlertTriangle} accent="warning" />
         <StatCard label="Total" value={manutencoes.length} icon={Shield} accent="primary" />
-        <StatCard label="Tempo Medio" value="12 dias" icon={Clock} accent="muted" />
+        <StatCard label="Tempo Medio" value={tempoMedio} icon={Clock} accent="muted" />
       </div>
       <Card className="card-shadow">
         <Table>
@@ -129,6 +166,31 @@ const Manutencoes = () => {
           </TableBody>
         </Table>
       </Card>
+      {/* Nova Manutencao */}
+      <Dialog open={novaOpen} onOpenChange={setNovaOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova Manutencao</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Veiculo</Label><Input value={novaForm.veiculo} onChange={e => setNovaForm(f => ({ ...f, veiculo: e.target.value }))} placeholder="Modelo do veiculo" /></div>
+            <div><Label>Placa</Label><Input value={novaForm.placa} onChange={e => setNovaForm(f => ({ ...f, placa: e.target.value }))} placeholder="ABC-1234" /></div>
+            <div><Label>Cliente</Label><Input value={novaForm.cliente_nome} onChange={e => setNovaForm(f => ({ ...f, cliente_nome: e.target.value }))} placeholder="Nome do cliente" /></div>
+            <div><Label>Problema</Label>
+              <Select value={novaForm.problema} onValueChange={v => setNovaForm(f => ({ ...f, problema: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(problemaMap).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaOpen(false)}>Cancelar</Button>
+            <Button onClick={criarManutencao}>Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Despachar */}
       <Dialog open={!!despacharId} onOpenChange={() => setDespacharId(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Despachar Tecnico</DialogTitle></DialogHeader>
