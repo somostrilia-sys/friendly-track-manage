@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useConfigDispositivosComChecklist, useUpdateConfiguracaoDispositivo, useUpdateConfigChecklist } from "@/hooks/useSupabaseData";
+import { useConfigDispositivosComChecklist, useUpdateConfiguracaoDispositivo, useUpdateConfigChecklist, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbConfiguracaoDispositivo, DbConfigChecklist } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Settings, CheckCircle, AlertCircle, Clock } from "lucide-react";
@@ -23,6 +23,9 @@ const ConfiguracaoDispositivos = () => {
   const { data: configs = [], isLoading } = useConfigDispositivosComChecklist();
   const updateConfig = useUpdateConfiguracaoDispositivo();
   const updateChecklist = useUpdateConfigChecklist();
+
+  useRealtimeSubscription("configuracao_dispositivos", ["configuracao_dispositivos", "config_dispositivos_completo"]);
+
   const [detalhe, setDetalhe] = useState<ConfigComChecklist | null>(null);
 
   const cfgs = configs as ConfigComChecklist[];

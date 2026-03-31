@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useControleKM, useInsertControleKM, useTecnicos } from "@/hooks/useSupabaseData";
+import { useControleKM, useInsertControleKM, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbControleKM } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, MapPin, Route, Trash2, Inbox } from "lucide-react";
@@ -21,6 +21,8 @@ const ControleKMPage = () => {
   const { data: registros = [], isLoading } = useControleKM();
   const { data: tecnicos = [] } = useTecnicos();
   const insertKM = useInsertControleKM();
+
+  useRealtimeSubscription("controle_km", ["controle_km"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filtroTecnico, setFiltroTecnico] = useState("all");

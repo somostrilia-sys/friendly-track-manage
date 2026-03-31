@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useChamadosSuporte, useInsertChamadoSuporte, useUpdateChamadoSuporte } from "@/hooks/useSupabaseData";
+import { useChamadosSuporte, useInsertChamadoSuporte, useUpdateChamadoSuporte, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbChamadoSuporte } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, Headphones, AlertTriangle, CheckCircle, Clock, Inbox } from "lucide-react";
@@ -27,6 +27,8 @@ const FilaSuporte = () => {
   const { data: chamados = [], isLoading } = useChamadosSuporte();
   const insertChamado = useInsertChamadoSuporte();
   const updateChamado = useUpdateChamadoSuporte();
+
+  useRealtimeSubscription("chamados_suporte", ["chamados_suporte"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("all");

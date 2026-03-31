@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useDespachos, useInsertDespacho, useUpdateDespacho } from "@/hooks/useSupabaseData";
+import { useDespachos, useInsertDespacho, useUpdateDespacho, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbDespacho } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -26,6 +26,8 @@ const LogisticaRastreadores = () => {
   const { data: despachos = [], isLoading } = useDespachos();
   const insertDespacho = useInsertDespacho();
   const updateDespacho = useUpdateDespacho();
+
+  useRealtimeSubscription("despachos_rastreadores", ["despachos_rastreadores"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filtro, setFiltro] = useState("");

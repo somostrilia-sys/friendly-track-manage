@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useInstalacoes, useInsertInstalacao, useUpdateInstalacao, useTecnicos } from "@/hooks/useSupabaseData";
+import { useInstalacoes, useInsertInstalacao, useUpdateInstalacao, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Inbox } from "lucide-react";
@@ -27,6 +27,8 @@ const AcompanhamentoInstalacoes = () => {
   const { data: tecnicos = [] } = useTecnicos();
   const insertInstalacao = useInsertInstalacao();
   const updateInstalacao = useUpdateInstalacao();
+
+  useRealtimeSubscription("instalacoes", ["instalacoes"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("all");
