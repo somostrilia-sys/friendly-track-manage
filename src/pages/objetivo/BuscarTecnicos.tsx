@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MapPin, Navigation, Wrench, Check, Inbox, Star, Loader2 } from "lucide-react";
+import { Search, MapPin, Navigation, Wrench, Check, Inbox, Star, Loader2, Phone, MessageCircle, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { useTecnicos, useInsertServico } from "@/hooks/useSupabaseData";
@@ -25,6 +25,9 @@ interface GooglePlace {
   lat: number;
   lng: number;
   tipos: string[];
+  telefone: string;
+  telefone_internacional: string;
+  website: string;
 }
 
 const BuscarTecnicos = () => {
@@ -199,46 +202,73 @@ const BuscarTecnicos = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>
+                      <TableHead>Telefone</TableHead>
                       <TableHead>Endereco</TableHead>
                       <TableHead>Avaliacao</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Acao</TableHead>
+                      <TableHead>Contato</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {googleResults.map(place => (
-                      <TableRow key={place.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{place.nome}</p>
-                            <p className="text-xs text-muted-foreground">{place.tipos.slice(0, 3).join(", ")}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm max-w-[300px]">{place.endereco}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                            <span className="text-sm font-medium">{place.avaliacao}</span>
-                            <span className="text-xs text-muted-foreground">({place.total_avaliacoes})</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {place.aberto === true && <Badge variant="default" className="text-xs">Aberto</Badge>}
-                          {place.aberto === false && <Badge variant="secondary" className="text-xs">Fechado</Badge>}
-                          {place.aberto === null && <Badge variant="outline" className="text-xs">—</Badge>}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline" className="text-xs" onClick={() => {
-                              navigator.clipboard.writeText(place.endereco);
-                              toast.success("Endereco copiado!");
-                            }}>
-                              <MapPin className="w-3 h-3 mr-1" /> Copiar
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {googleResults.map(place => {
+                      const phoneDigits = (place.telefone_internacional || place.telefone || "").replace(/\D/g, "");
+                      const whatsappNum = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
+                      return (
+                        <TableRow key={place.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{place.nome}</p>
+                              <p className="text-xs text-muted-foreground">{place.tipos.slice(0, 3).join(", ")}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {place.telefone ? (
+                              <span className="font-mono">{place.telefone}</span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Sem telefone</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[250px]">{place.endereco}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                              <span className="text-sm font-medium">{place.avaliacao}</span>
+                              <span className="text-xs text-muted-foreground">({place.total_avaliacoes})</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {place.aberto === true && <Badge variant="default" className="text-xs">Aberto</Badge>}
+                            {place.aberto === false && <Badge variant="secondary" className="text-xs">Fechado</Badge>}
+                            {place.aberto === null && <Badge variant="outline" className="text-xs">—</Badge>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1 flex-wrap">
+                              {phoneDigits ? (
+                                <>
+                                  <Button size="sm" variant="outline" className="text-xs" asChild>
+                                    <a href={`tel:${place.telefone_internacional || place.telefone}`}>
+                                      <Phone className="w-3 h-3 mr-1" /> Ligar
+                                    </a>
+                                  </Button>
+                                  <Button size="sm" className="text-xs bg-green-600 hover:bg-green-700" asChild>
+                                    <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Olá! Somos da Objetivo Auto e estamos buscando prestadores para instalação de rastreadores na região. Vocês trabalham com instalação de rastreadores veiculares?`)}`} target="_blank" rel="noopener">
+                                      <MessageCircle className="w-3 h-3 mr-1" /> WhatsApp
+                                    </a>
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button size="sm" variant="outline" className="text-xs" onClick={() => {
+                                  navigator.clipboard.writeText(place.nome + " - " + place.endereco);
+                                  toast.success("Dados copiados!");
+                                }}>
+                                  <MapPin className="w-3 h-3 mr-1" /> Copiar
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
