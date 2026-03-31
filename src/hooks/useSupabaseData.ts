@@ -13,7 +13,7 @@ import type {
 } from "@/types/database";
 
 // Generic helper
-function useSupabaseQuery<T>(key: string, table: string) {
+function useSupabaseQuery<T>(key: string, table: string, options?: { enabled?: boolean }) {
   return useQuery<T[]>({
     queryKey: [key],
     queryFn: async () => {
@@ -21,6 +21,7 @@ function useSupabaseQuery<T>(key: string, table: string) {
       if (error) throw error;
       return (data || []) as T[];
     },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
 }
 
@@ -60,7 +61,7 @@ function useSupabaseDelete(key: string, table: string) {
 }
 
 // ============ CLIENTES ============
-export const useClientes = () => useSupabaseQuery<DbCliente>("clientes", "clientes");
+export const useClientes = (options?: { enabled?: boolean }) => useSupabaseQuery<DbCliente>("clientes", "clientes", options);
 export const useInsertCliente = () => useSupabaseInsert<DbCliente>("clientes", "clientes");
 export const useUpdateCliente = () => useSupabaseUpdate<DbCliente>("clientes", "clientes");
 export const useDeleteCliente = () => useSupabaseDelete("clientes", "clientes");
@@ -81,7 +82,7 @@ export const useHistoricoContatos = (clienteId?: string) => {
 export const useInsertHistoricoContato = () => useSupabaseInsert<DbHistoricoContato>("historico_contatos", "historico_contatos");
 
 // ============ EQUIPAMENTOS ============
-export const useEquipamentos = () => useSupabaseQuery<DbEquipamento>("equipamentos", "equipamentos");
+export const useEquipamentos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbEquipamento>("equipamentos", "equipamentos", options);
 export const useInsertEquipamento = () => useSupabaseInsert<DbEquipamento>("equipamentos", "equipamentos");
 export const useUpdateEquipamento = () => useSupabaseUpdate<DbEquipamento>("equipamentos", "equipamentos");
 export const useDeleteEquipamento = () => useSupabaseDelete("equipamentos", "equipamentos");
@@ -113,7 +114,7 @@ export const useComodatos = (equipamentoId?: string) => {
 export const useInsertComodato = () => useSupabaseInsert<DbComodato>("comodatos", "comodatos");
 
 // ============ PEDIDOS ============
-export const usePedidos = () => useSupabaseQuery<DbPedido>("pedidos", "pedidos");
+export const usePedidos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbPedido>("pedidos", "pedidos", options);
 export const useInsertPedido = () => useSupabaseInsert<DbPedido>("pedidos", "pedidos");
 export const useUpdatePedido = () => useSupabaseUpdate<DbPedido>("pedidos", "pedidos");
 export const useDeletePedido = () => useSupabaseDelete("pedidos", "pedidos");
@@ -146,7 +147,7 @@ export const useInsertParcela = () => useSupabaseInsert<DbParcela>("parcelas", "
 export const useUpdateParcela = () => useSupabaseUpdate<DbParcela>("parcelas", "parcelas");
 
 // ============ LINHAS SIM ============
-export const useLinhasSIM = () => useSupabaseQuery<DbLinhaSIM>("linhas_sim", "linhas_sim");
+export const useLinhasSIM = (options?: { enabled?: boolean }) => useSupabaseQuery<DbLinhaSIM>("linhas_sim", "linhas_sim", options);
 export const useInsertLinhaSIM = () => useSupabaseInsert<DbLinhaSIM>("linhas_sim", "linhas_sim");
 export const useUpdateLinhaSIM = () => useSupabaseUpdate<DbLinhaSIM>("linhas_sim", "linhas_sim");
 export const useDeleteLinhaSIM = () => useSupabaseDelete("linhas_sim", "linhas_sim");
@@ -158,7 +159,7 @@ export const useUpdateTarefa = () => useSupabaseUpdate<DbTarefa>("tarefas", "tar
 export const useDeleteTarefa = () => useSupabaseDelete("tarefas", "tarefas");
 
 // ============ TECNICOS ============
-export const useTecnicos = () => useSupabaseQuery<DbTecnico>("tecnicos", "tecnicos");
+export const useTecnicos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbTecnico>("tecnicos", "tecnicos", options);
 export const useInsertTecnico = () => useSupabaseInsert<DbTecnico>("tecnicos", "tecnicos");
 export const useUpdateTecnico = () => useSupabaseUpdate<DbTecnico>("tecnicos", "tecnicos");
 
@@ -175,7 +176,7 @@ export const useTecnicoEstoque = (tecnicoId?: string) => {
 };
 
 // ============ SERVICOS ============
-export const useServicos = () => useSupabaseQuery<DbServico>("servicos_agendados", "servicos_agendados");
+export const useServicos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbServico>("servicos_agendados", "servicos_agendados", options);
 export const useInsertServico = () => useSupabaseInsert<DbServico>("servicos_agendados", "servicos_agendados");
 export const useUpdateServico = () => useSupabaseUpdate<DbServico>("servicos_agendados", "servicos_agendados");
 
@@ -192,7 +193,7 @@ export const useServicoById = (id?: string) => {
 };
 
 // ============ MANUTENCOES ============
-export const useManutencoes = () => useSupabaseQuery<DbManutencao>("manutencoes", "manutencoes");
+export const useManutencoes = (options?: { enabled?: boolean }) => useSupabaseQuery<DbManutencao>("manutencoes", "manutencoes", options);
 export const useInsertManutencao = () => useSupabaseInsert<DbManutencao>("manutencoes", "manutencoes");
 export const useUpdateManutencao = () => useSupabaseUpdate<DbManutencao>("manutencoes", "manutencoes");
 
@@ -219,7 +220,7 @@ export const useInsertInstalacao = () => useSupabaseInsert<DbInstalacao>("instal
 export const useUpdateInstalacao = () => useSupabaseUpdate<DbInstalacao>("instalacoes", "instalacoes");
 
 // ============ CONTROLE KM ============
-export const useControleKM = () => useSupabaseQuery<DbControleKM>("controle_km", "controle_km");
+export const useControleKM = (options?: { enabled?: boolean }) => useSupabaseQuery<DbControleKM>("controle_km", "controle_km", options);
 export const useInsertControleKM = () => useSupabaseInsert<DbControleKM>("controle_km", "controle_km");
 
 // ============ FECHAMENTO TECNICOS ============
@@ -239,22 +240,22 @@ export const useFechamentoInstalacoes = (fechamentoId?: string) => {
 };
 
 // ============ CHAMADOS SUPORTE ============
-export const useChamadosSuporte = () => useSupabaseQuery<DbChamadoSuporte>("chamados_suporte", "chamados_suporte");
+export const useChamadosSuporte = (options?: { enabled?: boolean }) => useSupabaseQuery<DbChamadoSuporte>("chamados_suporte", "chamados_suporte", options);
 export const useInsertChamadoSuporte = () => useSupabaseInsert<DbChamadoSuporte>("chamados_suporte", "chamados_suporte");
 export const useUpdateChamadoSuporte = () => useSupabaseUpdate<DbChamadoSuporte>("chamados_suporte", "chamados_suporte");
 
 // ============ AGENDAMENTOS ============
-export const useAgendamentos = () => useSupabaseQuery<DbAgendamento>("agendamentos", "agendamentos");
+export const useAgendamentos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbAgendamento>("agendamentos", "agendamentos", options);
 export const useInsertAgendamento = () => useSupabaseInsert<DbAgendamento>("agendamentos", "agendamentos");
 export const useUpdateAgendamento = () => useSupabaseUpdate<DbAgendamento>("agendamentos", "agendamentos");
 
 // ============ DESPACHOS ============
-export const useDespachos = () => useSupabaseQuery<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
+export const useDespachos = (options?: { enabled?: boolean }) => useSupabaseQuery<DbDespacho>("despachos_rastreadores", "despachos_rastreadores", options);
 export const useInsertDespacho = () => useSupabaseInsert<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
 export const useUpdateDespacho = () => useSupabaseUpdate<DbDespacho>("despachos_rastreadores", "despachos_rastreadores");
 
 // ============ CONTROLE UNIDADES ============
-export const useControleUnidades = () => useSupabaseQuery<DbControleUnidade>("controle_unidades", "controle_unidades");
+export const useControleUnidades = (options?: { enabled?: boolean }) => useSupabaseQuery<DbControleUnidade>("controle_unidades", "controle_unidades", options);
 export const useInsertControleUnidade = () => useSupabaseInsert<DbControleUnidade>("controle_unidades", "controle_unidades");
 export const useUpdateControleUnidade = () => useSupabaseUpdate<DbControleUnidade>("controle_unidades", "controle_unidades");
 export const useDeleteControleUnidade = () => useSupabaseDelete("controle_unidades", "controle_unidades");
@@ -336,7 +337,7 @@ export const useUpdateFornecedor = () => useSupabaseUpdate<DbFornecedor>("fornec
 export const useDeleteFornecedor = () => useSupabaseDelete("fornecedores", "fornecedores");
 
 // ============ FATURAMENTO B2B ============
-export const useFaturamentoB2B = () => useSupabaseQuery<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
+export const useFaturamentoB2B = (options?: { enabled?: boolean }) => useSupabaseQuery<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b", options);
 export const useInsertFaturamentoB2B = () => useSupabaseInsert<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
 export const useUpdateFaturamentoB2B = () => useSupabaseUpdate<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
 export const useDeleteFaturamentoB2B = () => useSupabaseDelete("faturamento_b2b", "faturamento_b2b");
@@ -443,9 +444,10 @@ export const useFinanceiroCompleto = () => {
 };
 
 // ============ FECHAMENTO COM INSTALACOES ============
-export const useFechamentoCompleto = () => {
+export const useFechamentoCompleto = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["fechamento_completo"],
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
     queryFn: async () => {
       const [fechRes, instRes] = await Promise.all([
         supabase.from("fechamento_tecnicos").select("*").order("created_at", { ascending: false }),
@@ -516,13 +518,20 @@ export const useClientesCompletos = () => {
 export function useRealtimeSubscription(table: string, queryKeys: string[]) {
   const qc = useQueryClient();
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel(`realtime-${table}`)
       .on("postgres_changes", { event: "*", schema: "public", table }, () => {
-        queryKeys.forEach(key => qc.invalidateQueries({ queryKey: [key] }));
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          queryKeys.forEach(key => qc.invalidateQueries({ queryKey: [key] }));
+        }, 500);
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      supabase.removeChannel(channel);
+    };
   }, [table, qc]);
 }
 

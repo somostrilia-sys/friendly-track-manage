@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users, Inbox } from "lucide-react";
+import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users, Inbox, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { buscarAssociadosComRastreador, sincronizarAssociados, type AssociadoERP } from "@/lib/hinova-erp";
 
 const statusColors: Record<string, string> = { agendado: "bg-yellow-400", realizado: "bg-green-500", sem_retorno: "bg-red-500" };
 const statusLabels: Record<string, string> = { agendado: "Agendado", realizado: "Realizado", sem_retorno: "Sem Retorno" };
@@ -22,13 +23,16 @@ const tipoLabels: Record<string, string> = { instalacao: "Instalacao", manutenca
 const envioLabels: Record<string, string> = { nao_enviado: "Nao Enviado", enviado: "Enviado", entregue: "Entregue" };
 const envioVariants: Record<string, "outline" | "secondary" | "default"> = { nao_enviado: "outline", enviado: "secondary", entregue: "default" };
 
-const erpAssociados: { id: string; numero: string; nome: string; modeloVeiculo: string; placa: string; produto: string }[] = [
-  { id: "erp-1", numero: "45832", nome: "Transportes Bandeirantes Ltda", modeloVeiculo: "Volkswagen Delivery 9.170", placa: "ABC-1D34", produto: "Positron Duoblock" },
-  { id: "erp-2", numero: "51290", nome: "Distribuidora Paulista de Alimentos", modeloVeiculo: "Fiat Ducato Cargo", placa: "DEF-2E78", produto: "Sascar ST300" },
-  { id: "erp-3", numero: "38471", nome: "Logística Anhanguera S/A", modeloVeiculo: "Mercedes-Benz Accelo 815", placa: "GHI-3F12", produto: "Quant Q900" },
-  { id: "erp-4", numero: "62105", nome: "Construtora ABC Engenharia", modeloVeiculo: "Ford Cargo 1723", placa: "JKL-4G56", produto: "Positron Duoblock" },
-  { id: "erp-5", numero: "29867", nome: "Supermercados Paulistão Ltda", modeloVeiculo: "Iveco Daily 70C17", placa: "MNO-5H90", produto: "Sascar ST300" },
-];
+const statusInstalacaoColors: Record<string, string> = {
+  instalado: "bg-green-500",
+  pendente: "bg-yellow-400",
+  agendado: "bg-blue-500",
+};
+const statusInstalacaoLabels: Record<string, string> = {
+  instalado: "Instalado",
+  pendente: "Pendente",
+  agendado: "Agendado",
+};
 
 const Agendamentos = () => {
   const { data: agendamentos = [], isLoading } = useAgendamentos();
@@ -44,8 +48,86 @@ const Agendamentos = () => {
 
   const [erpDataInicio, setErpDataInicio] = useState("");
   const [erpDataFim, setErpDataFim] = useState("");
-  const [erpFiltrado, setErpFiltrado] = useState<typeof erpAssociados>([]);
+  const [erpAssociados, setErpAssociados] = useState<AssociadoERP[]>([]);
+  const [erpLoading, setErpLoading] = useState(false);
+  const [erpLoaded, setErpLoaded] = useState(false);
   const [atribuicoes, setAtribuicoes] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState("agendamentos");
+
+  const fetchErpData = useCallback(async () => {
+    setErpLoading(true);
+    try {
+      const data = await buscarAssociadosComRastreador(
+        erpDataInicio || undefined,
+        erpDataFim || undefined
+      );
+
+      // Cross-reference with local agendamentos to update status
+      const enriched = data.map((assoc) => {
+        const agendamento = agendamentos.find(
+          (a) => a.placa === assoc.placa || a.associado === assoc.nome
+        );
+        if (agendamento) {
+          return {
+            ...assoc,
+            status_instalacao:
+              agendamento.status === "realizado"
+                ? ("instalado" as const)
+                : ("agendado" as const),
+          };
+        }
+        return assoc;
+      });
+
+      setErpAssociados(enriched);
+      setErpLoaded(true);
+      toast.success(`${enriched.length} associados importados do ERP`);
+    } catch (err: any) {
+      console.error("Erro ao buscar associados ERP:", err);
+      toast.error(err.message || "Erro ao buscar dados do ERP");
+      setErpAssociados([]);
+    } finally {
+      setErpLoading(false);
+    }
+  }, [erpDataInicio, erpDataFim, agendamentos]);
+
+  const handleSincronizar = async () => {
+    setErpLoading(true);
+    try {
+      const data = await sincronizarAssociados();
+
+      const enriched = data.map((assoc) => {
+        const agendamento = agendamentos.find(
+          (a) => a.placa === assoc.placa || a.associado === assoc.nome
+        );
+        if (agendamento) {
+          return {
+            ...assoc,
+            status_instalacao:
+              agendamento.status === "realizado"
+                ? ("instalado" as const)
+                : ("agendado" as const),
+          };
+        }
+        return assoc;
+      });
+
+      setErpAssociados(enriched);
+      toast.success(`Sincronizacao completa: ${enriched.length} associados`);
+    } catch (err: any) {
+      console.error("Erro ao sincronizar:", err);
+      toast.error(err.message || "Erro ao sincronizar com o ERP");
+    } finally {
+      setErpLoading(false);
+    }
+  };
+
+  // Auto-fetch when switching to the ERP tab
+  useEffect(() => {
+    if (activeTab === "erp" && !erpLoaded && !erpLoading) {
+      fetchErpData();
+    }
+  }, [activeTab, erpLoaded, erpLoading, fetchErpData]);
 
   const salvar = async () => {
     if (!form.placa || !form.tecnico_id) { toast.error("Preencha placa e tecnico"); return; }
@@ -74,18 +156,17 @@ const Agendamentos = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const porData = agendamentos.reduce((acc, a) => {
-    (acc[a.data] = acc[a.data] || []).push(a);
-    return acc;
-  }, {} as Record<string, DbAgendamento[]>);
-  const datasOrdenadas = Object.keys(porData).sort();
-
-  const filtrarERP = () => { setErpFiltrado(erpAssociados); toast.success("Dados importados do Sistema ERP"); };
   const atribuirTecnico = (erpId: string, tecId: string) => {
     setAtribuicoes(prev => ({ ...prev, [erpId]: tecId }));
     const tec = tecnicos.find(t => t.id === tecId);
     toast.success(`Associado atribuido ao tecnico ${tec?.nome}`);
   };
+
+  const porData = agendamentos.reduce((acc, a) => {
+    (acc[a.data] = acc[a.data] || []).push(a);
+    return acc;
+  }, {} as Record<string, DbAgendamento[]>);
+  const datasOrdenadas = Object.keys(porData).sort();
 
   if (isLoading) return (
     <div className="space-y-8">
@@ -97,7 +178,7 @@ const Agendamentos = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Agendamentos" subtitle="Calendario de instalacoes, manutencoes e retiradas" />
-      <Tabs defaultValue="agendamentos" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
           <TabsTrigger value="erp">Sincronismo com Sistema ERP</TabsTrigger>
@@ -125,7 +206,7 @@ const Agendamentos = () => {
                     <Inbox className="h-7 w-7 text-muted-foreground" />
                   </div>
                   <p className="text-sm font-medium text-muted-foreground">Nenhum agendamento encontrado</p>
-                  <p className="text-xs text-muted-foreground/60">Crie um novo agendamento para começar</p>
+                  <p className="text-xs text-muted-foreground/60">Crie um novo agendamento para comecar</p>
                 </div>
               </Card>
             )}
@@ -172,26 +253,61 @@ const Agendamentos = () => {
             <div className="flex flex-wrap gap-3 items-end">
               <div><Label className="text-xs">Data Inicio</Label><Input type="date" className="w-[160px]" value={erpDataInicio} onChange={e => setErpDataInicio(e.target.value)} /></div>
               <div><Label className="text-xs">Data Fim</Label><Input type="date" className="w-[160px]" value={erpDataFim} onChange={e => setErpDataFim(e.target.value)} /></div>
-              <Button onClick={filtrarERP}>Importar do ERP</Button>
+              <Button onClick={fetchErpData} disabled={erpLoading}>
+                {erpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Importar do ERP
+              </Button>
+              <Button variant="outline" onClick={handleSincronizar} disabled={erpLoading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${erpLoading ? "animate-spin" : ""}`} />
+                Sincronizar
+              </Button>
             </div>
           </Card>
-          {erpFiltrado.length > 0 && (
+
+          {erpLoading && !erpLoaded && (
+            <TableSkeleton rows={5} cols={7} />
+          )}
+
+          {!erpLoading && erpLoaded && erpAssociados.length === 0 && (
+            <Card className="p-0">
+              <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
+                <div className="rounded-full bg-muted/60 p-4">
+                  <Inbox className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Nenhum associado encontrado no ERP</p>
+                <p className="text-xs text-muted-foreground/60">Tente ajustar os filtros de data ou sincronizar novamente</p>
+              </div>
+            </Card>
+          )}
+
+          {erpAssociados.length > 0 && (
             <Card className="card-shadow">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>N. Associado</TableHead><TableHead>Nome</TableHead><TableHead>Modelo Veiculo</TableHead>
-                    <TableHead>Placa</TableHead><TableHead>Produto</TableHead><TableHead>Tecnico Atribuido</TableHead>
+                    <TableHead>N. Associado</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tecnico Atribuido</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {erpFiltrado.map(a => (
+                  {erpAssociados.map(a => (
                     <TableRow key={a.id}>
                       <TableCell className="font-mono">{a.numero}</TableCell>
                       <TableCell className="font-medium">{a.nome}</TableCell>
-                      <TableCell>{a.modeloVeiculo}</TableCell>
-                      <TableCell className="font-mono">{a.placa}</TableCell>
-                      <TableCell><Badge variant="secondary">{a.produto}</Badge></TableCell>
+                      <TableCell className="font-mono text-xs">{a.cpf_cnpj || "-"}</TableCell>
+                      <TableCell className="font-mono">{a.placa || "-"}</TableCell>
+                      <TableCell><Badge variant="secondary">{a.produto || "-"}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${statusInstalacaoColors[a.status_instalacao]}`} />
+                          <span className="text-xs">{statusInstalacaoLabels[a.status_instalacao]}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Select value={atribuicoes[a.id] || ""} onValueChange={v => atribuirTecnico(a.id, v)}>
                           <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="Atribuir tecnico" /></SelectTrigger>

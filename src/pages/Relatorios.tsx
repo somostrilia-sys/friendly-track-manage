@@ -40,20 +40,20 @@ const Relatorios = () => {
   const [dataFim, setDataFim] = useState("");
   const [gerado, setGerado] = useState(false);
 
-  const { data: clientes = [] } = useClientes();
-  const { data: equipamentos = [] } = useEquipamentos();
-  const { data: pedidos = [] } = usePedidos();
-  const { data: linhasSim = [] } = useLinhasSIM();
-  const { data: tecnicos = [] } = useTecnicos();
-  const { data: servicos = [] } = useServicos();
-  const { data: manutencoes = [] } = useManutencoes();
-  const { data: agendamentos = [] } = useAgendamentos();
-  const { data: despachos = [] } = useDespachos();
-  const { data: faturamento = [] } = useFaturamentoB2B();
-  const { data: fechamentos = [] } = useFechamentoCompleto();
-  const { data: chamados = [] } = useChamadosSuporte();
-  const { data: controleKm = [] } = useControleKM();
-  const { data: unidades = [] } = useControleUnidades();
+  const { data: clientes = [] } = useClientes({ enabled: modulo === "clientes" });
+  const { data: equipamentos = [] } = useEquipamentos({ enabled: modulo === "equipamentos" });
+  const { data: pedidos = [] } = usePedidos({ enabled: modulo === "pedidos" });
+  const { data: linhasSim = [] } = useLinhasSIM({ enabled: modulo === "linhas_sim" });
+  const { data: tecnicos = [] } = useTecnicos({ enabled: modulo === "tecnicos" });
+  const { data: servicos = [] } = useServicos({ enabled: modulo === "servicos" });
+  const { data: manutencoes = [] } = useManutencoes({ enabled: modulo === "manutencoes" });
+  const { data: agendamentos = [] } = useAgendamentos({ enabled: modulo === "agendamentos" });
+  const { data: despachos = [] } = useDespachos({ enabled: modulo === "despachos" });
+  const { data: faturamento = [] } = useFaturamentoB2B({ enabled: modulo === "faturamento_b2b" });
+  const { data: fechamentos = [] } = useFechamentoCompleto({ enabled: modulo === "fechamento_tecnicos" });
+  const { data: chamados = [] } = useChamadosSuporte({ enabled: modulo === "chamados_suporte" });
+  const { data: controleKm = [] } = useControleKM({ enabled: modulo === "controle_km" });
+  const { data: unidades = [] } = useControleUnidades({ enabled: modulo === "controle_unidades" });
 
   const dataMap: Record<string, any[]> = {
     clientes, equipamentos, pedidos, linhas_sim: linhasSim, tecnicos,
