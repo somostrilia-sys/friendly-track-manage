@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useServicos, useInsertServico, useUpdateServico, useTecnicos, useClientes, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbServico } from "@/types/database";
-import { MapPin, Navigation, ExternalLink, Plus, Copy, Check, Inbox, Search, CalendarDays, Clock, PlayCircle, CheckCircle } from "lucide-react";
+import { MapPin, Navigation, ExternalLink, Plus, Copy, Check, Inbox, Search, CalendarDays, Clock, PlayCircle, CheckCircle, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,26 @@ const Servicos = () => {
 
   const emptyForm = { tecnico_id: "", cliente_nome: "", veiculo: "", tipo: "instalacao" as DbServico["tipo"], endereco: "", cidade: "", estado: "", data: "", horario: "", valor_servico: 0, imei: "", chip: "" };
   const [form, setForm] = useState(emptyForm);
+
+  // Sort technicians by proximity to client city/state
+  const tecnicosOrdenados = useMemo(() => {
+    if (!form.cidade && !form.estado) return tecnicos.filter(t => t.status === "disponivel");
+    const cidadeLower = form.cidade.toLowerCase().trim();
+    const estadoUpper = form.estado.toUpperCase().trim();
+    return [...tecnicos]
+      .filter(t => t.status === "disponivel")
+      .sort((a, b) => {
+        const aMesmaCidade = a.cidade?.toLowerCase().trim() === cidadeLower;
+        const bMesmaCidade = b.cidade?.toLowerCase().trim() === cidadeLower;
+        const aMesmoEstado = a.estado?.toUpperCase().trim() === estadoUpper;
+        const bMesmoEstado = b.estado?.toUpperCase().trim() === estadoUpper;
+        if (aMesmaCidade && !bMesmaCidade) return -1;
+        if (!aMesmaCidade && bMesmaCidade) return 1;
+        if (aMesmoEstado && !bMesmoEstado) return -1;
+        if (!aMesmoEstado && bMesmoEstado) return 1;
+        return 0;
+      });
+  }, [tecnicos, form.cidade, form.estado]);
 
   // Auto-pull technician value
   const onTecnicoChange = (tecnicoId: string) => {
@@ -196,12 +216,6 @@ const Servicos = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova Ordem de Servico</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
-            <div><Label>Tecnico</Label>
-              <Select value={form.tecnico_id} onValueChange={onTecnicoChange}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.id}>{t.nome} ({t.cidade}/{t.estado})</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
             <div><Label>Cliente</Label>
               <Select value={form.cliente_nome} onValueChange={v => setForm(f => ({ ...f, cliente_nome: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -209,20 +223,50 @@ const Servicos = () => {
               </Select>
             </div>
             <div><Label>Veiculo</Label><Input value={form.veiculo} onChange={e => setForm(f => ({ ...f, veiculo: e.target.value }))} placeholder="Modelo - Placa" /></div>
+            <div className="col-span-2"><Label>Endereco do Cliente</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} placeholder="Rua, numero, bairro" /></div>
+            <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} placeholder="Preencha para ver tecnicos proximos" /></div>
+            <div><Label>Estado</Label><Input value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} placeholder="SP" maxLength={2} /></div>
+
+            {/* Technician selection with proximity indicators */}
+            <div className="col-span-2">
+              <Label className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Tecnico {form.cidade && <span className="text-xs text-muted-foreground font-normal">— ordenado por proximidade de {form.cidade}</span>}
+              </Label>
+              <Select value={form.tecnico_id} onValueChange={onTecnicoChange}>
+                <SelectTrigger><SelectValue placeholder="Selecione o tecnico" /></SelectTrigger>
+                <SelectContent>
+                  {tecnicosOrdenados.map(t => {
+                    const mesmaCidade = form.cidade && t.cidade?.toLowerCase().trim() === form.cidade.toLowerCase().trim();
+                    const mesmoEstado = form.estado && t.estado?.toUpperCase().trim() === form.estado.toUpperCase().trim();
+                    return (
+                      <SelectItem key={t.id} value={t.id}>
+                        {mesmaCidade ? "● " : mesmoEstado ? "○ " : ""}{t.nome} — {t.cidade}/{t.estado} — R$ {t.valor_instalacao || 0}/inst.
+                        {mesmaCidade ? " (mesma cidade)" : mesmoEstado ? " (mesmo estado)" : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {form.cidade && tecnicosOrdenados.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">● mesma cidade &nbsp; ○ mesmo estado</p>
+              )}
+              {form.cidade && tecnicosOrdenados.filter(t => t.cidade?.toLowerCase().trim() === form.cidade.toLowerCase().trim()).length === 0 && (
+                <p className="text-xs text-orange-400 mt-1">Nenhum tecnico cadastrado em {form.cidade}. Use "Buscar Tecnicos" para encontrar prestadores na regiao.</p>
+              )}
+            </div>
+
             <div><Label>Tipo</Label>
               <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as DbServico["tipo"] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{Object.entries(tipoMap).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="col-span-2"><Label>Endereco</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
-            <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
-            <div><Label>Estado</Label><Input value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))} placeholder="SP" /></div>
+            <div><Label>Valor do Servico (R$)</Label><Input type="number" value={form.valor_servico || ""} onChange={e => setForm(f => ({ ...f, valor_servico: +e.target.value }))} /></div>
             <div><Label>Data</Label><Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} /></div>
             <div><Label>Horario</Label><Input type="time" value={form.horario} onChange={e => setForm(f => ({ ...f, horario: e.target.value }))} /></div>
             <div><Label>IMEI do Rastreador</Label><Input value={form.imei} onChange={e => setForm(f => ({ ...f, imei: e.target.value }))} placeholder="IMEI do rastreador" /></div>
             <div><Label>Numero do Chip</Label><Input value={form.chip} onChange={e => setForm(f => ({ ...f, chip: e.target.value }))} placeholder="Numero do SIM" /></div>
-            <div><Label>Valor do Servico (R$)</Label><Input type="number" value={form.valor_servico || ""} onChange={e => setForm(f => ({ ...f, valor_servico: +e.target.value }))} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
