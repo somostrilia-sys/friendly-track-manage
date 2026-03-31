@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useFinanceiroCompleto, useInsertFinanceiro, useUpdateFinanceiro, useTecnicos } from "@/hooks/useSupabaseData";
+import { useFinanceiroCompleto, useInsertFinanceiro, useUpdateFinanceiro, useTecnicos, useServicos, useControleKM } from "@/hooks/useSupabaseData";
 import type { DbFinanceiro, DbFinanceiroServico } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
-import { DollarSign, CheckCircle, Clock, Plus, Upload, Eye } from "lucide-react";
+import { DollarSign, CheckCircle, Clock, Plus, Upload, Eye, Calculator, Loader2 } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -26,31 +26,83 @@ type FinanceiroComServicos = DbFinanceiro & { servicos: DbFinanceiroServico[] };
 const FechamentoTecnicosTab = () => {
   const { data: registros = [], isLoading } = useFinanceiroCompleto();
   const { data: tecnicos = [] } = useTecnicos();
+  const { data: servicos = [] } = useServicos();
+  const { data: kmRecords = [] } = useControleKM();
   const insertFinanceiro = useInsertFinanceiro();
   const updateFinanceiro = useUpdateFinanceiro();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [detalhe, setDetalhe] = useState<FinanceiroComServicos | null>(null);
-  const [form, setForm] = useState({ tecnico_id: "" as string | null, periodo: "", valor_total: 0, descontos: 0 });
+  const [calculando, setCalculando] = useState(false);
+  const [form, setForm] = useState({ tecnico_id: "" as string | null, dataInicio: "", dataFim: "", valor_total: 0, descontos: 0, servicosCount: 0, kmTotal: 0 });
 
   const regs = registros as FinanceiroComServicos[];
   const totalAberto = regs.filter(f => f.status === "aberto").reduce((a, f) => a + f.valor_final, 0);
   const totalPago = regs.filter(f => f.status === "pago").reduce((a, f) => a + f.valor_final, 0);
 
-  const salvar = async () => {
-    if (!form.tecnico_id || !form.periodo) { toast.error("Preencha tecnico e periodo"); return; }
+  const calcularAutomatico = () => {
+    if (!form.tecnico_id || !form.dataInicio || !form.dataFim) {
+      toast.error("Selecione tecnico e periodo primeiro");
+      return;
+    }
+    setCalculando(true);
     const tec = tecnicos.find(t => t.id === form.tecnico_id);
+    if (!tec) { setCalculando(false); return; }
+
+    // Filter services for this technician in the period
+    const servicosPeriodo = servicos.filter(s => {
+      if (s.tecnico_id !== form.tecnico_id) return false;
+      if (s.status !== "concluido") return false;
+      const dataServico = s.data || "";
+      return dataServico >= form.dataInicio && dataServico <= form.dataFim;
+    });
+
+    // Filter KM records for this technician in the period
+    const kmPeriodo = kmRecords.filter(k => {
+      if (k.tecnico_id !== form.tecnico_id) return false;
+      const dataKm = k.data || "";
+      return dataKm >= form.dataInicio && dataKm <= form.dataFim;
+    });
+
+    const totalInstalacoes = servicosPeriodo.length;
+    const totalKm = kmPeriodo.reduce((acc, k) => acc + (k.km_total || 0), 0);
+    const valorInstalacao = tec.valor_instalacao || 0;
+    const adicionalKm = tec.adicional_km || 0;
+
+    const valorServicos = totalInstalacoes * valorInstalacao;
+    const valorKm = totalKm * adicionalKm;
+    const valorTotal = valorServicos + valorKm;
+
+    setForm(f => ({
+      ...f,
+      valor_total: valorTotal,
+      servicosCount: totalInstalacoes,
+      kmTotal: totalKm,
+    }));
+
+    setCalculando(false);
+    if (totalInstalacoes === 0) {
+      toast.info("Nenhum servico concluido encontrado neste periodo");
+    } else {
+      toast.success(`${totalInstalacoes} servicos encontrados. Total: R$ ${valorTotal.toFixed(2)}`);
+    }
+  };
+
+  const salvar = async () => {
+    if (!form.tecnico_id || !form.dataInicio || !form.dataFim) { toast.error("Preencha tecnico e periodo"); return; }
+    const tec = tecnicos.find(t => t.id === form.tecnico_id);
+    const periodo = `${form.dataInicio} a ${form.dataFim}`;
     try {
       await insertFinanceiro.mutateAsync({
         codigo: `FIN-${String(regs.length + 1).padStart(3, "0")}`,
         tecnico_id: form.tecnico_id, tecnico_nome: tec?.nome || "",
-        periodo: form.periodo, total_servicos: 0,
+        periodo, total_servicos: form.servicosCount,
         valor_total: form.valor_total, descontos: form.descontos,
         valor_final: form.valor_total - form.descontos, status: "aberto",
         nota_fiscal: "", data_pagamento: "",
       });
       setModalOpen(false);
-      setForm({ tecnico_id: "", periodo: "", valor_total: 0, descontos: 0 });
+      setForm({ tecnico_id: "", dataInicio: "", dataFim: "", valor_total: 0, descontos: 0, servicosCount: 0, kmTotal: 0 });
       toast.success("Fatura criada!");
     } catch (e: any) { toast.error(e.message); }
   };
@@ -121,21 +173,34 @@ const FechamentoTecnicosTab = () => {
       </Card>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nova Fatura / Fechamento</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Gerar Fechamento</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Tecnico / Prestador</Label>
               <Select value={form.tecnico_id || ""} onValueChange={v => setForm(f => ({ ...f, tecnico_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.id}>{t.nome} — R$ {t.valor_instalacao || 0}/inst.</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Periodo</Label><Input value={form.periodo} onChange={e => setForm(f => ({ ...f, periodo: e.target.value }))} placeholder="01-15/03/2024" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Data Inicio</Label><Input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))} /></div>
+              <div><Label>Data Fim</Label><Input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))} /></div>
+            </div>
+            <Button variant="secondary" className="w-full" onClick={calcularAutomatico} disabled={calculando}>
+              {calculando ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
+              Calcular Automaticamente
+            </Button>
+            {form.servicosCount > 0 && (
+              <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
+                <p>Servicos concluidos: <strong>{form.servicosCount}</strong></p>
+                <p>KM total: <strong>{form.kmTotal.toFixed(1)} km</strong></p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Valor Total (R$)</Label><Input type="number" value={form.valor_total} onChange={e => setForm(f => ({ ...f, valor_total: +e.target.value }))} /></div>
               <div><Label>Descontos (R$)</Label><Input type="number" value={form.descontos} onChange={e => setForm(f => ({ ...f, descontos: +e.target.value }))} /></div>
             </div>
             {form.valor_total > 0 && (
-              <div className="p-3 rounded-lg bg-muted text-sm">Valor Final: <strong>R$ {(form.valor_total - form.descontos).toLocaleString("pt-BR")}</strong></div>
+              <div className="p-3 rounded-lg bg-primary/10 text-sm font-semibold">Valor Final: R$ {(form.valor_total - form.descontos).toLocaleString("pt-BR")}</div>
             )}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button><Button onClick={salvar}>Criar Fatura</Button></DialogFooter>
