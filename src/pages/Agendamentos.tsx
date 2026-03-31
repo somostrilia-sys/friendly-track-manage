@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useAgendamentos, useInsertAgendamento, useUpdateAgendamento, useTecnicos } from "@/hooks/useSupabaseData";
+import { useAgendamentos, useInsertAgendamento, useUpdateAgendamento, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbAgendamento } from "@/types/database";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/StatCard";
@@ -35,6 +35,8 @@ const Agendamentos = () => {
   const { data: tecnicos = [] } = useTecnicos();
   const insertAgendamento = useInsertAgendamento();
   const updateAgendamento = useUpdateAgendamento();
+
+  useRealtimeSubscription("agendamentos", ["agendamentos"]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [view, setView] = useState<"dia" | "semana" | "mes">("semana");
