@@ -69,29 +69,7 @@ const BuscarTecnicos = () => {
       }
     } catch (e: any) {
       console.error("Busca Inteligente error:", e);
-      // Fallback: try direct API call
-      try {
-        const query = encodeURIComponent(`autoeletrica instalador rastreador em ${cidade} ${estado || ""}`);
-        const resp = await fetch(
-          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=AIzaSyCXx6Zr4nKhj-n9RP8z2xdVubB2YtgjTe8&language=pt-BR&region=br`
-        );
-        const gdata = await resp.json();
-        if (gdata.results) {
-          setGoogleResults(gdata.results.map((p: any) => ({
-            id: p.place_id,
-            nome: p.name,
-            endereco: p.formatted_address,
-            avaliacao: p.rating || 0,
-            total_avaliacoes: p.user_ratings_total || 0,
-            aberto: p.opening_hours?.open_now ?? null,
-            lat: p.geometry?.location?.lat,
-            lng: p.geometry?.location?.lng,
-            tipos: p.types || [],
-          })));
-        }
-      } catch {
-        toast.error("Nao foi possivel buscar prestadores na regiao");
-      }
+      toast.error("Nao foi possivel buscar prestadores na regiao. Tente novamente.");
     }
     setBuscandoGoogle(false);
   };
