@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useManutencoes, useUpdateManutencao, useTecnicos } from "@/hooks/useSupabaseData";
 import type { DbManutencao } from "@/types/database";
-import { AlertTriangle, Send, WifiOff, Shield, Clock } from "lucide-react";
+import { AlertTriangle, Send, WifiOff, Shield, Clock, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -83,38 +83,45 @@ const Manutencoes = () => {
         <StatCard label="Tempo Medio" value="12 dias" icon={Clock} accent="muted" />
       </div>
       <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead><TableHead>Veiculo/Placa</TableHead><TableHead>Cliente</TableHead>
-              <TableHead>Problema</TableHead><TableHead>Classificacao</TableHead><TableHead>Tecnico</TableHead>
-              <TableHead>Status</TableHead><TableHead>Acao</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {ordenadas.map(m => {
-              const prio = classificarPrioridade(m.data_abertura);
-              return (
-                <TableRow key={m.id}>
-                  <TableCell className="font-mono text-sm">{m.codigo}</TableCell>
-                  <TableCell className="font-medium">{m.veiculo} - {m.placa}</TableCell>
-                  <TableCell>{m.cliente_nome}</TableCell>
-                  <TableCell>{problemaMap[m.problema]}</TableCell>
-                  <TableCell><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span></TableCell>
-                  <TableCell>{m.tecnico_designado || "--"}</TableCell>
-                  <TableCell><Badge variant={statusMap[m.status]?.variant}>{statusMap[m.status]?.label}</Badge></TableCell>
-                  <TableCell>
-                    {m.status === "aberto" && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => setDespacharId(m.id)}>
-                        <Send className="w-3 h-3 mr-1" /> Despachar
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        {ordenadas.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhuma manutenção encontrada</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead><TableHead>Veiculo/Placa</TableHead><TableHead>Cliente</TableHead>
+                <TableHead>Problema</TableHead><TableHead>Classificacao</TableHead><TableHead>Tecnico</TableHead>
+                <TableHead>Status</TableHead><TableHead>Acao</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ordenadas.map(m => {
+                const prio = classificarPrioridade(m.data_abertura);
+                return (
+                  <TableRow key={m.id}>
+                    <TableCell className="font-mono text-sm">{m.codigo}</TableCell>
+                    <TableCell className="font-medium">{m.veiculo} - {m.placa}</TableCell>
+                    <TableCell>{m.cliente_nome}</TableCell>
+                    <TableCell>{problemaMap[m.problema]}</TableCell>
+                    <TableCell><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prio.class}`}>{prio.label}</span></TableCell>
+                    <TableCell>{m.tecnico_designado || "--"}</TableCell>
+                    <TableCell><Badge variant={statusMap[m.status]?.variant}>{statusMap[m.status]?.label}</Badge></TableCell>
+                    <TableCell>
+                      {m.status === "aberto" && (
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => setDespacharId(m.id)}>
+                          <Send className="w-3 h-3 mr-1" /> Despachar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </Card>
       <Dialog open={!!despacharId} onOpenChange={() => setDespacharId(null)}>
         <DialogContent>

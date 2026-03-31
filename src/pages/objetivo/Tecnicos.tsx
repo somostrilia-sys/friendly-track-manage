@@ -12,7 +12,7 @@ import { useTecnicosCompletos, useInsertTecnico } from "@/hooks/useSupabaseData"
 import type { DbTecnico, DbTecnicoEstoque } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
-import { Users, Star, Package, Plus } from "lucide-react";
+import { Users, Star, Package, Plus, Inbox } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -109,36 +109,43 @@ const Tecnicos = () => {
       </Card>
 
       <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Cidade/UF</TableHead>
-              <TableHead>Especialidade</TableHead>
-              <TableHead>Regiao</TableHead>
-              <TableHead>Avaliacao</TableHead>
-              <TableHead>Instal./Mes</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tecs.map(t => (
-              <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetalhe(t)}>
-                <TableCell className="font-medium">{t.nome}</TableCell>
-                <TableCell><Badge variant="secondary">{tipoLabels[t.tipo_tecnico]}</Badge></TableCell>
-                <TableCell className="text-sm">{t.telefone}</TableCell>
-                <TableCell>{t.cidade}/{t.estado}</TableCell>
-                <TableCell className="text-sm">{t.especialidade}</TableCell>
-                <TableCell className="text-sm">{t.regiao_atuacao || "--"}</TableCell>
-                <TableCell>{t.avaliacao}</TableCell>
-                <TableCell>{t.instalacoes_mes}</TableCell>
-                <TableCell><Badge variant={statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.variant}>{statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.label}</Badge></TableCell>
+        {tecs.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum técnico cadastrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Cidade/UF</TableHead>
+                <TableHead>Especialidade</TableHead>
+                <TableHead>Regiao</TableHead>
+                <TableHead>Avaliacao</TableHead>
+                <TableHead>Instal./Mes</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {tecs.map(t => (
+                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetalhe(t)}>
+                  <TableCell className="font-medium">{t.nome}</TableCell>
+                  <TableCell><Badge variant="secondary">{tipoLabels[t.tipo_tecnico]}</Badge></TableCell>
+                  <TableCell className="text-sm">{t.telefone}</TableCell>
+                  <TableCell>{t.cidade}/{t.estado}</TableCell>
+                  <TableCell className="text-sm">{t.especialidade}</TableCell>
+                  <TableCell className="text-sm">{t.regiao_atuacao || "--"}</TableCell>
+                  <TableCell>{t.avaliacao}</TableCell>
+                  <TableCell>{t.instalacoes_mes}</TableCell>
+                  <TableCell><Badge variant={statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.variant}>{statusMap[t.status_ativo === "inativo" ? "inativo" : t.status]?.label}</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

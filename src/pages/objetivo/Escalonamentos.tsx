@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEscalonamentos, useInsertEscalonamento, useUpdateEscalonamento, useTecnicos } from "@/hooks/useSupabaseData";
 import type { DbEscalonamento } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
-import { ArrowUpCircle, Clock, CheckCircle, AlertTriangle, Plus } from "lucide-react";
+import { ArrowUpCircle, Clock, CheckCircle, AlertTriangle, Plus, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -74,34 +74,41 @@ const Escalonamentos = () => {
         <StatCard label="Resolvidos" value={resolvidos} icon={CheckCircle} accent="success" />
       </div>
       <Card className="card-shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead><TableHead>Tecnico</TableHead><TableHead>Cliente</TableHead>
-              <TableHead>Demanda</TableHead><TableHead>Motivo</TableHead><TableHead>Data</TableHead>
-              <TableHead>Status</TableHead><TableHead>Acoes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {escalonamentos.map(e => (
-              <TableRow key={e.id}>
-                <TableCell className="font-mono text-sm">{e.codigo}</TableCell>
-                <TableCell className="font-medium">{e.tecnico_nome}</TableCell>
-                <TableCell>{e.cliente_nome}</TableCell>
-                <TableCell className="max-w-[200px] truncate">{e.demanda}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">{e.motivo}</TableCell>
-                <TableCell>{e.data_abertura}</TableCell>
-                <TableCell><Badge variant={statusVariants[e.status]}>{statusLabels[e.status]}</Badge></TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {e.status === "pendente" && <Button size="sm" variant="outline" onClick={() => atualizarStatus(e.id, "em_analise")}>Analisar</Button>}
-                    {e.status === "em_analise" && <Button size="sm" onClick={() => atualizarStatus(e.id, "resolvido")}>Resolver</Button>}
-                  </div>
-                </TableCell>
+        {escalonamentos.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum escalonamento encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead><TableHead>Tecnico</TableHead><TableHead>Cliente</TableHead>
+                <TableHead>Demanda</TableHead><TableHead>Motivo</TableHead><TableHead>Data</TableHead>
+                <TableHead>Status</TableHead><TableHead>Acoes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {escalonamentos.map(e => (
+                <TableRow key={e.id}>
+                  <TableCell className="font-mono text-sm">{e.codigo}</TableCell>
+                  <TableCell className="font-medium">{e.tecnico_nome}</TableCell>
+                  <TableCell>{e.cliente_nome}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{e.demanda}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">{e.motivo}</TableCell>
+                  <TableCell>{e.data_abertura}</TableCell>
+                  <TableCell><Badge variant={statusVariants[e.status]}>{statusLabels[e.status]}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {e.status === "pendente" && <Button size="sm" variant="outline" onClick={() => atualizarStatus(e.id, "em_analise")}>Analisar</Button>}
+                      {e.status === "em_analise" && <Button size="sm" onClick={() => atualizarStatus(e.id, "resolvido")}>Resolver</Button>}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">

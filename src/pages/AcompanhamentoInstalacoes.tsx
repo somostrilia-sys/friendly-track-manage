@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useInstalacoes, useInsertInstalacao, useUpdateInstalacao, useTecnicos } from "@/hooks/useSupabaseData";
 import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
-import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -102,32 +102,39 @@ const AcompanhamentoInstalacoes = () => {
             <Button variant="outline" size="sm" onClick={() => { setFiltroStatus("all"); setFiltroTecnico("all"); setFiltroData(""); }}>Limpar</Button>
           )}
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Placa</TableHead><TableHead>IMEI</TableHead><TableHead>Chip</TableHead><TableHead>Filial</TableHead>
-              <TableHead>Técnico</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead>
-              <TableHead>Localização</TableHead><TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrado.map(i => (
-              <TableRow key={i.id}>
-                <TableCell className="font-medium font-mono">{i.placa}</TableCell>
-                <TableCell className="text-sm font-mono text-muted-foreground">{i.imei}</TableCell>
-                <TableCell className="text-sm font-mono text-muted-foreground">{i.chip}</TableCell>
-                <TableCell>{i.filial}</TableCell>
-                <TableCell>{i.tecnico_nome}</TableCell>
-                <TableCell>{i.data}</TableCell>
-                <TableCell><Badge variant={statusMap[i.status]?.variant}>{statusMap[i.status]?.label}</Badge></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{i.localizacao_confirmacao || "—"}</TableCell>
-                <TableCell>
-                  {i.status !== "concluida" && <Button size="sm" variant="outline" onClick={() => concluir(i.id)}>Concluir</Button>}
-                </TableCell>
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhuma instalação encontrada</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Placa</TableHead><TableHead>IMEI</TableHead><TableHead>Chip</TableHead><TableHead>Filial</TableHead>
+                <TableHead>Técnico</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead>
+                <TableHead>Localização</TableHead><TableHead>Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtrado.map(i => (
+                <TableRow key={i.id}>
+                  <TableCell className="font-medium font-mono">{i.placa}</TableCell>
+                  <TableCell className="text-sm font-mono text-muted-foreground">{i.imei}</TableCell>
+                  <TableCell className="text-sm font-mono text-muted-foreground">{i.chip}</TableCell>
+                  <TableCell>{i.filial}</TableCell>
+                  <TableCell>{i.tecnico_nome}</TableCell>
+                  <TableCell>{i.data}</TableCell>
+                  <TableCell><Badge variant={statusMap[i.status]?.variant}>{statusMap[i.status]?.label}</Badge></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{i.localizacao_confirmacao || "—"}</TableCell>
+                  <TableCell>
+                    {i.status !== "concluida" && <Button size="sm" variant="outline" onClick={() => concluir(i.id)}>Concluir</Button>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>

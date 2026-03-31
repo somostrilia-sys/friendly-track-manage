@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useServicos, useInsertServico, useTecnicos, useClientes } from "@/hooks/useSupabaseData";
 import type { DbServico } from "@/types/database";
-import { MapPin, Navigation, ExternalLink, Plus, Copy, Check } from "lucide-react";
+import { MapPin, Navigation, ExternalLink, Plus, Copy, Check, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -76,39 +76,46 @@ const Servicos = () => {
       </PageHeader>
 
       <div className="grid gap-4">
-        {servicos.map(s => (
-          <Card key={s.id} className="p-5 card-shadow">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-semibold text-sm">{s.codigo}</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[s.status]?.class}`}>{statusMap[s.status]?.label}</span>
-                  <Badge variant="secondary">{tipoMap[s.tipo]}</Badge>
+        {servicos.length === 0 ? (
+          <div className="empty-state empty-state-border">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum serviço agendado encontrado</p>
+          </div>
+        ) : (
+          servicos.map(s => (
+            <Card key={s.id} className="p-5 card-shadow">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-semibold text-sm">{s.codigo}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[s.status]?.class}`}>{statusMap[s.status]?.label}</span>
+                    <Badge variant="secondary">{tipoMap[s.tipo]}</Badge>
+                  </div>
+                  <div className="text-sm">
+                    <p><strong>Técnico:</strong> {s.tecnico_nome}</p>
+                    <p><strong>Cliente:</strong> {s.cliente_nome}</p>
+                    <p><strong>Veículo:</strong> {s.veiculo}</p>
+                    <p className="text-muted-foreground">{s.endereco} — {s.cidade}/{s.estado}</p>
+                    <p className="text-muted-foreground">{s.data} às {s.horario}</p>
+                  </div>
                 </div>
-                <div className="text-sm">
-                  <p><strong>Técnico:</strong> {s.tecnico_nome}</p>
-                  <p><strong>Cliente:</strong> {s.cliente_nome}</p>
-                  <p><strong>Veículo:</strong> {s.veiculo}</p>
-                  <p className="text-muted-foreground">{s.endereco} — {s.cidade}/{s.estado}</p>
-                  <p className="text-muted-foreground">{s.data} às {s.horario}</p>
+                <div className="flex flex-col gap-2 items-end">
+                  <span className="font-semibold">R$ {s.valor_servico}</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => copyLink("tecnico", s.codigo)}>
+                      {copiedId === `tecnico-${s.codigo}` ? <Check className="w-3 h-3 mr-1" /> : <Navigation className="w-3 h-3 mr-1" />}
+                      Link Técnico
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => copyLink("cliente", s.codigo)}>
+                      {copiedId === `cliente-${s.codigo}` ? <Check className="w-3 h-3 mr-1" /> : <ExternalLink className="w-3 h-3 mr-1" />}
+                      Link Cliente
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 items-end">
-                <span className="font-semibold">R$ {s.valor_servico}</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="text-xs" onClick={() => copyLink("tecnico", s.codigo)}>
-                    {copiedId === `tecnico-${s.codigo}` ? <Check className="w-3 h-3 mr-1" /> : <Navigation className="w-3 h-3 mr-1" />}
-                    Link Técnico
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs" onClick={() => copyLink("cliente", s.codigo)}>
-                    {copiedId === `cliente-${s.codigo}` ? <Check className="w-3 h-3 mr-1" /> : <ExternalLink className="w-3 h-3 mr-1" />}
-                    Link Cliente
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

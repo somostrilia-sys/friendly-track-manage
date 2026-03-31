@@ -85,28 +85,35 @@ const Tarefas = () => {
         ))}
       </div>
       <div className="grid gap-3">
-        {filtrado.map(t => {
-          const StatusIcon = statusIcons[t.status];
-          return (
-            <Card key={t.id} className={`p-4 card-shadow transition-shadow ${t.status === "concluida" ? "opacity-60" : "hover:shadow-md"}`}>
-              <div className="flex items-start gap-3">
-                <Checkbox checked={t.status === "concluida"} onCheckedChange={() => toggleConcluida(t)} className="mt-1" />
-                <StatusIcon className={`w-5 h-5 mt-0.5 shrink-0 ${t.status === "concluida" ? "text-success" : t.status === "em_andamento" ? "text-primary" : "text-muted-foreground"}`} />
-                <div className="flex-1">
-                  <h3 className={`font-medium ${t.status === "concluida" ? "line-through" : ""}`}>{t.titulo}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{t.descricao}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span>Responsável: {t.responsavel}</span>
-                    <span>Prazo: {t.data_limite}</span>
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
+          </div>
+        ) : (
+          filtrado.map(t => {
+            const StatusIcon = statusIcons[t.status];
+            return (
+              <Card key={t.id} className={`p-4 card-shadow transition-shadow ${t.status === "concluida" ? "opacity-60" : "hover:shadow-md"}`}>
+                <div className="flex items-start gap-3">
+                  <Checkbox checked={t.status === "concluida"} onCheckedChange={() => toggleConcluida(t)} className="mt-1" />
+                  <StatusIcon className={`w-5 h-5 mt-0.5 shrink-0 ${t.status === "concluida" ? "text-success" : t.status === "em_andamento" ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="flex-1">
+                    <h3 className={`font-medium ${t.status === "concluida" ? "line-through" : ""}`}>{t.titulo}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{t.descricao}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                      <span>Responsável: {t.responsavel}</span>
+                      <span>Prazo: {t.data_limite}</span>
+                    </div>
                   </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${prioridadeStyles[t.prioridade]}`}>
+                    {t.prioridade.charAt(0).toUpperCase() + t.prioridade.slice(1)}
+                  </span>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${prioridadeStyles[t.prioridade]}`}>
-                  {t.prioridade.charAt(0).toUpperCase() + t.prioridade.slice(1)}
-                </span>
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })
+        )}
       </div>
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>

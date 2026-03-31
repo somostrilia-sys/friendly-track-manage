@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useControleKM, useInsertControleKM, useTecnicos } from "@/hooks/useSupabaseData";
 import type { DbControleKM } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
-import { Plus, MapPin, Route, Trash2 } from "lucide-react";
+import { Plus, MapPin, Route, Trash2, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -99,25 +99,32 @@ const ControleKMPage = () => {
           </Select>
           <Input type="date" className="w-[160px]" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tecnico</TableHead><TableHead>Endereco</TableHead><TableHead>Horario</TableHead>
-              <TableHead>Data</TableHead><TableHead>KM Trecho</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrado.map(r => (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.tecnico_nome}</TableCell>
-                <TableCell className="text-sm">{r.endereco_instalacao}</TableCell>
-                <TableCell>{r.horario}</TableCell>
-                <TableCell>{r.data}</TableCell>
-                <TableCell><Badge variant="secondary">{r.km_calculado} km</Badge></TableCell>
+        {filtrado.length === 0 ? (
+          <div className="empty-state empty-state-border m-4">
+            <Inbox className="empty-state-icon" />
+            <p className="text-sm text-muted-foreground">Nenhum registro de KM encontrado</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tecnico</TableHead><TableHead>Endereco</TableHead><TableHead>Horario</TableHead>
+                <TableHead>Data</TableHead><TableHead>KM Trecho</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtrado.map(r => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.tecnico_nome}</TableCell>
+                  <TableCell className="text-sm">{r.endereco_instalacao}</TableCell>
+                  <TableCell>{r.horario}</TableCell>
+                  <TableCell>{r.data}</TableCell>
+                  <TableCell><Badge variant="secondary">{r.km_calculado} km</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
       {Object.keys(totais).length > 0 && (
         <Card className="p-6 card-shadow">

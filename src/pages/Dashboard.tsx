@@ -142,15 +142,14 @@ const Dashboard = () => {
   const totalTecnicos = tecnicos.length;
   const tecnicosDisponiveis = tecnicos.filter((t: any) => t.status === "disponivel").length;
 
-  // Trackit Operational KPIs (with mock fallbacks for empty DB)
+  // Trackit Operational KPIs (real data from Supabase)
   const instalacoesSemana = (() => {
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-    const c = agendamentos.filter((a: any) => a.status === "realizado" && new Date(a.data) >= weekAgo).length;
-    return c > 0 ? c : 47;
+    return agendamentos.filter((a: any) => a.status === "realizado" && new Date(a.data) >= weekAgo).length;
   })();
-  const rastreadoresAtivos = clientesAtivos > 0 ? clientesAtivos * 5 : 1284;
-  const manutencoesPendentes = manutencoesAbertas > 0 ? manutencoesAbertas : 23;
-  const tecnicosOnline = tecnicosDisponiveis > 0 ? tecnicosDisponiveis : 4;
+  const rastreadoresAtivos = clientes.reduce((sum: number, c: any) => sum + (Number(c.veiculos_ativos) || 0), 0);
+  const manutencoesPendentes = manutencoesAbertas;
+  const tecnicosOnline = tecnicosDisponiveis;
 
   // Recent faturamentos
   const ultimosFaturamentos = useMemo(() => {

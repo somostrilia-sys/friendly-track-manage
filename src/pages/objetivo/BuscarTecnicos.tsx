@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Phone, Mail, UserPlus, Check } from "lucide-react";
+import { Search, MapPin, Phone, Mail, UserPlus, Check, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
@@ -67,47 +67,54 @@ const BuscarTecnicos = () => {
             <h3 className="font-semibold">Resultados encontrados: {resultados.length}</h3>
             <p className="text-xs text-muted-foreground">CNAEs: 4321-5/00, 4530-7/03, 4541-2/06</p>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>CNPJ</TableHead>
-                <TableHead>CNAE</TableHead>
-                <TableHead>Endereço</TableHead>
-                <TableHead>Cidade/UF</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {resultados.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.nome}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{r.cnpj}</TableCell>
-                  <TableCell><Badge variant="secondary">{r.cnae}</Badge></TableCell>
-                  <TableCell className="text-sm">{r.endereco}</TableCell>
-                  <TableCell>{r.cidade}/{r.estado}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{r.telefone}</span>
-                      <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {adicionados.has(r.id) ? (
-                      <Button size="sm" variant="outline" className="text-xs" disabled>
-                        <Check className="w-3 h-3 mr-1" /> Adicionado
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => adicionarLead(r)}>
-                        <UserPlus className="w-3 h-3 mr-1" /> Cadastrar Lead
-                      </Button>
-                    )}
-                  </TableCell>
+          {resultados.length === 0 ? (
+            <div className="empty-state empty-state-border m-4">
+              <Inbox className="empty-state-icon" />
+              <p className="text-sm text-muted-foreground">Nenhum técnico encontrado para os critérios informados</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>CNPJ</TableHead>
+                  <TableHead>CNAE</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Cidade/UF</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Ação</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {resultados.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.nome}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.cnpj}</TableCell>
+                    <TableCell><Badge variant="secondary">{r.cnae}</Badge></TableCell>
+                    <TableCell className="text-sm">{r.endereco}</TableCell>
+                    <TableCell>{r.cidade}/{r.estado}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{r.telefone}</span>
+                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {adicionados.has(r.id) ? (
+                        <Button size="sm" variant="outline" className="text-xs" disabled>
+                          <Check className="w-3 h-3 mr-1" /> Adicionado
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => adicionarLead(r)}>
+                          <UserPlus className="w-3 h-3 mr-1" /> Cadastrar Lead
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </Card>
       )}
     </div>
