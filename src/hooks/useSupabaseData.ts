@@ -570,3 +570,9 @@ export const useDeleteChamadoSuporte = () => useSupabaseDelete("chamados_suporte
 export const useDeleteAgendamento = () => useSupabaseDelete("agendamentos", "agendamentos");
 export const useDeleteDespacho = () => useSupabaseDelete("despachos_rastreadores", "despachos_rastreadores");
 export const useDeleteInstalacao = () => useSupabaseDelete("instalacoes", "instalacoes");
+
+// ============ RASTREADORES INSTALADOS ============
+export const useRastreadoresInstalados = (options?: { enabled?: boolean }) => useSupabaseQuery<any>("rastreadores_instalados", "rastreadores_instalados", options);
+export const useInsertRastreadorInstalado = () => useSupabaseInsert<any>("rastreadores_instalados", "rastreadores_instalados");
+export const useUpdateRastreadorInstalado = () => useSupabaseUpdate<any>("rastreadores_instalados", "rastreadores_instalados");
+export const useDeleteRastreadorInstalado = () => useSupabaseDelete("rastreadores_instalados", "rastreadores_instalados");

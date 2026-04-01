@@ -45,6 +45,7 @@ const FechamentoTecnicos = lazy(() => import("@/pages/FechamentoTecnicos"));
 const LogisticaRastreadores = lazy(() => import("@/pages/operacional/LogisticaRastreadores"));
 const Rastreadores = lazy(() => import("@/pages/operacional/Rastreadores"));
 const ConfiguracaoDispositivos = lazy(() => import("@/pages/operacional/ConfiguracaoDispositivos"));
+const GestaoRastreadores = lazy(() => import("@/pages/GestaoRastreadores"));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-64">
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/rastreadores" element={<Suspense fallback={<LazyFallback />}><Rastreadores /></Suspense>} />
               <Route path="/logistica-rastreadores" element={<Suspense fallback={<LazyFallback />}><LogisticaRastreadores /></Suspense>} />
               <Route path="/config-dispositivos" element={<Suspense fallback={<LazyFallback />}><ConfiguracaoDispositivos /></Suspense>} />
+              <Route path="/gestao-rastreadores" element={<Suspense fallback={<LazyFallback />}><GestaoRastreadores /></Suspense>} />
               <Route path="/relatorios" element={<Suspense fallback={<LazyFallback />}><Relatorios /></Suspense>} />
             </Route>
 
