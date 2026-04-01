@@ -162,16 +162,40 @@ function normPlaca(p: string | null | undefined): string {
   return n.length >= 5 ? n : "";
 }
 
-function exportCSV(rows: Record<string, any>[], filename: string) {
-  if (!rows.length) {
-    toast.error("Nenhum dado para exportar");
-    return;
-  }
+function exportExcel(rows: Record<string, any>[], filename: string) {
+  if (!rows.length) { toast.error("Nenhum dado para exportar"); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
+  const colWidths = Object.keys(rows[0] || {}).map((key) => {
+    const maxLen = Math.max(key.length, ...rows.slice(0, 50).map((r) => String(r[key] || "").length));
+    return { wch: Math.min(maxLen + 2, 40) };
+  });
+  ws["!cols"] = colWidths;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Dados");
-  XLSX.writeFile(wb, `${filename}.csv`, { bookType: "csv" });
-  toast.success("Arquivo exportado com sucesso");
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+  toast.success(`Planilha exportada: ${filename}.xlsx`);
+}
+
+function exportPDF(title: string) {
+  const tableEl = document.querySelector("[data-print-table]");
+  if (!tableEl) { toast.error("Tabela nao encontrada"); return; }
+  const pw = window.open("", "_blank");
+  if (!pw) { toast.error("Permita popups para exportar PDF"); return; }
+  pw.document.write(`<html><head><title>${title}</title><style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:20px}
+    h1{font-size:16px;margin-bottom:5px}
+    p{color:#666;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}
+    th{background:#f0f0f0;font-weight:bold}
+    @media print{body{margin:0}}
+  </style></head><body>
+    <h1>${title}</h1>
+    <p>Exportado em ${new Date().toLocaleDateString("pt-BR")}</p>
+    ${tableEl.outerHTML}
+  </body></html>`);
+  pw.document.close();
+  setTimeout(() => pw.print(), 500);
 }
 
 // ---- Component ----
@@ -197,6 +221,20 @@ const GestaoRastreadores = () => {
   const erpData = useMemo(() => flattenSGACache(sgaCache), [sgaCache]);
   const erpLoaded = sgaCache.length > 0;
   const [erpRefreshing, setErpRefreshing] = useState(false);
+
+  // Cross-reference tab search/filter state
+  const [pendenteBusca, setPendenteBusca] = useState("");
+  const [pendenteFilial, setPendenteFilial] = useState("todas");
+  const [pendenteLimite, setPendenteLimite] = useState(PAGE_SIZE);
+  const [inadimplBusca, setInadimplBusca] = useState("");
+  const [inadimplFilial, setInadimplFilial] = useState("todas");
+  const [inadimplLimite, setInadimplLimite] = useState(PAGE_SIZE);
+  const [inativoBusca, setInativoBusca] = useState("");
+  const [inativoFilial, setInativoFilial] = useState("todas");
+  const [inativoLimite, setInativoLimite] = useState(PAGE_SIZE);
+  const [semCorrespBusca, setSemCorrespBusca] = useState("");
+  const [semCorrespFilial, setSemCorrespFilial] = useState("todas");
+  const [semCorrespLimite, setSemCorrespLimite] = useState(PAGE_SIZE);
 
   // Pagination
   const [limiteExibido, setLimiteExibido] = useState(PAGE_SIZE);
@@ -380,6 +418,122 @@ const GestaoRastreadores = () => {
   }, [instalados, erpData, erpLoaded]);
   const totalSemCorrespondencia = semCorrespondencia.length;
 
+  // ---- Filtered cross-reference data ----
+
+  // Pendentes filtered
+  const pendenteCooperativas = useMemo(() => {
+    const set = new Set(pendentesInstalacao.map((v) => v.cooperativa).filter(Boolean));
+    return Array.from(set).sort();
+  }, [pendentesInstalacao]);
+
+  const pendentesFiltrados = useMemo(() => {
+    let data = pendentesInstalacao;
+    if (pendenteFilial !== "todas") {
+      data = data.filter((v) => v.cooperativa === pendenteFilial);
+    }
+    if (pendenteBusca.trim()) {
+      const termo = pendenteBusca.toLowerCase();
+      data = data.filter(
+        (v) =>
+          v.placa.toLowerCase().includes(termo) ||
+          v.associado.toLowerCase().includes(termo) ||
+          v.cpf.toLowerCase().includes(termo) ||
+          v.cooperativa.toLowerCase().includes(termo)
+      );
+    }
+    return data;
+  }, [pendentesInstalacao, pendenteBusca, pendenteFilial]);
+
+  // Inadimplentes filtered
+  const inadimplCooperativas = useMemo(() => {
+    const set = new Set(inadimplentesComRastreador.map((r) => {
+      const match = findSGAMatch(r);
+      return match?.cooperativa || r.cooperativa || "";
+    }).filter(Boolean));
+    return Array.from(set).sort();
+  }, [inadimplentesComRastreador, findSGAMatch]);
+
+  const inadimplFiltrados = useMemo(() => {
+    let data = inadimplentesComRastreador;
+    if (inadimplFilial !== "todas") {
+      data = data.filter((r) => {
+        const match = findSGAMatch(r);
+        const coop = match?.cooperativa || r.cooperativa || "";
+        return coop === inadimplFilial;
+      });
+    }
+    if (inadimplBusca.trim()) {
+      const termo = inadimplBusca.toLowerCase();
+      data = data.filter((r) => {
+        const match = findSGAMatch(r);
+        return (
+          (r.placa || "").toLowerCase().includes(termo) ||
+          (r.imei || "").toLowerCase().includes(termo) ||
+          (match?.associado || r.associado || "").toLowerCase().includes(termo) ||
+          (match?.cooperativa || r.cooperativa || "").toLowerCase().includes(termo)
+        );
+      });
+    }
+    return data;
+  }, [inadimplentesComRastreador, inadimplBusca, inadimplFilial, findSGAMatch]);
+
+  // Inativos filtered
+  const inativoCooperativas = useMemo(() => {
+    const set = new Set(inativosComRastreador.map((r) => {
+      const match = findSGAMatch(r);
+      return match?.cooperativa || r.cooperativa || "";
+    }).filter(Boolean));
+    return Array.from(set).sort();
+  }, [inativosComRastreador, findSGAMatch]);
+
+  const inativosFiltrados = useMemo(() => {
+    let data = inativosComRastreador;
+    if (inativoFilial !== "todas") {
+      data = data.filter((r) => {
+        const match = findSGAMatch(r);
+        const coop = match?.cooperativa || r.cooperativa || "";
+        return coop === inativoFilial;
+      });
+    }
+    if (inativoBusca.trim()) {
+      const termo = inativoBusca.toLowerCase();
+      data = data.filter((r) => {
+        const match = findSGAMatch(r);
+        return (
+          (r.placa || "").toLowerCase().includes(termo) ||
+          (r.imei || "").toLowerCase().includes(termo) ||
+          (match?.associado || r.associado || "").toLowerCase().includes(termo) ||
+          (match?.cooperativa || r.cooperativa || "").toLowerCase().includes(termo)
+        );
+      });
+    }
+    return data;
+  }, [inativosComRastreador, inativoBusca, inativoFilial, findSGAMatch]);
+
+  // Sem Correspondencia filtered
+  const semCorrespCooperativas = useMemo(() => {
+    const set = new Set(semCorrespondencia.map((r) => r.cooperativa || "").filter(Boolean));
+    return Array.from(set).sort();
+  }, [semCorrespondencia]);
+
+  const semCorrespFiltrados = useMemo(() => {
+    let data = semCorrespondencia;
+    if (semCorrespFilial !== "todas") {
+      data = data.filter((r) => (r.cooperativa || "") === semCorrespFilial);
+    }
+    if (semCorrespBusca.trim()) {
+      const termo = semCorrespBusca.toLowerCase();
+      data = data.filter(
+        (r) =>
+          (r.placa || "").toLowerCase().includes(termo) ||
+          (r.imei || "").toLowerCase().includes(termo) ||
+          (r.associado || "").toLowerCase().includes(termo) ||
+          (r.cooperativa || "").toLowerCase().includes(termo)
+      );
+    }
+    return data;
+  }, [semCorrespondencia, semCorrespBusca, semCorrespFilial]);
+
   // Console log for debugging cross-reference numbers
   useMemo(() => {
     if (!erpLoaded) return;
@@ -398,7 +552,7 @@ const GestaoRastreadores = () => {
       placasInstaladasSetSize: placasInstaladas.size,
       chassisInstaladosSetSize: chassisInstalados.size,
     });
-  }, [erpLoaded, totalInstalados, totalEstoque, totalAtivos, totalInadimplentes, totalPendenteRetirada, pendentesInstalacao, inativosComRastreador, semProduto, erpData, typed, placasInstaladas, chassisInstalados]);
+  }, [erpLoaded, totalInstalados, totalEstoque, totalAtivos, totalInadimplentes, totalInativos, pendentesInstalacao, inativosComRastreador, semProduto, erpData, typed, placasInstaladas, chassisInstalados]);
 
   // ---- Handlers ----
 
@@ -518,7 +672,7 @@ const GestaoRastreadores = () => {
         </div>
       </PageHeader>
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setLimiteExibido(PAGE_SIZE); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setLimiteExibido(PAGE_SIZE); setPendenteLimite(PAGE_SIZE); setInadimplLimite(PAGE_SIZE); setInativoLimite(PAGE_SIZE); setSemCorrespLimite(PAGE_SIZE); }}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="todos">Todos Instalados</TabsTrigger>
           <TabsTrigger value="pendentes">
@@ -539,8 +693,8 @@ const GestaoRastreadores = () => {
               <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{inativosComRastreador.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="irregulares">Sem Correspondencia
-            Sem Produto
+          <TabsTrigger value="irregulares">
+            Sem Correspondencia
             {erpLoaded && semCorrespondencia.length > 0 && (
               <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5">{semCorrespondencia.length}</Badge>
             )}
@@ -657,85 +811,190 @@ const GestaoRastreadores = () => {
               </Button>
             </Card>
           ) : (
-            <Card className="card-shadow overflow-x-auto">
-              <div className="p-4 border-b">
-                <p className="text-sm text-muted-foreground">
-                  Veiculos com produto rastreador ativo no SGA, mas sem rastreador instalado na base.
-                  <span className="font-medium text-foreground ml-1">{pendentesInstalacao.length} registros</span>
-                </p>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Associado</TableHead>
-                    <TableHead>CPF</TableHead>
-                    <TableHead>Placa</TableHead>
-                    <TableHead>Veiculo</TableHead>
-                    <TableHead>Cooperativa</TableHead>
-                    <TableHead>Status SGA</TableHead>
-                    <TableHead>Acao</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendentesInstalacao.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <EmptyState message="Nenhum veiculo pendente de instalacao" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {pendentesInstalacao.slice(0, limiteExibido).map((v, i) => (
-                    <TableRow key={`${v.placa}-${i}`}>
-                      <TableCell className="text-sm font-medium">{v.associado}</TableCell>
-                      <TableCell className="font-mono text-xs">{v.cpf}</TableCell>
-                      <TableCell className="font-mono font-medium text-sm">{v.placa}</TableCell>
-                      <TableCell className="text-sm">{v.veiculo}</TableCell>
-                      <TableCell className="text-sm">{v.cooperativa}</TableCell>
-                      <TableCell>
-                        <Badge variant="default">Ativo</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          onClick={() => {
-                            setNovoForm({
-                              ...emptyForm,
-                              placa: v.placa,
-                              associado: v.associado,
-                              cpf: v.cpf,
-                              veiculo: v.veiculo,
-                              cooperativa: v.cooperativa,
-                            });
-                            setNovoOpen(true);
-                          }}
-                        >
-                          Agendar Instalacao
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {pendentesInstalacao.length > limiteExibido && (
-                <div className="flex justify-center py-4 border-t">
-                  <Button variant="outline" size="sm" onClick={() => setLimiteExibido((l) => l + PAGE_SIZE)}>
-                    Carregar mais ({pendentesInstalacao.length - limiteExibido} restantes)
-                  </Button>
+            <>
+              <Card className="p-4 card-shadow">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por placa, associado, CPF ou cooperativa..."
+                      value={pendenteBusca}
+                      onChange={(e) => { setPendenteBusca(e.target.value); setPendenteLimite(PAGE_SIZE); }}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Select value={pendenteFilial} onValueChange={(v) => { setPendenteFilial(v); setPendenteLimite(PAGE_SIZE); }}>
+                      <SelectTrigger className="w-[200px] h-9 text-sm">
+                        <SelectValue placeholder="Cooperativa: Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">Todas Cooperativas</SelectItem>
+                        {pendenteCooperativas.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        exportExcel(
+                          pendentesFiltrados.map((v) => ({
+                            Associado: v.associado,
+                            CPF: v.cpf,
+                            Telefone: v.telefone,
+                            Placa: v.placa,
+                            Veiculo: v.veiculo,
+                            Cooperativa: v.cooperativa,
+                            Status_SGA: v.status_sga,
+                          })),
+                          "pendentes_instalacao"
+                        )
+                      }
+                    >
+                      <Download className="w-4 h-4 mr-1" /> Excel
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </Card>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {pendentesFiltrados.length} de {pendentesInstalacao.length} registros
+                  {(pendenteBusca || pendenteFilial !== "todas") && " (filtrado)"}
+                </p>
+              </Card>
+              <Card className="card-shadow overflow-x-auto">
+                <div className="p-4 border-b">
+                  <p className="text-sm text-muted-foreground">
+                    Veiculos com produto rastreador ativo no SGA, mas sem rastreador instalado na base.
+                  </p>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Associado</TableHead>
+                      <TableHead>CPF</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Placa</TableHead>
+                      <TableHead>Veiculo</TableHead>
+                      <TableHead>Cooperativa</TableHead>
+                      <TableHead>Status SGA</TableHead>
+                      <TableHead>Acao</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendentesFiltrados.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8}>
+                          <EmptyState message="Nenhum veiculo pendente de instalacao" />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {pendentesFiltrados.slice(0, pendenteLimite).map((v, i) => (
+                      <TableRow key={`${v.placa}-${i}`}>
+                        <TableCell className="text-sm font-medium">{v.associado}</TableCell>
+                        <TableCell className="font-mono text-xs">{v.cpf}</TableCell>
+                        <TableCell className="text-sm">{v.telefone || "--"}</TableCell>
+                        <TableCell className="font-mono font-medium text-sm">{v.placa}</TableCell>
+                        <TableCell className="text-sm">{v.veiculo}</TableCell>
+                        <TableCell className="text-sm">{v.cooperativa}</TableCell>
+                        <TableCell>
+                          <Badge variant="default">Ativo</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              setNovoForm({
+                                ...emptyForm,
+                                placa: v.placa,
+                                associado: v.associado,
+                                cpf: v.cpf,
+                                veiculo: v.veiculo,
+                                cooperativa: v.cooperativa,
+                              });
+                              setNovoOpen(true);
+                            }}
+                          >
+                            Agendar Instalacao
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {pendentesFiltrados.length > pendenteLimite && (
+                  <div className="flex justify-center py-4 border-t">
+                    <Button variant="outline" size="sm" onClick={() => setPendenteLimite((l) => l + PAGE_SIZE)}>
+                      Carregar mais ({pendentesFiltrados.length - pendenteLimite} restantes)
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </>
           )}
         </TabsContent>
 
         {/* ============ TAB 3: INADIMPLENTES COM RASTREADOR ============ */}
         <TabsContent value="inadimplentes" className="space-y-4 mt-4">
+          <Card className="p-4 card-shadow">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por placa, IMEI, associado ou cooperativa..."
+                  value={inadimplBusca}
+                  onChange={(e) => { setInadimplBusca(e.target.value); setInadimplLimite(PAGE_SIZE); }}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <Select value={inadimplFilial} onValueChange={(v) => { setInadimplFilial(v); setInadimplLimite(PAGE_SIZE); }}>
+                  <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectValue placeholder="Cooperativa: Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas Cooperativas</SelectItem>
+                    {inadimplCooperativas.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    exportExcel(
+                      inadimplFiltrados.map((r) => {
+                        const match = findSGAMatch(r);
+                        return {
+                          Placa: r.placa,
+                          IMEI: r.imei,
+                          Associado: match?.associado || r.associado || "",
+                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          Telefone: match?.telefone || "",
+                          Encaminhamento: encaminhamentoMap[r.encaminhamento] || r.encaminhamento || "",
+                          Observacao: r.observacao || "",
+                        };
+                      }),
+                      "inadimplentes_rastreador"
+                    )
+                  }
+                >
+                  <Download className="w-4 h-4 mr-1" /> Excel
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {inadimplFiltrados.length} de {inadimplentesComRastreador.length} registros
+              {(inadimplBusca || inadimplFilial !== "todas") && " (filtrado)"}
+            </p>
+          </Card>
           <Card className="card-shadow overflow-x-auto">
             <div className="p-4 border-b">
               <p className="text-sm text-muted-foreground">
                 Rastreadores instalados em veiculos com status inadimplente no SGA ou marcados como cobranca.
-                <span className="font-medium text-foreground ml-1">{inadimplentesComRastreador.length} registros</span>
               </p>
             </div>
             <Table>
@@ -745,26 +1004,28 @@ const GestaoRastreadores = () => {
                   <TableHead>IMEI</TableHead>
                   <TableHead>Associado</TableHead>
                   <TableHead>Cooperativa</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead>Encaminhamento</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {inadimplentesComRastreador.length === 0 && (
+                {inadimplFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <EmptyState message="Nenhum inadimplente com rastreador" />
                     </TableCell>
                   </TableRow>
                 )}
-                {inadimplentesComRastreador.slice(0, limiteExibido).map((r) => {
+                {inadimplFiltrados.slice(0, inadimplLimite).map((r) => {
                   const sgaMatch = findSGAMatch(r);
                   return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
                     <TableCell className="font-mono text-xs">{r.imei}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
-                    <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.telefone || "--"}</TableCell>
                     <TableCell>
                       <Select
                         value={r.encaminhamento || "pendente"}
@@ -797,10 +1058,10 @@ const GestaoRastreadores = () => {
                   ); })}
               </TableBody>
             </Table>
-            {inadimplentesComRastreador.length > limiteExibido && (
+            {inadimplFiltrados.length > inadimplLimite && (
               <div className="flex justify-center py-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => setLimiteExibido((l) => l + PAGE_SIZE)}>
-                  Carregar mais ({inadimplentesComRastreador.length - limiteExibido} restantes)
+                <Button variant="outline" size="sm" onClick={() => setInadimplLimite((l) => l + PAGE_SIZE)}>
+                  Carregar mais ({inadimplFiltrados.length - inadimplLimite} restantes)
                 </Button>
               </div>
             )}
@@ -809,11 +1070,63 @@ const GestaoRastreadores = () => {
 
         {/* ============ TAB 4: INATIVOS COM RASTREADOR ============ */}
         <TabsContent value="inativos" className="space-y-4 mt-4">
+          <Card className="p-4 card-shadow">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por placa, IMEI, associado ou cooperativa..."
+                  value={inativoBusca}
+                  onChange={(e) => { setInativoBusca(e.target.value); setInativoLimite(PAGE_SIZE); }}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2 items-center">
+                <Select value={inativoFilial} onValueChange={(v) => { setInativoFilial(v); setInativoLimite(PAGE_SIZE); }}>
+                  <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectValue placeholder="Cooperativa: Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas Cooperativas</SelectItem>
+                    {inativoCooperativas.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    exportExcel(
+                      inativosFiltrados.map((r) => {
+                        const match = findSGAMatch(r);
+                        return {
+                          Placa: r.placa,
+                          IMEI: r.imei,
+                          Associado: match?.associado || r.associado || "",
+                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          Telefone: match?.telefone || "",
+                          Motivo_Nao_Retirada: motivoNaoRetiradaMap[r.motivo_nao_retirada] || r.motivo_nao_retirada || "",
+                          Observacao: r.observacao || "",
+                        };
+                      }),
+                      "inativos_rastreador"
+                    )
+                  }
+                >
+                  <Download className="w-4 h-4 mr-1" /> Excel
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {inativosFiltrados.length} de {inativosComRastreador.length} registros
+              {(inativoBusca || inativoFilial !== "todas") && " (filtrado)"}
+            </p>
+          </Card>
           <Card className="card-shadow overflow-x-auto">
             <div className="p-4 border-b">
               <p className="text-sm text-muted-foreground">
                 Rastreadores instalados em veiculos com status inativo ou cancelado no SGA.
-                <span className="font-medium text-foreground ml-1">{inativosComRastreador.length} registros</span>
               </p>
             </div>
             <Table>
@@ -823,26 +1136,28 @@ const GestaoRastreadores = () => {
                   <TableHead>IMEI</TableHead>
                   <TableHead>Associado</TableHead>
                   <TableHead>Cooperativa</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead>Motivo Nao Retirada</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {inativosComRastreador.length === 0 && (
+                {inativosFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <EmptyState message="Nenhum inativo com rastreador" />
                     </TableCell>
                   </TableRow>
                 )}
-                {inativosComRastreador.slice(0, limiteExibido).map((r) => {
+                {inativosFiltrados.slice(0, inativoLimite).map((r) => {
                   const sgaMatch = findSGAMatch(r);
                   return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
                     <TableCell className="font-mono text-xs">{r.imei}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
-                    <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.telefone || "--"}</TableCell>
                     <TableCell>
                       <Select
                         value={r.motivo_nao_retirada || ""}
@@ -874,10 +1189,10 @@ const GestaoRastreadores = () => {
                   ); })}
               </TableBody>
             </Table>
-            {inativosComRastreador.length > limiteExibido && (
+            {inativosFiltrados.length > inativoLimite && (
               <div className="flex justify-center py-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => setLimiteExibido((l) => l + PAGE_SIZE)}>
-                  Carregar mais ({inativosComRastreador.length - limiteExibido} restantes)
+                <Button variant="outline" size="sm" onClick={() => setInativoLimite((l) => l + PAGE_SIZE)}>
+                  Carregar mais ({inativosFiltrados.length - inativoLimite} restantes)
                 </Button>
               </div>
             )}
@@ -898,72 +1213,126 @@ const GestaoRastreadores = () => {
               </Button>
             </Card>
           ) : (
-            <Card className="card-shadow overflow-x-auto">
-              <div className="p-4 border-b">
-                <p className="text-sm text-muted-foreground">
-                  Rastreadores instalados na plataforma mas sem correspondencia no SGA (placa nao encontrada).
-                  <span className="font-medium text-foreground ml-1">{semCorrespondencia.length} registros</span>
-                </p>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Placa</TableHead>
-                    <TableHead>IMEI</TableHead>
-                    <TableHead>Associado</TableHead>
-                    <TableHead>Cooperativa</TableHead>
-                    <TableHead>Justificativa</TableHead>
-                    <TableHead>Acao</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {semCorrespondencia.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6}>
-                        <EmptyState message="Nenhum rastreador irregular encontrado" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {semCorrespondencia.slice(0, limiteExibido).map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.imei}</TableCell>
-                      <TableCell className="text-sm">{r.associado || "--"}</TableCell>
-                      <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
-                      <TableCell>
-                        <Input
-                          className="h-8 text-xs w-[200px]"
-                          placeholder="Justificativa..."
-                          defaultValue={r.justificativa || ""}
-                          onBlur={(e) => {
-                            if (e.target.value !== (r.justificativa || "")) {
-                              updateInline(r.id, { justificativa: e.target.value });
-                            }
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          onClick={() => updateInline(r.id, { status: "irregular", encaminhamento: "regularizacao" })}
-                        >
-                          Marcar Irregular
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {semCorrespondencia.length > limiteExibido && (
-                <div className="flex justify-center py-4 border-t">
-                  <Button variant="outline" size="sm" onClick={() => setLimiteExibido((l) => l + PAGE_SIZE)}>
-                    Carregar mais ({semCorrespondencia.length - limiteExibido} restantes)
-                  </Button>
+            <>
+              <Card className="p-4 card-shadow">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por placa, IMEI, associado ou cooperativa..."
+                      value={semCorrespBusca}
+                      onChange={(e) => { setSemCorrespBusca(e.target.value); setSemCorrespLimite(PAGE_SIZE); }}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Select value={semCorrespFilial} onValueChange={(v) => { setSemCorrespFilial(v); setSemCorrespLimite(PAGE_SIZE); }}>
+                      <SelectTrigger className="w-[200px] h-9 text-sm">
+                        <SelectValue placeholder="Cooperativa: Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">Todas Cooperativas</SelectItem>
+                        {semCorrespCooperativas.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        exportExcel(
+                          semCorrespFiltrados.map((r) => ({
+                            Placa: r.placa,
+                            IMEI: r.imei,
+                            Cooperativa: r.cooperativa || "",
+                            Associado: r.associado || "",
+                            Status_Planilha: statusMap[r.status]?.label || r.status || "",
+                            Observacao: r.justificativa || "",
+                          })),
+                          "sem_correspondencia"
+                        )
+                      }
+                    >
+                      <Download className="w-4 h-4 mr-1" /> Excel
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </Card>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {semCorrespFiltrados.length} de {semCorrespondencia.length} registros
+                  {(semCorrespBusca || semCorrespFilial !== "todas") && " (filtrado)"}
+                </p>
+              </Card>
+              <Card className="card-shadow overflow-x-auto">
+                <div className="p-4 border-b">
+                  <p className="text-sm text-muted-foreground">
+                    Rastreadores instalados na plataforma mas sem correspondencia no SGA (placa nao encontrada).
+                  </p>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Placa</TableHead>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead>Cooperativa</TableHead>
+                      <TableHead>Status na Planilha</TableHead>
+                      <TableHead>Observacao</TableHead>
+                      <TableHead>Acao</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {semCorrespFiltrados.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <EmptyState message="Nenhum rastreador sem correspondencia encontrado" />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {semCorrespFiltrados.slice(0, semCorrespLimite).map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
+                        <TableCell className="font-mono text-xs">{r.imei}</TableCell>
+                        <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusMap[r.status]?.variant || "secondary"}>
+                            {statusMap[r.status]?.label || r.status || "--"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            className="h-8 text-xs w-[200px]"
+                            placeholder="Observacao..."
+                            defaultValue={r.justificativa || ""}
+                            onBlur={(e) => {
+                              if (e.target.value !== (r.justificativa || "")) {
+                                updateInline(r.id, { justificativa: e.target.value });
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => updateInline(r.id, { status: "irregular", encaminhamento: "regularizacao" })}
+                          >
+                            Marcar Irregular
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {semCorrespFiltrados.length > semCorrespLimite && (
+                  <div className="flex justify-center py-4 border-t">
+                    <Button variant="outline" size="sm" onClick={() => setSemCorrespLimite((l) => l + PAGE_SIZE)}>
+                      Carregar mais ({semCorrespFiltrados.length - semCorrespLimite} restantes)
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </>
           )}
         </TabsContent>
 
@@ -1028,7 +1397,7 @@ const GestaoRastreadores = () => {
               variant="outline"
               size="sm"
               onClick={() =>
-                exportCSV(
+                exportExcel(
                   typed.map((r) => ({
                     Placa: r.placa,
                     Chassi: r.chassi,
@@ -1047,7 +1416,7 @@ const GestaoRastreadores = () => {
                 )
               }
             >
-              <Download className="w-4 h-4 mr-1" /> Exportar CSV
+              <Download className="w-4 h-4 mr-1" /> Excel
             </Button>
           </div>
         </TabsContent>
