@@ -201,7 +201,11 @@ const GestaoRastreadores = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const typed = rastreadores as RastreadorInstalado[];
-  const placasInstaladas = useMemo(() => new Set(typed.map((r) => normPlaca(r.placa))), [typed]);
+  // Separate: only records with placa or chassi are "installed", rest is stock
+  const instalados = useMemo(() => typed.filter((r) => r.status !== "em_estoque"), [typed]);
+  const estoque = useMemo(() => typed.filter((r) => r.status === "em_estoque"), [typed]);
+  const placasInstaladas = useMemo(() => new Set(instalados.map((r) => normPlaca(r.placa)).filter(Boolean)), [instalados]);
+  const chassisInstalados = useMemo(() => new Set(instalados.map((r) => (r.chassi || "").toUpperCase().trim()).filter(Boolean)), [instalados]);
 
   // ---- ERP import (refresh cache in background) ----
   const importarSGA = useCallback(async () => {
@@ -220,42 +224,60 @@ const GestaoRastreadores = () => {
 
   // ---- Cross-reference computations ----
 
-  // Tab 2: Pendentes de Instalacao - veiculos com rastreador no SGA, ativos, mas SEM rastreador instalado
+  // Helper: check if a record from planilha matches a record from SGA (by placa or chassi)
+  const isInstalledInSGA = useCallback((erpPlaca: string, erpChassi?: string) => {
+    const p = normPlaca(erpPlaca);
+    if (p && placasInstaladas.has(p)) return true;
+    const c = (erpChassi || "").toUpperCase().trim();
+    if (c && chassisInstalados.has(c)) return true;
+    return false;
+  }, [placasInstaladas, chassisInstalados]);
+
+  // Tab 2: Pendentes de Instalacao - veiculos ATIVOS com rastreador no SGA, mas SEM rastreador na plataforma
   const pendentesInstalacao = useMemo(() => {
     if (!erpLoaded) return [];
     return erpData.filter(
-      (v) => v.tem_produto_rastreador && v.status_sga === "ativo" && !placasInstaladas.has(normPlaca(v.placa))
+      (v) => v.tem_produto_rastreador && v.status_sga === "ativo" && !isInstalledInSGA(v.placa, v.chassi)
     );
-  }, [erpData, erpLoaded, placasInstaladas]);
+  }, [erpData, erpLoaded, isInstalledInSGA]);
 
-  // Tab 3: Inadimplentes com rastreador
+  // Tab 3: Inadimplentes com rastreador - instalados na plataforma E inadimplentes no SGA
   const inadimplentesComRastreador = useMemo(() => {
-    const erpInadimplentes = new Set(
+    const erpInadimplentePlacas = new Set(
       erpData.filter((v) => v.status_sga === "inadimplente").map((v) => normPlaca(v.placa))
     );
-    return typed.filter(
-      (r) => erpInadimplentes.has(normPlaca(r.placa)) || r.encaminhamento === "cobranca"
+    const erpInadimplenteChassis = new Set(
+      erpData.filter((v) => v.status_sga === "inadimplente" && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim())
     );
-  }, [typed, erpData]);
+    return instalados.filter(
+      (r) => erpInadimplentePlacas.has(normPlaca(r.placa)) ||
+             (r.chassi && erpInadimplenteChassis.has((r.chassi || "").toUpperCase().trim())) ||
+             r.encaminhamento === "cobranca"
+    );
+  }, [instalados, erpData]);
 
-  // Tab 4: Inativos com rastreador
+  // Tab 4: Inativos com rastreador - instalados na plataforma E inativos/cancelados no SGA
   const inativosComRastreador = useMemo(() => {
-    const erpInativos = new Set(
+    const erpInativoPlacas = new Set(
       erpData.filter((v) => v.status_sga === "inativo" || v.status_sga === "cancelado").map((v) => normPlaca(v.placa))
     );
-    return typed.filter(
-      (r) => erpInativos.has(normPlaca(r.placa)) || (r.status || "").toLowerCase().includes("inativo")
+    const erpInativoChassis = new Set(
+      erpData.filter((v) => (v.status_sga === "inativo" || v.status_sga === "cancelado") && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim())
     );
-  }, [typed, erpData]);
+    return instalados.filter(
+      (r) => erpInativoPlacas.has(normPlaca(r.placa)) ||
+             (r.chassi && erpInativoChassis.has((r.chassi || "").toUpperCase().trim()))
+    );
+  }, [instalados, erpData]);
 
-  // Tab 5: Sem Produto (Irregular)
+  // Tab 5: Sem Produto (Irregular) - instalados na plataforma mas SEM produto rastreador no SGA
   const semProduto = useMemo(() => {
     if (!erpLoaded) return [];
-    const erpSemProduto = new Set(
+    const erpSemProdutoPlacas = new Set(
       erpData.filter((v) => !v.tem_produto_rastreador).map((v) => normPlaca(v.placa))
     );
-    return typed.filter((r) => erpSemProduto.has(normPlaca(r.placa)));
-  }, [typed, erpData, erpLoaded]);
+    return instalados.filter((r) => erpSemProdutoPlacas.has(normPlaca(r.placa)));
+  }, [instalados, erpData, erpLoaded]);
 
   // ---- Search filter (Tab 1) ----
   const filtrados = useMemo(() => {
@@ -273,10 +295,11 @@ const GestaoRastreadores = () => {
   const filtradosPaginados = useMemo(() => filtrados.slice(0, limiteExibido), [filtrados, limiteExibido]);
 
   // ---- Stats ----
-  const totalInstalados = typed.length;
-  const totalAtivos = typed.filter((r) => r.status === "instalado").length;
+  const totalInstalados = instalados.length;
+  const totalEstoque = estoque.length;
+  const totalAtivos = instalados.filter((r) => r.status === "instalado").length;
   const totalInadimplentes = inadimplentesComRastreador.length;
-  const totalPendenteRetirada = typed.filter((r) => r.status === "pendente_retirada").length;
+  const totalPendenteRetirada = instalados.filter((r) => r.status === "pendente_retirada").length;
 
   // ---- Handlers ----
 
