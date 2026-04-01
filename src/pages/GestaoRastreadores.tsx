@@ -155,7 +155,8 @@ function flattenSGACache(cacheRows: any[]): ERPVeiculoFlat[] {
 }
 
 function normPlaca(p: string) {
-  return (p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const n = (p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return n.length >= 5 ? n : ""; // placa valida tem no minimo 5 chars
 }
 
 function exportCSV(rows: Record<string, any>[], filename: string) {
@@ -245,10 +246,10 @@ const GestaoRastreadores = () => {
   // Tab 3: Inadimplentes com rastreador - instalados na plataforma E inadimplentes no SGA
   const inadimplentesComRastreador = useMemo(() => {
     const erpInadimplentePlacas = new Set(
-      erpData.filter((v) => v.status_sga === "inadimplente").map((v) => normPlaca(v.placa))
+      erpData.filter((v) => v.status_sga === "inadimplente").map((v) => normPlaca(v.placa)).filter(Boolean)
     );
     const erpInadimplenteChassis = new Set(
-      erpData.filter((v) => v.status_sga === "inadimplente" && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim())
+      erpData.filter((v) => v.status_sga === "inadimplente" && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim()).filter(Boolean)
     );
     return instalados.filter(
       (r) => erpInadimplentePlacas.has(normPlaca(r.placa)) ||
@@ -260,10 +261,10 @@ const GestaoRastreadores = () => {
   // Tab 4: Inativos com rastreador - instalados na plataforma E inativos/cancelados no SGA
   const inativosComRastreador = useMemo(() => {
     const erpInativoPlacas = new Set(
-      erpData.filter((v) => v.status_sga === "inativo" || v.status_sga === "cancelado").map((v) => normPlaca(v.placa))
+      erpData.filter((v) => v.status_sga === "inativo" || v.status_sga === "cancelado").map((v) => normPlaca(v.placa)).filter(Boolean)
     );
     const erpInativoChassis = new Set(
-      erpData.filter((v) => (v.status_sga === "inativo" || v.status_sga === "cancelado") && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim())
+      erpData.filter((v) => (v.status_sga === "inativo" || v.status_sga === "cancelado") && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim()).filter(Boolean)
     );
     return instalados.filter(
       (r) => erpInativoPlacas.has(normPlaca(r.placa)) ||
@@ -275,7 +276,7 @@ const GestaoRastreadores = () => {
   const semProduto = useMemo(() => {
     if (!erpLoaded) return [];
     const erpSemProdutoPlacas = new Set(
-      erpData.filter((v) => !v.tem_produto_rastreador).map((v) => normPlaca(v.placa))
+      erpData.filter((v) => !v.tem_produto_rastreador).map((v) => normPlaca(v.placa)).filter(Boolean)
     );
     return instalados.filter((r) => erpSemProdutoPlacas.has(normPlaca(r.placa)));
   }, [instalados, erpData, erpLoaded]);
