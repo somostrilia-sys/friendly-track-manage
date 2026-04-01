@@ -13,9 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StatCard } from "@/components/StatCard";
 import { useFaturamentoB2B, useInsertFaturamentoB2B, useUpdateFaturamentoB2B, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users, CheckCircle2, AlertTriangle, Upload, Trash2, FileText, Image as ImageIcon } from "lucide-react";
+import { Plus, Download, BarChart3, Calendar, TrendingUp, TrendingDown, DollarSign, Building2, ArrowUpRight, ArrowDownRight, Search, Users, CheckCircle2, AlertTriangle, Upload, Trash2, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import type { DbFaturamentoB2B } from "@/types/database";
+import { sincronizarCompleto } from "@/lib/walk-finance";
 import * as XLSX from "xlsx";
 import { addDays, format, parseISO } from "date-fns";
 import {
@@ -91,6 +92,7 @@ const FaturamentoB2BTab = () => {
   const [chartInitDone, setChartInitDone] = useState(false);
   const [uploadingBoleto, setUploadingBoleto] = useState(false);
   const [uploadingComprovante, setUploadingComprovante] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const boletoInputRef = useRef<HTMLInputElement>(null);
   const comprovanteInputRef = useRef<HTMLInputElement>(null);
@@ -233,6 +235,28 @@ const FaturamentoB2BTab = () => {
   }, [registros, meses, empresaFiltro]);
 
   const setField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const handleSyncWalkFinance = async () => {
+    setSyncing(true);
+    try {
+      const result = await sincronizarCompleto();
+      const pushMsg = `Enviados: ${result.push.enviados}, Atualizados: ${result.push.atualizados}`;
+      const pullMsg = `Pagamentos sincronizados: ${result.pull.atualizados}`;
+      const allErrors = [...result.push.erros, ...result.pull.erros];
+
+      if (allErrors.length > 0) {
+        toast.warning(`Sync parcial. ${pushMsg}. ${pullMsg}. Erros: ${allErrors.length}`);
+        console.warn("Walk Finance sync errors:", allErrors);
+      } else {
+        toast.success(`Walk Finance sincronizado! ${pushMsg}. ${pullMsg}`);
+      }
+    } catch (err: any) {
+      toast.error(`Erro na sincronizacao: ${err.message}`);
+      console.error("Walk Finance sync error:", err);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const abrirNovo = () => { setForm({ ...emptyForm, mes_referencia: mesAtual }); setEditando(null); setModalOpen(true); };
   const abrirEditar = (r: DbFaturamentoB2B) => {
@@ -426,6 +450,10 @@ const FaturamentoB2BTab = () => {
                 <span className="text-xs text-muted-foreground">{registrosMesFiltrados.length} empresas</span>
               </div>
               <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleSyncWalkFinance} disabled={syncing}>
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Sincronizando..." : "Sync Walk Finance"}
+                </Button>
                 <Button size="sm" variant="outline" onClick={exportar}><Download className="w-3.5 h-3.5 mr-1" /> Exportar</Button>
                 <Button size="sm" onClick={abrirNovo}><Plus className="w-3.5 h-3.5 mr-1" /> Novo</Button>
               </div>
