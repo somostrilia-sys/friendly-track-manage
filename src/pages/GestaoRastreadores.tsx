@@ -364,7 +364,21 @@ const GestaoRastreadores = () => {
 
   const totalInadimplentes = inadimplentesComRastreador.length;
   const totalInativos = inativosComRastreador.length;
-  const totalSemCorrespondencia = erpLoaded ? totalInstalados - totalAtivos - totalInadimplentes - totalInativos : 0;
+
+  // Sem correspondencia = instalados na planilha que nao tem match nenhum no SGA
+  const semCorrespondencia = useMemo(() => {
+    if (!erpLoaded) return [];
+    const allSGAPlacas = new Set(erpData.map((v) => normPlaca(v.placa)).filter(Boolean));
+    const allSGAChassis = new Set(erpData.map((v) => normChassi(v.chassi)).filter(Boolean));
+    return instalados.filter((r) => {
+      const p = normPlaca(r.placa);
+      if (p && allSGAPlacas.has(p)) return false;
+      const c = normChassi(r.chassi);
+      if (c && allSGAChassis.has(c)) return false;
+      return true; // no match
+    });
+  }, [instalados, erpData, erpLoaded]);
+  const totalSemCorrespondencia = semCorrespondencia.length;
 
   // Console log for debugging cross-reference numbers
   useMemo(() => {
@@ -378,7 +392,7 @@ const GestaoRastreadores = () => {
       totalSemCorrespondencia,
       pendentesInstalacao: pendentesInstalacao.length,
       inativos: inativosComRastreador.length,
-      semProduto: semProduto.length,
+      semCorrespondencia: semCorrespondencia.length,
       sgaCacheRecords: erpData.length,
       planilhaRecords: typed.length,
       placasInstaladasSetSize: placasInstaladas.size,
@@ -525,10 +539,10 @@ const GestaoRastreadores = () => {
               <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{inativosComRastreador.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="irregulares">
+          <TabsTrigger value="irregulares">Sem Correspondencia
             Sem Produto
-            {erpLoaded && semProduto.length > 0 && (
-              <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5">{semProduto.length}</Badge>
+            {erpLoaded && semCorrespondencia.length > 0 && (
+              <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5">{semCorrespondencia.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
@@ -540,8 +554,8 @@ const GestaoRastreadores = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Instalados" value={totalInstalados} icon={Radio} accent="primary" />
             <StatCard label="Ativos no SGA" value={totalAtivos} icon={CheckCircle2} accent="success" />
-            <StatCard label="Inadimplentes" value={totalInadimplentes} icon={AlertTriangle} accent="warning" />
-            <StatCard label="Inativos" value={totalInativos} icon={XCircle} accent="destructive" />
+            <StatCard label="Inadimpl. + Inativos" value={totalInadimplentes + totalInativos} icon={AlertTriangle} accent="warning" />
+            <StatCard label="Sem Correspondencia" value={totalSemCorrespondencia} icon={FileWarning} accent="destructive" />
           </div>
 
           {/* Actions + Search */}
@@ -887,8 +901,8 @@ const GestaoRastreadores = () => {
             <Card className="card-shadow overflow-x-auto">
               <div className="p-4 border-b">
                 <p className="text-sm text-muted-foreground">
-                  Rastreadores instalados em veiculos que nao possuem produto rastreador no SGA.
-                  <span className="font-medium text-foreground ml-1">{semProduto.length} registros</span>
+                  Rastreadores instalados na plataforma mas sem correspondencia no SGA (placa nao encontrada).
+                  <span className="font-medium text-foreground ml-1">{semCorrespondencia.length} registros</span>
                 </p>
               </div>
               <Table>
@@ -903,14 +917,14 @@ const GestaoRastreadores = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {semProduto.length === 0 && (
+                  {semCorrespondencia.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6}>
                         <EmptyState message="Nenhum rastreador irregular encontrado" />
                       </TableCell>
                     </TableRow>
                   )}
-                  {semProduto.slice(0, limiteExibido).map((r) => (
+                  {semCorrespondencia.slice(0, limiteExibido).map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
                       <TableCell className="font-mono text-xs">{r.imei}</TableCell>
@@ -942,10 +956,10 @@ const GestaoRastreadores = () => {
                   ))}
                 </TableBody>
               </Table>
-              {semProduto.length > limiteExibido && (
+              {semCorrespondencia.length > limiteExibido && (
                 <div className="flex justify-center py-4 border-t">
                   <Button variant="outline" size="sm" onClick={() => setLimiteExibido((l) => l + PAGE_SIZE)}>
-                    Carregar mais ({semProduto.length - limiteExibido} restantes)
+                    Carregar mais ({semCorrespondencia.length - limiteExibido} restantes)
                   </Button>
                 </div>
               )}
@@ -977,7 +991,7 @@ const GestaoRastreadores = () => {
             />
             <StatCard
               label="Irregulares"
-              value={erpLoaded ? semProduto.length : "--"}
+              value={erpLoaded ? semCorrespondencia.length : "--"}
               icon={FileWarning}
               accent="destructive"
             />
