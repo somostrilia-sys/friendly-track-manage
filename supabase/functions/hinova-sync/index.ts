@@ -6,9 +6,9 @@ const cors = {
 };
 
 const HINOVA_BASE_URL = "https://api.hinova.com.br/api/sga/v2";
-const HINOVA_TOKEN_FORNECEDOR = "583bc4740e73a5510513f04b10a1810cfe4be1f86cfb4ce34beb10a4439e640291d66d1891d4fbe55da175d5e667b8d3681c4bca180fdffaa0257dd88140670ed4c4ec6569e60add5f0c238c251eb59668cad90d6a2061ea5293d13562af3c86";
-const HINOVA_USUARIO = "Matheus";
-const HINOVA_SENHA = "Crm2026";
+const HINOVA_TOKEN_FORNECEDOR = "c63a188780b2c3c950aa431950130cca20d4fdbfc71d51f320830f8d4678b955953ee6dd0f95bfc1c44855e9dc684926c851a9e845d957d1e3b994da76a6a5256d4db0c0f82f5198af4c62b20fd5dd50a69e459be55c908e49c794450036ed2a";
+const HINOVA_USUARIO = "Alex";
+const HINOVA_SENHA = "Walk2026";
 
 // Rastreador product codes (classificacao 24)
 const RASTREADOR_KEYWORDS = ["rastreador", "rastreamento", "tracker", "bloqueio rastreador", "ratreador"];
