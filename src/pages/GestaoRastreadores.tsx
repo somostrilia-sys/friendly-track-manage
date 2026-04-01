@@ -363,7 +363,8 @@ const GestaoRastreadores = () => {
   }, [instalados, erpData, erpLoaded]);
 
   const totalInadimplentes = inadimplentesComRastreador.length;
-  const totalPendenteRetirada = instalados.filter((r) => r.status === "pendente_retirada").length;
+  const totalInativos = inativosComRastreador.length;
+  const totalSemCorrespondencia = erpLoaded ? totalInstalados - totalAtivos - totalInadimplentes - totalInativos : 0;
 
   // Console log for debugging cross-reference numbers
   useMemo(() => {
@@ -373,7 +374,8 @@ const GestaoRastreadores = () => {
       totalEstoque,
       totalAtivos,
       totalInadimplentes,
-      totalPendenteRetirada,
+      totalInativos,
+      totalSemCorrespondencia,
       pendentesInstalacao: pendentesInstalacao.length,
       inativos: inativosComRastreador.length,
       semProduto: semProduto.length,
@@ -537,9 +539,9 @@ const GestaoRastreadores = () => {
           {/* Stat Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Instalados" value={totalInstalados} icon={Radio} accent="primary" />
-            <StatCard label="Ativos" value={totalAtivos} icon={CheckCircle2} accent="success" />
+            <StatCard label="Ativos no SGA" value={totalAtivos} icon={CheckCircle2} accent="success" />
             <StatCard label="Inadimplentes" value={totalInadimplentes} icon={AlertTriangle} accent="warning" />
-            <StatCard label="Pendente Retirada" value={totalPendenteRetirada} icon={Clock} accent="destructive" />
+            <StatCard label="Inativos" value={totalInativos} icon={XCircle} accent="destructive" />
           </div>
 
           {/* Actions + Search */}
