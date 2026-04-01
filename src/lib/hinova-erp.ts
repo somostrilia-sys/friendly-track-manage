@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface VeiculoERP {
   codigo_veiculo: string;
   placa: string;
+  chassi?: string;
   marca: string;
   modelo: string;
   ano: string;

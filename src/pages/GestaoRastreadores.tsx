@@ -56,6 +56,7 @@ type ERPVeiculoFlat = {
   cpf: string;
   telefone: string;
   placa: string;
+  chassi: string;
   veiculo: string;
   cooperativa: string;
   status_sga: string;
@@ -120,6 +121,7 @@ function flattenERP(associados: AssociadoERP[]): ERPVeiculoFlat[] {
         cpf: a.cpf,
         telefone: a.telefone_celular ? `(${a.ddd_celular}) ${a.telefone_celular}` : "",
         placa: (v.placa || "").toUpperCase().trim(),
+        chassi: (v.chassi || "").toUpperCase().trim(),
         veiculo: `${v.marca} ${v.modelo}`.trim(),
         cooperativa: v.categoria || "",
         status_sga: (v.status || "").toLowerCase(),
@@ -146,6 +148,7 @@ function flattenSGACache(cacheRows: any[]): ERPVeiculoFlat[] {
       cpf: row.cpf || "",
       telefone: row.telefone_celular ? `(${row.ddd_celular || ""}) ${row.telefone_celular}` : "",
       placa: (row.placa || "").toUpperCase().trim(),
+      chassi: (row.chassi || "").toUpperCase().trim(),
       veiculo: `${row.marca || ""} ${row.modelo || ""}`.trim(),
       cooperativa: row.cooperativa || "",
       status_sga: (row.status_veiculo || "").toLowerCase(),
@@ -154,9 +157,9 @@ function flattenSGACache(cacheRows: any[]): ERPVeiculoFlat[] {
   });
 }
 
-function normPlaca(p: string) {
+function normPlaca(p: string | null | undefined): string {
   const n = (p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return n.length >= 5 ? n : ""; // placa valida tem no minimo 5 chars
+  return n.length >= 5 ? n : "";
 }
 
 function exportCSV(rows: Record<string, any>[], filename: string) {
@@ -207,7 +210,7 @@ const GestaoRastreadores = () => {
   const instalados = useMemo(() => typed.filter(temIdentificador), [typed]);
   const estoque = useMemo(() => typed.filter((r) => !temIdentificador(r)), [typed]);
   const placasInstaladas = useMemo(() => new Set(instalados.map((r) => normPlaca(r.placa)).filter(Boolean)), [instalados]);
-  const chassisInstalados = useMemo(() => new Set(instalados.map((r) => (r.chassi || "").toUpperCase().trim()).filter(Boolean)), [instalados]);
+  const chassisInstalados = useMemo(() => new Set(instalados.map((r) => (r.chassi || "").toUpperCase().trim()).filter((c) => c.length >= 10)), [instalados]);
 
   // ---- ERP import (refresh cache in background) ----
   const importarSGA = useCallback(async () => {
@@ -226,51 +229,89 @@ const GestaoRastreadores = () => {
 
   // ---- Cross-reference computations ----
 
-  // Helper: check if a record from planilha matches a record from SGA (by placa or chassi)
-  const isInstalledInSGA = useCallback((erpPlaca: string, erpChassi?: string) => {
+  // Helper: normalize chassi for comparison
+  const normChassi = (c: string | null | undefined): string => {
+    const n = (c || "").toUpperCase().trim();
+    return n.length >= 10 ? n : "";
+  };
+
+  // Helper: check if a SGA record is installed (exists in planilha) by placa or chassi
+  const isInstalledInPlanilha = useCallback((erpPlaca: string, erpChassi?: string) => {
     const p = normPlaca(erpPlaca);
     if (p && placasInstaladas.has(p)) return true;
-    const c = (erpChassi || "").toUpperCase().trim();
+    const c = normChassi(erpChassi);
     if (c && chassisInstalados.has(c)) return true;
     return false;
   }, [placasInstaladas, chassisInstalados]);
 
-  // Tab 2: Pendentes de Instalacao - veiculos ATIVOS com rastreador no SGA, mas SEM rastreador na plataforma
+  // Build SGA lookup maps by status (keyed by normalized placa)
+  const sgaByPlaca = useMemo(() => {
+    const map = new Map<string, ERPVeiculoFlat>();
+    for (const v of erpData) {
+      const p = normPlaca(v.placa);
+      if (p) map.set(p, v);
+    }
+    return map;
+  }, [erpData]);
+
+  // Helper: find the SGA record that matches a planilha record
+  const findSGAMatch = useCallback((r: RastreadorInstalado): ERPVeiculoFlat | undefined => {
+    const p = normPlaca(r.placa);
+    if (p) {
+      const match = sgaByPlaca.get(p);
+      if (match) return match;
+    }
+    // Fallback: try chassi match (slower, linear scan)
+    const c = normChassi(r.chassi);
+    if (c) {
+      return erpData.find((v) => normChassi(v.chassi) === c);
+    }
+    return undefined;
+  }, [sgaByPlaca, erpData]);
+
+  // Tab 2: Pendentes de Instalacao - SGA vehicles with tem_rastreador=true AND status_veiculo="ativo" NOT in planilha
   const pendentesInstalacao = useMemo(() => {
     if (!erpLoaded) return [];
     return erpData.filter(
-      (v) => v.tem_produto_rastreador && v.status_sga === "ativo" && !isInstalledInSGA(v.placa, v.chassi)
+      (v) => v.tem_produto_rastreador && v.status_sga === "ativo" && !isInstalledInPlanilha(v.placa, v.chassi)
     );
-  }, [erpData, erpLoaded, isInstalledInSGA]);
+  }, [erpData, erpLoaded, isInstalledInPlanilha]);
 
-  // Tab 3: Inadimplentes com rastreador - instalados na plataforma E inadimplentes no SGA
+  // Tab 3: Inadimplentes - planilha records (with placa/chassi) matching SGA status_veiculo="inadimplente"
   const inadimplentesComRastreador = useMemo(() => {
-    const erpInadimplentePlacas = new Set(
+    if (!erpLoaded) return [];
+    const sgaInadimplentePlacas = new Set(
       erpData.filter((v) => v.status_sga === "inadimplente").map((v) => normPlaca(v.placa)).filter(Boolean)
     );
-    const erpInadimplenteChassis = new Set(
-      erpData.filter((v) => v.status_sga === "inadimplente" && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim()).filter(Boolean)
+    const sgaInadimplenteChassis = new Set(
+      erpData.filter((v) => v.status_sga === "inadimplente").map((v) => normChassi(v.chassi)).filter(Boolean)
     );
-    return instalados.filter(
-      (r) => erpInadimplentePlacas.has(normPlaca(r.placa)) ||
-             (r.chassi && erpInadimplenteChassis.has((r.chassi || "").toUpperCase().trim())) ||
-             r.encaminhamento === "cobranca"
-    );
-  }, [instalados, erpData]);
+    return instalados.filter((r) => {
+      const p = normPlaca(r.placa);
+      if (p && sgaInadimplentePlacas.has(p)) return true;
+      const c = normChassi(r.chassi);
+      if (c && sgaInadimplenteChassis.has(c)) return true;
+      return false;
+    });
+  }, [instalados, erpData, erpLoaded]);
 
-  // Tab 4: Inativos com rastreador - instalados na plataforma E inativos/cancelados no SGA
+  // Tab 4: Inativos - planilha records (with placa/chassi) matching SGA status_veiculo="inativo" or "cancelado"
   const inativosComRastreador = useMemo(() => {
-    const erpInativoPlacas = new Set(
+    if (!erpLoaded) return [];
+    const sgaInativoPlacas = new Set(
       erpData.filter((v) => v.status_sga === "inativo" || v.status_sga === "cancelado").map((v) => normPlaca(v.placa)).filter(Boolean)
     );
-    const erpInativoChassis = new Set(
-      erpData.filter((v) => (v.status_sga === "inativo" || v.status_sga === "cancelado") && v.chassi).map((v) => (v.chassi || "").toUpperCase().trim()).filter(Boolean)
+    const sgaInativoChassis = new Set(
+      erpData.filter((v) => v.status_sga === "inativo" || v.status_sga === "cancelado").map((v) => normChassi(v.chassi)).filter(Boolean)
     );
-    return instalados.filter(
-      (r) => erpInativoPlacas.has(normPlaca(r.placa)) ||
-             (r.chassi && erpInativoChassis.has((r.chassi || "").toUpperCase().trim()))
-    );
-  }, [instalados, erpData]);
+    return instalados.filter((r) => {
+      const p = normPlaca(r.placa);
+      if (p && sgaInativoPlacas.has(p)) return true;
+      const c = normChassi(r.chassi);
+      if (c && sgaInativoChassis.has(c)) return true;
+      return false;
+    });
+  }, [instalados, erpData, erpLoaded]);
 
   // Tab 5: Sem Produto (Irregular) - instalados na plataforma mas SEM produto rastreador no SGA
   const semProduto = useMemo(() => {
@@ -299,9 +340,49 @@ const GestaoRastreadores = () => {
   // ---- Stats ----
   const totalInstalados = instalados.length;
   const totalEstoque = estoque.length;
-  const totalAtivos = instalados.filter((r) => r.status === "instalado").length;
+
+  // Ativos = planilha records (with placa/chassi) that match SGA record with status_veiculo="ativo"
+  const totalAtivos = useMemo(() => {
+    if (!erpLoaded) return 0;
+    const sgaAtivoPlacas = new Set(
+      erpData.filter((v) => v.status_sga === "ativo").map((v) => normPlaca(v.placa)).filter(Boolean)
+    );
+    const sgaAtivoChassis = new Set(
+      erpData.filter((v) => v.status_sga === "ativo").map((v) => {
+        const c = (v.chassi || "").toUpperCase().trim();
+        return c.length >= 10 ? c : "";
+      }).filter(Boolean)
+    );
+    return instalados.filter((r) => {
+      const p = normPlaca(r.placa);
+      if (p && sgaAtivoPlacas.has(p)) return true;
+      const c = (r.chassi || "").toUpperCase().trim();
+      if (c.length >= 10 && sgaAtivoChassis.has(c)) return true;
+      return false;
+    }).length;
+  }, [instalados, erpData, erpLoaded]);
+
   const totalInadimplentes = inadimplentesComRastreador.length;
   const totalPendenteRetirada = instalados.filter((r) => r.status === "pendente_retirada").length;
+
+  // Console log for debugging cross-reference numbers
+  useMemo(() => {
+    if (!erpLoaded) return;
+    console.log("[GestaoRastreadores] Cross-reference stats:", {
+      totalInstalados,
+      totalEstoque,
+      totalAtivos,
+      totalInadimplentes,
+      totalPendenteRetirada,
+      pendentesInstalacao: pendentesInstalacao.length,
+      inativos: inativosComRastreador.length,
+      semProduto: semProduto.length,
+      sgaCacheRecords: erpData.length,
+      planilhaRecords: typed.length,
+      placasInstaladasSetSize: placasInstaladas.size,
+      chassisInstaladosSetSize: chassisInstalados.size,
+    });
+  }, [erpLoaded, totalInstalados, totalEstoque, totalAtivos, totalInadimplentes, totalPendenteRetirada, pendentesInstalacao, inativosComRastreador, semProduto, erpData, typed, placasInstaladas, chassisInstalados]);
 
   // ---- Handlers ----
 
@@ -660,11 +741,13 @@ const GestaoRastreadores = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {inadimplentesComRastreador.slice(0, limiteExibido).map((r) => (
+                {inadimplentesComRastreador.slice(0, limiteExibido).map((r) => {
+                  const sgaMatch = findSGAMatch(r);
+                  return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
                     <TableCell className="font-mono text-xs">{r.imei}</TableCell>
-                    <TableCell className="text-sm">{r.associado || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
                     <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
                     <TableCell>
                       <Select
@@ -695,7 +778,7 @@ const GestaoRastreadores = () => {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  ); })}
               </TableBody>
             </Table>
             {inadimplentesComRastreador.length > limiteExibido && (
@@ -736,11 +819,13 @@ const GestaoRastreadores = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {inativosComRastreador.slice(0, limiteExibido).map((r) => (
+                {inativosComRastreador.slice(0, limiteExibido).map((r) => {
+                  const sgaMatch = findSGAMatch(r);
+                  return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
                     <TableCell className="font-mono text-xs">{r.imei}</TableCell>
-                    <TableCell className="text-sm">{r.associado || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
                     <TableCell className="text-sm">{r.cooperativa || "--"}</TableCell>
                     <TableCell>
                       <Select
@@ -770,7 +855,7 @@ const GestaoRastreadores = () => {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  ); })}
               </TableBody>
             </Table>
             {inativosComRastreador.length > limiteExibido && (
