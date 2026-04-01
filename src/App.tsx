@@ -35,6 +35,7 @@ const Servicos = lazy(() => import("@/pages/objetivo/Servicos"));
 const Manutencoes = lazy(() => import("@/pages/objetivo/Manutencoes"));
 const BuscarTecnicos = lazy(() => import("@/pages/objetivo/BuscarTecnicos"));
 const ControleUnidades = lazy(() => import("@/pages/objetivo/ControleUnidades"));
+const Retiradas = lazy(() => import("@/pages/objetivo/Retiradas"));
 const Relatorios = lazy(() => import("@/pages/Relatorios"));
 const AcompanhamentoInstalacoes = lazy(() => import("@/pages/AcompanhamentoInstalacoes"));
 const ControleKMPage = lazy(() => import("@/pages/ControleKM"));
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/objetivo/manutencoes" element={<Suspense fallback={<LazyFallback />}><Manutencoes /></Suspense>} />
               <Route path="/objetivo/buscar-tecnicos" element={<Suspense fallback={<LazyFallback />}><BuscarTecnicos /></Suspense>} />
               <Route path="/objetivo/controle-unidades" element={<Suspense fallback={<LazyFallback />}><ControleUnidades /></Suspense>} />
+              <Route path="/objetivo/retiradas" element={<Suspense fallback={<LazyFallback />}><Retiradas /></Suspense>} />
               <Route path="/instalacoes" element={<Suspense fallback={<LazyFallback />}><AcompanhamentoInstalacoes /></Suspense>} />
               <Route path="/controle-km" element={<Suspense fallback={<LazyFallback />}><ControleKMPage /></Suspense>} />
               <Route path="/suporte" element={<Suspense fallback={<LazyFallback />}><FilaSuporte /></Suspense>} />

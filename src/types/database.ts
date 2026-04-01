@@ -180,8 +180,16 @@ export interface DbManutencao {
   descricao: string;
   prioridade: "critica" | "alta" | "media";
   tecnico_designado: string;
-  status: "aberto" | "designado" | "em_atendimento" | "resolvido";
+  status: "aberto" | "designado" | "em_atendimento" | "resolvido" | "espera" | "prioridade";
   data_abertura: string;
+  tipo_veiculo?: "carro" | "moto" | "caminhao";
+  valor_fipe?: string;
+  iccid?: string;
+  ultimo_sinal?: string;
+  comandos_enviados?: { reset?: boolean; rl?: boolean; reset_em?: string; rl_em?: string };
+  data_espera?: string;
+  data_prioridade?: string;
+  dias_offline?: number;
 }
 
 export interface DbFinanceiro {
@@ -283,10 +291,14 @@ export interface DbAgendamento {
   tecnico_nome: string;
   data: string;
   horario: string;
-  status: "agendado" | "realizado" | "sem_retorno";
+  status: "agendado" | "realizado" | "sem_retorno" | "tentativa_1" | "tentativa_2" | "tentativa_3";
   tentativas: number;
   rastreador_serial: string;
   status_envio_rastreador: "nao_enviado" | "enviado" | "entregue";
+  data_ultima_tentativa: string | null;
+  gestor_notificado: boolean;
+  unidade: string;
+  telefone: string;
 }
 
 export interface DbDespacho {

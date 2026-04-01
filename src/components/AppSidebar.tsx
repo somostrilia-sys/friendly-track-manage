@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingCart, Smartphone,
   Wrench, Calendar, Settings2, DollarSign, Search, FileText,
   ChevronDown, ClipboardCheck, Route, Headphones, CalendarDays,
-  LogOut, Truck, Building2, Settings, Radio,
+  LogOut, Truck, Building2, Settings, Radio, PackageMinus,
 } from "lucide-react";
 import logoTrackit from "@/assets/logo-trackit-cropped.png";
 import { NavLink } from "@/components/NavLink";
@@ -29,6 +29,7 @@ const objetivoItems = [
   { title: "Manutencoes", url: "/objetivo/manutencoes", icon: Settings2 },
   { title: "Buscar Tecnicos", url: "/objetivo/buscar-tecnicos", icon: Search },
   { title: "Controle Unidades", url: "/objetivo/controle-unidades", icon: Building2 },
+  { title: "Retiradas", url: "/objetivo/retiradas", icon: PackageMinus },
 ];
 
 const operacionalItems = [

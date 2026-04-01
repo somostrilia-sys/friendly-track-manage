@@ -354,6 +354,12 @@ export const useInsertFaturamentoB2B = () => useSupabaseInsert<DbFaturamentoB2B>
 export const useUpdateFaturamentoB2B = () => useSupabaseUpdate<DbFaturamentoB2B>("faturamento_b2b", "faturamento_b2b");
 export const useDeleteFaturamentoB2B = () => useSupabaseDelete("faturamento_b2b", "faturamento_b2b");
 
+// ============ RETIRADAS ============
+export const useRetiradas = () => useSupabaseQuery<any>("retiradas", "retiradas");
+export const useInsertRetirada = () => useSupabaseInsert<any>("retiradas", "retiradas");
+export const useUpdateRetirada = () => useSupabaseUpdate<any>("retiradas", "retiradas");
+export const useDeleteRetirada = () => useSupabaseDelete("retiradas", "retiradas");
+
 
 export const useUnidadesCompletas = () => {
   return useQuery({
