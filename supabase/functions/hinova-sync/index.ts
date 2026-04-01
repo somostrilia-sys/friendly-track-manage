@@ -190,7 +190,7 @@ serve(async (req) => {
             const batch = cacheRows.slice(i, i + 500);
             await supabaseAdmin
               .from("sga_veiculos_cache")
-              .upsert(batch, { onConflict: "placa" });
+              .upsert(batch, { onConflict: "codigo_veiculo" });
           }
         } catch (cacheErr) {
           console.error("Erro ao salvar cache SGA:", cacheErr);
@@ -270,7 +270,7 @@ serve(async (req) => {
           const batch = rows.slice(i, i + 500);
           const { error: upsertErr } = await supabaseAdmin
             .from("sga_veiculos_cache")
-            .upsert(batch, { onConflict: "placa" });
+            .upsert(batch, { onConflict: "codigo_veiculo" });
           if (upsertErr) {
             console.error("Cache upsert error:", upsertErr);
           } else {

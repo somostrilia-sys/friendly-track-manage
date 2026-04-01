@@ -73,15 +73,51 @@ export async function buscarCacheSGA(): Promise<any[]> {
 }
 
 /**
- * Dispara atualizacao do cache SGA em background via edge function.
- * A edge function busca tudo da Hinova e salva no cache automaticamente.
+ * Busca dados da Hinova e salva no cache Supabase diretamente.
+ * A edge function retorna os dados, e salvamos no cache pelo frontend.
  */
-export async function atualizarCacheSGA(): Promise<void> {
-  try {
-    await invokeHinova("listar_veiculos_rastreador");
-  } catch (e) {
-    console.error("Erro ao atualizar cache SGA:", e);
+export async function atualizarCacheSGA(): Promise<number> {
+  const data = await invokeHinova("listar_veiculos_rastreador");
+  if (!data?.associados) return 0;
+
+  // Flatten associados into cache rows
+  const rows: any[] = [];
+  for (const a of data.associados) {
+    for (const v of a.veiculos || []) {
+      rows.push({
+        codigo_veiculo: v.codigo_veiculo || `${a.codigo_associado}_${v.placa}`,
+        placa: (v.placa || "").toUpperCase().trim() || null,
+        chassi: v.chassi || null,
+        nome_associado: a.nome || "",
+        cpf: a.cpf || "",
+        codigo_associado: a.codigo_associado || "",
+        marca: v.marca || "",
+        modelo: v.modelo || "",
+        ano: v.ano || "",
+        valor_fipe: v.valor_fipe || null,
+        status_veiculo: v.status || "ativo",
+        cooperativa: v.cooperativa || a.cooperativa || "",
+        tem_rastreador: true,
+        telefone: a.telefone || "",
+        telefone_celular: a.telefone_celular || "",
+        ddd_celular: a.ddd_celular || "",
+        email: a.email || "",
+        produtos: JSON.stringify(v.produtos || []),
+        updated_at: new Date().toISOString(),
+      });
+    }
   }
+
+  // Save in batches of 500 directly via Supabase client
+  let saved = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const batch = rows.slice(i, i + 500);
+    const { error } = await supabase.from("sga_veiculos_cache").upsert(batch, { onConflict: "codigo_veiculo" });
+    if (!error) saved += batch.length;
+    else console.error("Cache save error:", error);
+  }
+
+  return saved;
 }
 
 /**

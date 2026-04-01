@@ -206,17 +206,17 @@ const GestaoRastreadores = () => {
   // ---- ERP import (refresh cache in background) ----
   const importarSGA = useCallback(async () => {
     setErpRefreshing(true);
+    toast.info("Buscando dados do SGA... Isso pode levar alguns segundos.");
     try {
-      await atualizarCacheSGA();
-      // Invalidate the cache query to refetch from Supabase
+      const saved = await atualizarCacheSGA();
       await queryClient.invalidateQueries({ queryKey: ["sga_veiculos_cache"] });
-      toast.success("Cache SGA atualizado com sucesso!");
+      toast.success(`SGA atualizado! ${saved} veiculos com rastreador salvos no cache.`);
     } catch (e: any) {
-      toast.error("Erro ao atualizar cache SGA: " + (e.message || "Erro desconhecido"));
+      toast.error("Erro ao atualizar: " + (e.message || "Erro desconhecido"));
     } finally {
       setErpRefreshing(false);
     }
-  }, []);
+  }, [queryClient]);
 
   // ---- Cross-reference computations ----
 
