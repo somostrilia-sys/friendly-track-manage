@@ -863,12 +863,15 @@ const GestaoRastreadores = () => {
                 </p>
               </Card>
               <Card className="card-shadow overflow-x-auto">
-                <div className="p-4 border-b">
-                  <p className="text-sm text-muted-foreground">
-                    Veiculos com produto rastreador ativo no SGA, mas sem rastreador instalado na base.
+                <div className="p-4 border-b bg-green-50/50">
+                  <p className="text-sm font-medium text-green-800 mb-1">
+                    Associados ATIVOS com produto rastreador no SGA que ainda NAO tem rastreador instalado na plataforma.
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Acao: agendar instalacao.
                   </p>
                 </div>
-                <Table>
+                <Table data-print-table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Associado</TableHead>
@@ -898,7 +901,7 @@ const GestaoRastreadores = () => {
                         <TableCell className="text-sm">{v.veiculo}</TableCell>
                         <TableCell className="text-sm">{v.cooperativa}</TableCell>
                         <TableCell>
-                          <Badge variant="default">Ativo</Badge>
+                          <Badge variant="default" className="text-[9px] bg-green-600">Ativo</Badge>
                         </TableCell>
                         <TableCell>
                           <Button
@@ -1280,9 +1283,8 @@ const GestaoRastreadores = () => {
                             Placa: r.placa,
                             IMEI: r.imei,
                             Cooperativa: r.cooperativa || "",
-                            Associado: r.associado || "",
-                            Status_Planilha: statusMap[r.status]?.label || r.status || "",
-                            Observacao: r.justificativa || "",
+                            Status: statusMap[r.status]?.label || r.status || "",
+                            Observacao: r.justificativa || r.observacao || "",
                           })),
                           "sem_correspondencia"
                         )
@@ -1298,18 +1300,21 @@ const GestaoRastreadores = () => {
                 </p>
               </Card>
               <Card className="card-shadow overflow-x-auto">
-                <div className="p-4 border-b">
-                  <p className="text-sm text-muted-foreground">
-                    Rastreadores instalados na plataforma mas sem correspondencia no SGA (placa nao encontrada).
+                <div className="p-4 border-b bg-amber-50/50">
+                  <p className="text-sm font-medium text-amber-800 mb-1">
+                    Rastreadores instalados na plataforma cuja placa NAO foi encontrada no SGA.
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Verificar se a placa esta correta ou se o veiculo foi removido do sistema.
                   </p>
                 </div>
-                <Table>
+                <Table data-print-table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Placa</TableHead>
                       <TableHead>IMEI</TableHead>
                       <TableHead>Cooperativa</TableHead>
-                      <TableHead>Status na Planilha</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Observacao</TableHead>
                       <TableHead>Acao</TableHead>
                     </TableRow>
