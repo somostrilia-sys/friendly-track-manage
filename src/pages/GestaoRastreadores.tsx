@@ -201,9 +201,10 @@ const GestaoRastreadores = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const typed = rastreadores as RastreadorInstalado[];
-  // Separate: only records with placa or chassi are "installed", rest is stock
-  const instalados = useMemo(() => typed.filter((r) => r.status !== "em_estoque"), [typed]);
-  const estoque = useMemo(() => typed.filter((r) => r.status === "em_estoque"), [typed]);
+  // Installed = has placa or chassi. Stock = only IMEI, no placa, no chassi.
+  const temIdentificador = (r: RastreadorInstalado) => !!(r.placa?.trim()) || !!(r.chassi?.trim());
+  const instalados = useMemo(() => typed.filter(temIdentificador), [typed]);
+  const estoque = useMemo(() => typed.filter((r) => !temIdentificador(r)), [typed]);
   const placasInstaladas = useMemo(() => new Set(instalados.map((r) => normPlaca(r.placa)).filter(Boolean)), [instalados]);
   const chassisInstalados = useMemo(() => new Set(instalados.map((r) => (r.chassi || "").toUpperCase().trim()).filter(Boolean)), [instalados]);
 
