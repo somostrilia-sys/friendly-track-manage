@@ -70,28 +70,27 @@ serve(async (req) => {
 
     switch (action) {
       case "listar_veiculos_rastreador": {
-        // Fetch vehicles WITH products using the veiculo/listar-veiculo-produto endpoint
-        // situacao: 1=ativo, 0=todos
-        const situacao = params?.situacao || "1";
-        const pageSize = 1000;
-        let offset = 0;
+        // Fetch ALL vehicles across ALL situacoes (1=ativo, 2=inadimplente, 3=cancelado, 4=inativo)
+        const situacoes = params?.situacao ? [params.situacao] : ["1", "2", "3", "4"];
+        const pageSize = 15000; // API supports large pages
         let allVehicles: any[] = [];
-        const maxPages = 20; // Safety limit
 
-        // Fetch in pages, re-authenticating for each page (token expires fast)
-        for (let page = 0; page < maxPages; page++) {
+        const sitLabels: Record<string, string> = { "1": "ativo", "2": "inadimplente", "3": "cancelado", "4": "inativo" };
+
+        for (const sit of situacoes) {
           const freshToken = await getTokenUsuario();
           const data = await hinovaGet(
-            `/veiculo/listar-veiculo-produto/${situacao}/${offset}/${pageSize}`,
+            `/veiculo/listar-veiculo-produto/${sit}/0/${pageSize}`,
             freshToken
           );
 
           if (Array.isArray(data)) {
+            // Tag each vehicle with the situacao from the request
+            for (const v of data) {
+              v._situacao_veiculo = sit;
+              v._status_label = sitLabels[sit] || `status_${sit}`;
+            }
             allVehicles = allVehicles.concat(data);
-            if (data.length < pageSize) break;
-            offset += pageSize;
-          } else {
-            break;
           }
         }
 
@@ -115,17 +114,17 @@ serve(async (req) => {
               telefone_celular: v.telefone_celular,
               ddd_celular: v.ddd_celular,
               email: v.email,
+              cidade: v.cidade,
+              estado: v.estado,
+              cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
+              status_associado: v.descricao_situacao_associado || v.codigo_situacao_associado || "",
               veiculos: [],
             };
           }
 
-          // Determine vehicle status
-          let statusVeiculo = "ativo";
-          const codSit = String(v.codigo_situacao || "1");
-          if (codSit === "2") statusVeiculo = "inadimplente";
-          else if (codSit === "3") statusVeiculo = "cancelado";
-          else if (codSit === "4") statusVeiculo = "inativo";
-          else if (codSit !== "1") statusVeiculo = `status_${codSit}`;
+          // Use status from the request situacao tag
+          const statusVeiculo = v._status_label || "ativo";
+          const codSit = v._situacao_veiculo || "1";
 
           associadoMap[codAssoc].veiculos.push({
             codigo_veiculo: v.codigo_veiculo,
