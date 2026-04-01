@@ -155,46 +155,7 @@ serve(async (req) => {
 
         const associados = Object.values(associadoMap);
 
-        // Save to sga_veiculos_cache in background
-        try {
-          const cacheRows: any[] = [];
-          for (const a of associados) {
-            for (const v of (a as any).veiculos) {
-              cacheRows.push({
-                placa: (v.placa || "").toUpperCase().trim(),
-                chassi: v.chassi || "",
-                nome_associado: (a as any).nome || "",
-                cpf: (a as any).cpf || "",
-                marca: v.marca || "",
-                modelo: v.modelo || "",
-                status_veiculo: v.status || "ativo",
-                cooperativa: (a as any).cooperativa || "",
-                tem_rastreador: true,
-                codigo_associado: (a as any).codigo_associado || "",
-                codigo_veiculo: v.codigo_veiculo || "",
-                ano: v.ano || "",
-                valor_fipe: v.valor_fipe || null,
-                data_contrato: v.data_contrato || null,
-                telefone: (a as any).telefone || "",
-                telefone_celular: (a as any).telefone_celular || "",
-                ddd_celular: (a as any).ddd_celular || "",
-                email: (a as any).email || "",
-                produtos: JSON.stringify(v.produtos || []),
-                updated_at: new Date().toISOString(),
-              });
-            }
-          }
-
-          // Upsert in batches of 500
-          for (let i = 0; i < cacheRows.length; i += 500) {
-            const batch = cacheRows.slice(i, i + 500);
-            await supabaseAdmin
-              .from("sga_veiculos_cache")
-              .upsert(batch, { onConflict: "codigo_veiculo" });
-          }
-        } catch (cacheErr) {
-          console.error("Erro ao salvar cache SGA:", cacheErr);
-        }
+        // Cache is saved by the frontend after receiving data (edge function has 60s timeout)
 
         result = {
           error: false,

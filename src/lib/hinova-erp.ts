@@ -77,8 +77,20 @@ export async function buscarCacheSGA(): Promise<any[]> {
  * A edge function retorna os dados, e salvamos no cache pelo frontend.
  */
 export async function atualizarCacheSGA(): Promise<number> {
-  const data = await invokeHinova("listar_veiculos_rastreador");
-  if (!data?.associados) return 0;
+  // Fetch each situacao separately to avoid edge function timeout
+  let allAssociados: any[] = [];
+  for (const sit of ["1", "2", "3", "4"]) {
+    try {
+      const data = await invokeHinova("listar_veiculos_rastreador", { situacao: sit });
+      if (data?.associados) {
+        allAssociados = allAssociados.concat(data.associados);
+      }
+    } catch (e) {
+      console.error(`Erro situacao ${sit}:`, e);
+    }
+  }
+  if (allAssociados.length === 0) return 0;
+  const data = { associados: allAssociados };
 
   // Flatten associados into cache rows
   const rows: any[] = [];
