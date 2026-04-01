@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 
 const MONTH_MAP: Record<string, number> = {
-  JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
+  JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, "MARÇO": 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
   JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
 };
 
@@ -65,24 +65,38 @@ const Dashboard = () => {
   useRealtimeSubscription("servicos_agendados", ["servicos_agendados"]);
 
   const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
+
+  // Find the most recent month that has data (may not be current calendar month)
+  const { latestMonth, latestYear } = useMemo(() => {
+    let best = { month: now.getMonth() + 1, year: now.getFullYear() };
+    let bestKey = "";
+    faturamentoB2B.forEach((f: any) => {
+      const parsed = parseMesReferencia(f.mes_referencia);
+      if (!parsed) return;
+      const key = `${parsed.year}-${String(parsed.month).padStart(2, "0")}`;
+      if (key > bestKey) {
+        bestKey = key;
+        best = parsed;
+      }
+    });
+    return { latestMonth: best.month, latestYear: best.year };
+  }, [faturamentoB2B]);
 
   const currentMonthRecords = useMemo(() => {
     return faturamentoB2B.filter((f: any) => {
       const parsed = parseMesReferencia(f.mes_referencia);
-      return parsed && parsed.month === currentMonth && parsed.year === currentYear;
+      return parsed && parsed.month === latestMonth && parsed.year === latestYear;
     });
-  }, [faturamentoB2B, currentMonth, currentYear]);
+  }, [faturamentoB2B, latestMonth, latestYear]);
 
   const prevMonthRecords = useMemo(() => {
-    let pm = currentMonth - 1, py = currentYear;
+    let pm = latestMonth - 1, py = latestYear;
     if (pm === 0) { pm = 12; py--; }
     return faturamentoB2B.filter((f: any) => {
       const parsed = parseMesReferencia(f.mes_referencia);
       return parsed && parsed.month === pm && parsed.year === py;
     });
-  }, [faturamentoB2B, currentMonth, currentYear]);
+  }, [faturamentoB2B, latestMonth, latestYear]);
 
   // Metric 1: Clientes Ativos
   const clientesAtivos = clientes.filter((c: any) => c.status === "ativo").length;
@@ -93,20 +107,24 @@ const Dashboard = () => {
   const faturamentoVariacao = faturamentoMesAnterior > 0
     ? ((faturamentoMesAtual - faturamentoMesAnterior) / faturamentoMesAnterior * 100)
     : 0;
+  const labelMesAtual = `${MONTH_SHORT[latestMonth] || ""}/${latestYear}`;
 
-  // Metric 3: A Receber
+  // Metric 3: A Receber (situacao that does NOT start with "pago")
+  const isPago = (sit: string | null) => (sit || "").toLowerCase().startsWith("pago");
   const aReceber = currentMonthRecords
-    .filter((f: any) => f.situacao !== "pago")
-    .reduce((sum: number, f: any) => sum + (Number(f.total_geral || 0) - Number(f.valor_pago || 0)), 0);
+    .filter((f: any) => !isPago(f.situacao))
+    .reduce((sum: number, f: any) => sum + Number(f.total_geral || 0), 0);
 
-  // Metric 4: Inadimplentes
+  // Metric 4: Inadimplentes (aberto + atrasado + cobr. suspensa + anything not pago that's overdue)
   const inadimplentes = currentMonthRecords.filter((f: any) => {
-    if (f.situacao === "atrasado") return true;
-    if (f.situacao === "pago") return false;
+    const sit = (f.situacao || "").toLowerCase();
+    if (isPago(f.situacao)) return false;
+    if (sit.includes("atrasado") || sit.includes("suspensa")) return true;
+    // If has a fechamento date and it's been more than 30 days without payment
     if (f.data_fechamento) {
       const fechamento = new Date(f.data_fechamento);
       const vencimento = new Date(fechamento);
-      vencimento.setDate(vencimento.getDate() + 3);
+      vencimento.setDate(vencimento.getDate() + 30);
       return vencimento < now;
     }
     return false;
@@ -192,7 +210,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Clientes Ativos" value={clientesAtivos} icon={Users} accent="primary" />
         <StatCard
-          label="Faturamento do Mes"
+          label={`Faturamento ${labelMesAtual}`}
           value={`R$ ${faturamentoMesAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
           icon={DollarSign}
           accent="success"
