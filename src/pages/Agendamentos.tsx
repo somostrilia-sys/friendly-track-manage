@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users, Inbox, RefreshCw, Loader2, AlertTriangle, Phone, Bell, RotateCcw } from "lucide-react";
+import { Plus, Calendar, CheckCircle, XCircle, Clock, Truck, Users, Inbox, RefreshCw, Loader2, AlertTriangle, Phone, Bell, RotateCcw, Search, ChevronDown, ChevronRight, Car } from "lucide-react";
 import { toast } from "sonner";
-import { buscarAssociadosComRastreador, sincronizarAssociados, type AssociadoERP } from "@/lib/hinova-erp";
+import { buscarAssociadosComRastreador, type AssociadoERP, type SyncResult } from "@/lib/hinova-erp";
 
 const statusColors: Record<string, string> = {
   agendado: "bg-yellow-400",
@@ -37,16 +37,6 @@ const tipoLabels: Record<string, string> = { instalacao: "Instalacao", manutenca
 const envioLabels: Record<string, string> = { nao_enviado: "Nao Enviado", enviado: "Enviado", entregue: "Entregue" };
 const envioVariants: Record<string, "outline" | "secondary" | "default"> = { nao_enviado: "outline", enviado: "secondary", entregue: "default" };
 
-const statusInstalacaoColors: Record<string, string> = {
-  instalado: "bg-green-500",
-  pendente: "bg-yellow-400",
-  agendado: "bg-blue-500",
-};
-const statusInstalacaoLabels: Record<string, string> = {
-  instalado: "Instalado",
-  pendente: "Pendente",
-  agendado: "Agendado",
-};
 
 function diasDesde(dataStr: string | null): number {
   if (!dataStr) return 0;
@@ -97,12 +87,12 @@ const Agendamentos = () => {
     unidade: "",
   });
 
-  const [erpDataInicio, setErpDataInicio] = useState("");
-  const [erpDataFim, setErpDataFim] = useState("");
   const [erpAssociados, setErpAssociados] = useState<AssociadoERP[]>([]);
+  const [erpSyncResult, setErpSyncResult] = useState<SyncResult | null>(null);
   const [erpLoading, setErpLoading] = useState(false);
   const [erpLoaded, setErpLoaded] = useState(false);
-  const [atribuicoes, setAtribuicoes] = useState<Record<string, string>>({});
+  const [erpSearch, setErpSearch] = useState("");
+  const [erpExpandedRows, setErpExpandedRows] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("agendamentos");
 
   // Derived data
@@ -118,62 +108,29 @@ const Agendamentos = () => {
   const fetchErpData = useCallback(async () => {
     setErpLoading(true);
     try {
-      const data = await buscarAssociadosComRastreador(
-        erpDataInicio || undefined,
-        erpDataFim || undefined
-      );
-
-      const enriched = data.map((assoc) => {
-        const agendamento = agendamentos.find(
-          (a) => a.placa === assoc.placa || a.associado === assoc.nome
-        );
-        if (agendamento) {
-          return {
-            ...assoc,
-            status_instalacao:
-              agendamento.status === "realizado"
-                ? ("instalado" as const)
-                : ("agendado" as const),
-          };
-        }
-        return assoc;
-      });
-
-      setErpAssociados(enriched);
+      const result = await buscarAssociadosComRastreador();
+      setErpSyncResult(result);
+      setErpAssociados(result.associados);
       setErpLoaded(true);
-      toast.success(`${enriched.length} associados importados do ERP`);
+      toast.success(`${result.total_associados} associados importados do ERP`);
     } catch (err: any) {
       console.error("Erro ao buscar associados ERP:", err);
       toast.error(err.message || "Erro ao buscar dados do ERP");
       setErpAssociados([]);
+      setErpSyncResult(null);
     } finally {
       setErpLoading(false);
     }
-  }, [erpDataInicio, erpDataFim, agendamentos]);
+  }, []);
 
   const handleSincronizar = async () => {
     setErpLoading(true);
     try {
-      const data = await sincronizarAssociados();
-
-      const enriched = data.map((assoc) => {
-        const agendamento = agendamentos.find(
-          (a) => a.placa === assoc.placa || a.associado === assoc.nome
-        );
-        if (agendamento) {
-          return {
-            ...assoc,
-            status_instalacao:
-              agendamento.status === "realizado"
-                ? ("instalado" as const)
-                : ("agendado" as const),
-          };
-        }
-        return assoc;
-      });
-
-      setErpAssociados(enriched);
-      toast.success(`Sincronizacao completa: ${enriched.length} associados`);
+      const result = await buscarAssociadosComRastreador();
+      setErpSyncResult(result);
+      setErpAssociados(result.associados);
+      setErpLoaded(true);
+      toast.success(`Sincronizacao completa: ${result.total_associados} associados`);
     } catch (err: any) {
       console.error("Erro ao sincronizar:", err);
       toast.error(err.message || "Erro ao sincronizar com o ERP");
@@ -181,6 +138,34 @@ const Agendamentos = () => {
       setErpLoading(false);
     }
   };
+
+  const toggleErpRow = (codigoAssociado: string) => {
+    setErpExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(codigoAssociado)) next.delete(codigoAssociado);
+      else next.add(codigoAssociado);
+      return next;
+    });
+  };
+
+  const erpFilteredAssociados = useMemo(() => {
+    if (!erpSearch.trim()) return erpAssociados;
+    const term = erpSearch.toLowerCase().trim();
+    return erpAssociados.filter((a) => {
+      if (a.nome.toLowerCase().includes(term)) return true;
+      if (a.cpf.toLowerCase().includes(term)) return true;
+      if (a.veiculos.some((v) => v.placa.toLowerCase().includes(term))) return true;
+      return false;
+    });
+  }, [erpAssociados, erpSearch]);
+
+  const erpVeiculoStats = useMemo(() => {
+    const allVeiculos = erpAssociados.flatMap((a) => a.veiculos);
+    return {
+      ativos: allVeiculos.filter((v) => v.status === "ativo").length,
+      inativos: allVeiculos.filter((v) => v.status === "inativo" || v.status === "cancelado").length,
+    };
+  }, [erpAssociados]);
 
   // Auto-fetch when switching to the ERP tab
   useEffect(() => {
@@ -274,11 +259,6 @@ const Agendamentos = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const atribuirTecnico = (erpId: string, tecId: string) => {
-    setAtribuicoes(prev => ({ ...prev, [erpId]: tecId }));
-    const tec = tecnicos.find(t => t.id === tecId);
-    toast.success(`Associado atribuido ao tecnico ${tec?.nome}`);
-  };
 
   const porData = agendadosList.reduce((acc, a) => {
     (acc[a.data] = acc[a.data] || []).push(a);
@@ -497,11 +477,9 @@ const Agendamentos = () => {
             <h3 className="font-semibold mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Sincronismo com Sistema ERP</h3>
             <p className="text-sm text-muted-foreground mb-4">Importe veiculos e associados do ERP que possuem produto rastreador.</p>
             <div className="flex flex-wrap gap-3 items-end">
-              <div><Label className="text-xs">Data Inicio</Label><Input type="date" className="w-[160px]" value={erpDataInicio} onChange={e => setErpDataInicio(e.target.value)} /></div>
-              <div><Label className="text-xs">Data Fim</Label><Input type="date" className="w-[160px]" value={erpDataFim} onChange={e => setErpDataFim(e.target.value)} /></div>
               <Button onClick={fetchErpData} disabled={erpLoading}>
                 {erpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Importar do ERP
+                Importar do SGA
               </Button>
               <Button variant="outline" onClick={handleSincronizar} disabled={erpLoading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${erpLoading ? "animate-spin" : ""}`} />
@@ -510,8 +488,17 @@ const Agendamentos = () => {
             </div>
           </Card>
 
+          {erpLoaded && erpSyncResult && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard label="Total Associados" value={erpSyncResult.total_associados} icon={Users} accent="primary" />
+              <StatCard label="Veiculos com Rastreador" value={erpSyncResult.total_veiculos_com_rastreador} icon={Car} accent="success" />
+              <StatCard label="Veiculos Ativos" value={erpVeiculoStats.ativos} icon={CheckCircle} accent="success" />
+              <StatCard label="Veiculos Inativos" value={erpVeiculoStats.inativos} icon={XCircle} accent="destructive" />
+            </div>
+          )}
+
           {erpLoading && !erpLoaded && (
-            <TableSkeleton rows={5} cols={7} />
+            <TableSkeleton rows={5} cols={6} />
           )}
 
           {!erpLoading && erpLoaded && erpAssociados.length === 0 && (
@@ -521,50 +508,148 @@ const Agendamentos = () => {
                   <Inbox className="h-7 w-7 text-muted-foreground" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">Nenhum associado encontrado no ERP</p>
-                <p className="text-xs text-muted-foreground/60">Tente ajustar os filtros de data ou sincronizar novamente</p>
+                <p className="text-xs text-muted-foreground/60">Tente sincronizar novamente</p>
               </div>
             </Card>
           )}
 
           {erpAssociados.length > 0 && (
-            <Card className="card-shadow">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>N. Associado</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>CPF/CNPJ</TableHead>
-                    <TableHead>Placa</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Tecnico Atribuido</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {erpAssociados.map(a => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-mono">{a.numero}</TableCell>
-                      <TableCell className="font-medium">{a.nome}</TableCell>
-                      <TableCell className="font-mono text-xs">{a.cpf_cnpj || "-"}</TableCell>
-                      <TableCell className="font-mono">{a.placa || "-"}</TableCell>
-                      <TableCell><Badge variant="secondary">{a.produto || "-"}</Badge></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full ${statusInstalacaoColors[a.status_instalacao]}`} />
-                          <span className="text-xs">{statusInstalacaoLabels[a.status_instalacao]}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select value={atribuicoes[a.id] || ""} onValueChange={v => atribuirTecnico(a.id, v)}>
-                          <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="Atribuir tecnico" /></SelectTrigger>
-                          <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, CPF ou placa..."
+                  value={erpSearch}
+                  onChange={(e) => setErpSearch(e.target.value)}
+                  className="pl-9 max-w-md"
+                />
+              </div>
+              <Card className="card-shadow">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead>Associado</TableHead>
+                      <TableHead>CPF</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Veiculos</TableHead>
+                      <TableHead>Status dos Veiculos</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {erpFilteredAssociados.map((a) => {
+                      const isExpanded = erpExpandedRows.has(a.codigo_associado);
+                      const celular = a.ddd_celular && a.telefone_celular
+                        ? `(${a.ddd_celular}) ${a.telefone_celular}`
+                        : a.ddd && a.telefone
+                          ? `(${a.ddd}) ${a.telefone}`
+                          : "-";
+                      return (
+                        <Fragment key={a.codigo_associado}>
+                          <TableRow
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => toggleErpRow(a.codigo_associado)}
+                          >
+                            <TableCell className="w-10 px-2">
+                              {isExpanded
+                                ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                            </TableCell>
+                            <TableCell className="font-medium">{a.nome}</TableCell>
+                            <TableCell className="font-mono text-xs">{a.cpf || "-"}</TableCell>
+                            <TableCell className="font-mono text-sm">{celular}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{a.veiculos.length}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1 flex-wrap">
+                                {a.veiculos.map((v) => (
+                                  <Badge
+                                    key={v.codigo_veiculo}
+                                    variant="outline"
+                                    className={
+                                      v.status === "ativo"
+                                        ? "border-green-500 text-green-700 bg-green-50"
+                                        : v.status === "inadimplente"
+                                          ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+                                          : "border-red-500 text-red-700 bg-red-50"
+                                    }
+                                  >
+                                    {v.placa} - {v.status}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${a.codigo_associado}-detail`}>
+                              <TableCell colSpan={6} className="bg-muted/30 p-0">
+                                <div className="p-4">
+                                  <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                    <Car className="w-3.5 h-3.5" /> Veiculos do associado
+                                  </p>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-xs">Placa</TableHead>
+                                        <TableHead className="text-xs">Marca / Modelo</TableHead>
+                                        <TableHead className="text-xs">Ano</TableHead>
+                                        <TableHead className="text-xs">Status</TableHead>
+                                        <TableHead className="text-xs">Valor FIPE</TableHead>
+                                        <TableHead className="text-xs">Produtos</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {a.veiculos.map((v) => (
+                                        <TableRow key={v.codigo_veiculo}>
+                                          <TableCell className="font-mono text-sm">{v.placa}</TableCell>
+                                          <TableCell className="text-sm">{v.marca} {v.modelo}</TableCell>
+                                          <TableCell className="text-sm">{v.ano || "-"}</TableCell>
+                                          <TableCell>
+                                            <Badge
+                                              variant="outline"
+                                              className={
+                                                v.status === "ativo"
+                                                  ? "border-green-500 text-green-700 bg-green-50"
+                                                  : v.status === "inadimplente"
+                                                    ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+                                                    : "border-red-500 text-red-700 bg-red-50"
+                                              }
+                                            >
+                                              {v.status}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-sm">
+                                            {v.valor_fipe
+                                              ? `R$ ${v.valor_fipe.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                              : "-"}
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="flex gap-1 flex-wrap">
+                                              {v.produtos.length > 0
+                                                ? v.produtos.map((p) => (
+                                                    <Badge key={p.codigo} variant="secondary" className="text-[10px]">
+                                                      {p.descricao} (R$ {p.valor})
+                                                    </Badge>
+                                                  ))
+                                                : <span className="text-xs text-muted-foreground">-</span>}
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
           )}
         </TabsContent>
       </Tabs>

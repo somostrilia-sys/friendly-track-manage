@@ -1,22 +1,43 @@
 /**
  * Hinova ERP API Integration
- * Docs: https://api.hinova.com.br/api/sga/v2/doc-sincronismo/
- *
- * All calls are proxied through the Supabase Edge Function `hinova-sync`
- * to avoid CORS issues and keep credentials server-side.
+ * Busca associados com produto RASTREADOR via Edge Function hinova-sync
  */
 
 import { supabase } from "@/integrations/supabase/client";
 
-export interface AssociadoERP {
-  id: string;
-  numero: string;
-  nome: string;
-  cpf_cnpj: string;
-  modeloVeiculo: string;
+export interface VeiculoERP {
+  codigo_veiculo: string;
   placa: string;
-  produto: string;
-  status_instalacao: "instalado" | "pendente" | "agendado";
+  marca: string;
+  modelo: string;
+  ano: string;
+  tipo: string;
+  categoria: string;
+  valor_fipe: number;
+  status: string; // ativo, inadimplente, cancelado, inativo
+  codigo_situacao: string;
+  data_contrato: string;
+  produtos: { codigo: string; descricao: string; valor: string }[];
+}
+
+export interface AssociadoERP {
+  codigo_associado: string;
+  nome: string;
+  cpf: string;
+  telefone: string;
+  ddd: string;
+  telefone_celular: string;
+  ddd_celular: string;
+  email: string;
+  veiculos: VeiculoERP[];
+}
+
+export interface SyncResult {
+  success: boolean;
+  total_veiculos_buscados: number;
+  total_veiculos_com_rastreador: number;
+  total_associados: number;
+  associados: AssociadoERP[];
 }
 
 async function invokeHinova(action: string, params: Record<string, string> = {}) {
@@ -26,84 +47,37 @@ async function invokeHinova(action: string, params: Record<string, string> = {})
 
   if (error) {
     console.error("Erro ao invocar hinova-sync:", error);
-    throw new Error(error.message || "Erro ao comunicar com o ERP");
+    throw new Error(error.message || "Erro ao comunicar com o SGA");
   }
 
-  if (data?.error) {
-    throw new Error(
-      typeof data.error === "string"
-        ? data.error
-        : `Erro ERP: ${data.status || "desconhecido"}`
-    );
+  if (data?.error && typeof data.error === "string") {
+    throw new Error(data.error);
   }
 
   return data;
 }
 
 /**
- * Fetch associates that have a tracker product.
- * Optionally filter by date range.
+ * Busca todos os associados que possuem produto RASTREADOR vinculado ao veículo.
+ * Retorna associados com seus veículos, separados por status (ativo/inativo).
  */
-export async function buscarAssociadosComRastreador(
-  dataInicio?: string,
-  dataFim?: string
-): Promise<AssociadoERP[]> {
-  const params: Record<string, string> = {};
-  if (dataInicio) params.data_inicio = dataInicio;
-  if (dataFim) params.data_fim = dataFim;
-
-  const data = await invokeHinova("listar_associados", params);
-
-  // Normalize the API response into our internal format.
-  // The Hinova API may return data in different structures;
-  // we handle the most common patterns here.
-  const registros: any[] = Array.isArray(data)
-    ? data
-    : data?.associados ?? data?.registros ?? data?.data ?? [];
-
-  return registros.map((r: any, idx: number) => ({
-    id: String(r.id || r.codigo || r.numero_associado || idx),
-    numero: String(r.numero_associado || r.codigo || r.id || ""),
-    nome: r.nome || r.razao_social || r.nome_fantasia || "",
-    cpf_cnpj: r.cpf || r.cnpj || r.cpf_cnpj || "",
-    modeloVeiculo: r.modelo_veiculo || r.veiculo?.modelo || "",
-    placa: r.placa || r.veiculo?.placa || "",
-    produto: r.produto || r.nome_produto || r.plano || "",
-    status_instalacao: (r.status_instalacao as AssociadoERP["status_instalacao"]) || "pendente",
-  }));
+export async function buscarAssociadosComRastreador(situacao: string = "1"): Promise<SyncResult> {
+  const data = await invokeHinova("listar_veiculos_rastreador", { situacao });
+  return {
+    success: data.success ?? false,
+    total_veiculos_buscados: data.total_veiculos_buscados ?? 0,
+    total_veiculos_com_rastreador: data.total_veiculos_com_rastreador ?? 0,
+    total_associados: data.total_associados ?? 0,
+    associados: data.associados ?? [],
+  };
 }
 
-/** Fetch a single associate by ID */
-export async function buscarAssociadoPorId(id: string) {
-  return invokeHinova("buscar_associado", { id });
+/** Busca produtos vinculados a um veículo específico */
+export async function buscarProdutosVeiculo(codigoOuPlaca: string) {
+  return invokeHinova("buscar_produtos_veiculo", { codigo_veiculo: codigoOuPlaca });
 }
 
-/** Fetch vehicles for an associate */
-export async function buscarVeiculosAssociado(associadoId: string) {
-  return invokeHinova("buscar_veiculos", { associado_id: associadoId });
-}
-
-/** Fetch products / services */
-export async function buscarProdutos() {
-  return invokeHinova("buscar_produtos");
-}
-
-/** Trigger full sync of associates */
-export async function sincronizarAssociados(): Promise<AssociadoERP[]> {
-  const data = await invokeHinova("sincronizar_associados");
-
-  const registros: any[] = Array.isArray(data)
-    ? data
-    : data?.associados ?? data?.registros ?? data?.data ?? [];
-
-  return registros.map((r: any, idx: number) => ({
-    id: String(r.id || r.codigo || r.numero_associado || idx),
-    numero: String(r.numero_associado || r.codigo || r.id || ""),
-    nome: r.nome || r.razao_social || r.nome_fantasia || "",
-    cpf_cnpj: r.cpf || r.cnpj || r.cpf_cnpj || "",
-    modeloVeiculo: r.modelo_veiculo || r.veiculo?.modelo || "",
-    placa: r.placa || r.veiculo?.placa || "",
-    produto: r.produto || r.nome_produto || r.plano || "",
-    status_instalacao: (r.status_instalacao as AssociadoERP["status_instalacao"]) || "pendente",
-  }));
+/** Sincronizar = mesma coisa que buscar, mas força refresh */
+export async function sincronizarAssociados(): Promise<SyncResult> {
+  return buscarAssociadosComRastreador("1");
 }
