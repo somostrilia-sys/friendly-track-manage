@@ -576,13 +576,25 @@ export const useRastreadoresInstalados = (options?: { enabled?: boolean }) => {
   return useQuery<any[]>({
     queryKey: ["rastreadores_instalados"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rastreadores_instalados")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10000);
-      if (error) throw error;
-      return data || [];
+      // Supabase limits to 1000 per request, need to paginate
+      const pageSize = 1000;
+      let allData: any[] = [];
+      let page = 0;
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("rastreadores_instalados")
+          .select("*")
+          .order("cooperativa", { ascending: true })
+          .range(from, to);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < pageSize) break;
+        page++;
+      }
+      return allData;
     },
     ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
@@ -596,12 +608,24 @@ export const useSGACache = (options?: { enabled?: boolean }) => {
   return useQuery<any[]>({
     queryKey: ["sga_veiculos_cache"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sga_veiculos_cache")
-        .select("*")
-        .limit(15000);
-      if (error) throw error;
-      return data || [];
+      const pageSize = 1000;
+      let allData: any[] = [];
+      let page = 0;
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("sga_veiculos_cache")
+          .select("*")
+          .eq("tem_rastreador", true)
+          .range(from, to);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < pageSize) break;
+        page++;
+      }
+      return allData;
     },
     ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });
