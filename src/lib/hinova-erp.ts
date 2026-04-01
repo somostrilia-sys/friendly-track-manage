@@ -61,8 +61,8 @@ async function invokeHinova(action: string, params: Record<string, string> = {})
  * Busca todos os associados que possuem produto RASTREADOR vinculado ao veículo.
  * Retorna associados com seus veículos, separados por status (ativo/inativo).
  */
-export async function buscarAssociadosComRastreador(situacao: string = "1"): Promise<SyncResult> {
-  const data = await invokeHinova("listar_veiculos_rastreador", { situacao });
+export async function buscarAssociadosComRastreador(): Promise<SyncResult> {
+  const data = await invokeHinova("listar_veiculos_rastreador");
   return {
     success: data.success ?? false,
     total_veiculos_buscados: data.total_veiculos_buscados ?? 0,

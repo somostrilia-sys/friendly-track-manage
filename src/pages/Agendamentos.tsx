@@ -163,7 +163,7 @@ const Agendamentos = () => {
     const allVeiculos = erpAssociados.flatMap((a) => a.veiculos);
     return {
       ativos: allVeiculos.filter((v) => v.status === "ativo").length,
-      inativos: allVeiculos.filter((v) => v.status === "inativo" || v.status === "cancelado").length,
+      inativos: allVeiculos.filter((v) => v.status !== "ativo").length,
     };
   }, [erpAssociados]);
 
