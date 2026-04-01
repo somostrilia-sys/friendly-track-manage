@@ -102,7 +102,6 @@ const App = () => (
               <Route path="/suporte" element={<Suspense fallback={<LazyFallback />}><FilaSuporte /></Suspense>} />
               <Route path="/agendamentos" element={<Suspense fallback={<LazyFallback />}><Agendamentos /></Suspense>} />
               <Route path="/fechamento-tecnicos" element={<Suspense fallback={<LazyFallback />}><FechamentoTecnicos /></Suspense>} />
-              <Route path="/rastreadores" element={<Suspense fallback={<LazyFallback />}><GestaoRastreadores /></Suspense>} />
               <Route path="/logistica-rastreadores" element={<Suspense fallback={<LazyFallback />}><LogisticaRastreadores /></Suspense>} />
               <Route path="/config-dispositivos" element={<Suspense fallback={<LazyFallback />}><ConfiguracaoDispositivos /></Suspense>} />
               <Route path="/gestao-rastreadores" element={<Suspense fallback={<LazyFallback />}><GestaoRastreadores /></Suspense>} />
