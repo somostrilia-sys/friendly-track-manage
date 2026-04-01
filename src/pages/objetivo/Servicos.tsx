@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useServicos, useInsertServico, useUpdateServico, useTecnicos, useClientes, useRealtimeSubscription } from "@/hooks/useSupabaseData";
+import { supabase } from "@/integrations/supabase/client";
 import type { DbServico } from "@/types/database";
-import { MapPin, Navigation, ExternalLink, Plus, Copy, Check, Inbox, Search, CalendarDays, Clock, PlayCircle, CheckCircle, Users } from "lucide-react";
+import { MapPin, Navigation, ExternalLink, Plus, Copy, Check, Inbox, Search, CalendarDays, Clock, PlayCircle, CheckCircle, Users, Camera, Upload, X, Image } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,14 @@ const statusFlow: Record<string, string> = {
   em_execucao: "concluido",
 };
 
+type FotoTipo = "imei" | "chip" | "instalacao";
+
+const fotoLabels: Record<FotoTipo, string> = {
+  imei: "Foto do IMEI",
+  chip: "Foto do Chip",
+  instalacao: "Foto da Instalacao",
+};
+
 const Servicos = () => {
   const { data: servicos = [], isLoading } = useServicos();
   const { data: tecnicos = [] } = useTecnicos();
@@ -44,6 +53,19 @@ const Servicos = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+
+  // Photo upload dialog state
+  const [fotoDialogOpen, setFotoDialogOpen] = useState(false);
+  const [fotoServico, setFotoServico] = useState<DbServico | null>(null);
+  const [fotos, setFotos] = useState<Record<FotoTipo, File | null>>({ imei: null, chip: null, instalacao: null });
+  const [fotoPreviews, setFotoPreviews] = useState<Record<FotoTipo, string | null>>({ imei: null, chip: null, instalacao: null });
+  const [fotoUploading, setFotoUploading] = useState(false);
+  const [fotoErrors, setFotoErrors] = useState<Record<FotoTipo, string>>({ imei: "", chip: "", instalacao: "" });
+  const fileInputRefs = {
+    imei: useRef<HTMLInputElement>(null),
+    chip: useRef<HTMLInputElement>(null),
+    instalacao: useRef<HTMLInputElement>(null),
+  };
 
   const emptyForm = { tecnico_id: "", cliente_nome: "", veiculo: "", tipo: "instalacao" as DbServico["tipo"], endereco: "", cidade: "", estado: "", data: "", horario: "", valor_servico: 0, imei: "", chip: "" };
   const [form, setForm] = useState(emptyForm);
@@ -97,9 +119,111 @@ const Servicos = () => {
     }
   };
 
+  const handleFotoSelect = (tipo: FotoTipo, file: File | null) => {
+    if (!file) return;
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setFotoErrors(prev => ({ ...prev, [tipo]: "Selecione um arquivo de imagem" }));
+      return;
+    }
+    setFotoErrors(prev => ({ ...prev, [tipo]: "" }));
+    setFotos(prev => ({ ...prev, [tipo]: file }));
+    // Generate preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFotoPreviews(prev => ({ ...prev, [tipo]: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFoto = (tipo: FotoTipo) => {
+    setFotos(prev => ({ ...prev, [tipo]: null }));
+    setFotoPreviews(prev => ({ ...prev, [tipo]: null }));
+    setFotoErrors(prev => ({ ...prev, [tipo]: "" }));
+    if (fileInputRefs[tipo].current) {
+      fileInputRefs[tipo].current!.value = "";
+    }
+  };
+
+  const uploadFotosAndConcluir = async () => {
+    if (!fotoServico) return;
+
+    // Validate all photos present
+    const missing: string[] = [];
+    (["imei", "chip", "instalacao"] as FotoTipo[]).forEach(tipo => {
+      if (!fotos[tipo]) missing.push(fotoLabels[tipo]);
+    });
+    if (missing.length > 0) {
+      const newErrors = { imei: "", chip: "", instalacao: "" };
+      if (!fotos.imei) newErrors.imei = "Obrigatorio";
+      if (!fotos.chip) newErrors.chip = "Obrigatorio";
+      if (!fotos.instalacao) newErrors.instalacao = "Obrigatorio";
+      setFotoErrors(newErrors);
+      toast.error(`Fotos obrigatorias: ${missing.join(", ")}`);
+      return;
+    }
+
+    setFotoUploading(true);
+    try {
+      const urls: Record<string, string> = {};
+      for (const tipo of ["imei", "chip", "instalacao"] as FotoTipo[]) {
+        const file = fotos[tipo]!;
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${fotoServico.codigo}/${tipo}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("instalacao-fotos")
+          .upload(path, file, { upsert: true });
+
+        if (uploadError) throw new Error(`Erro ao enviar ${fotoLabels[tipo]}: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage
+          .from("instalacao-fotos")
+          .getPublicUrl(path);
+
+        urls[`foto_${tipo}`] = urlData.publicUrl;
+      }
+
+      // Update service order with photo URLs and mark as concluido
+      await updateServico.mutateAsync({
+        id: fotoServico.id,
+        status: "concluido",
+        foto_imei: urls.foto_imei,
+        foto_chip: urls.foto_chip,
+        foto_instalacao: urls.foto_instalacao,
+      } as any);
+
+      toast.success("Fotos enviadas e OS marcada como concluida!");
+      closeFotoDialog();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setFotoUploading(false);
+    }
+  };
+
+  const closeFotoDialog = () => {
+    setFotoDialogOpen(false);
+    setFotoServico(null);
+    setFotos({ imei: null, chip: null, instalacao: null });
+    setFotoPreviews({ imei: null, chip: null, instalacao: null });
+    setFotoErrors({ imei: "", chip: "", instalacao: "" });
+  };
+
   const avancarStatus = async (id: string, statusAtual: string) => {
     const proximo = statusFlow[statusAtual];
     if (!proximo) return;
+
+    // If advancing to concluido, show photo upload dialog instead
+    if (proximo === "concluido") {
+      const servico = servicos.find(s => s.id === id);
+      if (servico) {
+        setFotoServico(servico);
+        setFotoDialogOpen(true);
+      }
+      return;
+    }
+
     try {
       await updateServico.mutateAsync({ id, status: proximo } as any);
       toast.success(`Status alterado para ${statusMap[proximo]?.label}`);
@@ -188,6 +312,12 @@ const Servicos = () => {
                   <p className="text-muted-foreground">{s.endereco} — {s.cidade}/{s.estado}</p>
                   <p className="text-muted-foreground">{s.data} as {s.horario}</p>
                 </div>
+                {s.status === "concluido" && (s.foto_imei || s.foto_chip || s.foto_instalacao) && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Camera className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs text-green-600 font-medium">Fotos anexadas</span>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-2 items-end">
                 <span className="font-semibold">R$ {s.valor_servico}</span>
@@ -212,6 +342,7 @@ const Servicos = () => {
         ))}
       </div>
 
+      {/* Nova OS Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nova Ordem de Servico</DialogTitle></DialogHeader>
@@ -271,6 +402,77 @@ const Servicos = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={salvar}>Criar OS</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Upload Dialog for Concluir OS */}
+      <Dialog open={fotoDialogOpen} onOpenChange={(open) => { if (!open) closeFotoDialog(); }}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="w-5 h-5" />
+              Fotos Obrigatorias — Concluir OS
+            </DialogTitle>
+          </DialogHeader>
+          {fotoServico && (
+            <p className="text-sm text-muted-foreground">
+              OS: <span className="font-mono font-semibold text-foreground">{fotoServico.codigo}</span>
+              {" | "}{fotoServico.cliente_nome} — {fotoServico.veiculo}
+            </p>
+          )}
+          <div className="space-y-5">
+            {(["imei", "chip", "instalacao"] as FotoTipo[]).map(tipo => (
+              <div key={tipo} className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Image className="w-4 h-4" />
+                  {fotoLabels[tipo]}
+                  <span className="text-destructive">*</span>
+                </Label>
+                {fotoPreviews[tipo] ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={fotoPreviews[tipo]!}
+                      alt={fotoLabels[tipo]}
+                      className="w-40 h-28 object-cover rounded-md border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFoto(tipo)}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 hover:bg-destructive/80"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors ${fotoErrors[tipo] ? "border-destructive" : "border-muted-foreground/30"}`}
+                    onClick={() => fileInputRefs[tipo].current?.click()}
+                  >
+                    <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Clique para selecionar</p>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRefs[tipo]}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFotoSelect(tipo, e.target.files?.[0] || null)}
+                />
+                {fotoErrors[tipo] && (
+                  <p className="text-xs text-destructive">{fotoErrors[tipo]}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeFotoDialog} disabled={fotoUploading}>
+              Cancelar
+            </Button>
+            <Button onClick={uploadFotosAndConcluir} disabled={fotoUploading}>
+              {fotoUploading ? "Enviando..." : "Enviar Fotos e Concluir OS"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

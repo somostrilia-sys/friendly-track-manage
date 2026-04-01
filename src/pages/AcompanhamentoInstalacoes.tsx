@@ -10,13 +10,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useInstalacoes, useInsertInstalacao, useUpdateInstalacao, useDeleteInstalacao, useTecnicos, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
-import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Inbox, Eye, Pencil, Trash2, Play, XCircle } from "lucide-react";
+import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Inbox, Eye, Pencil, Trash2, Play, XCircle, ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+
+const checklistItems = [
+  { id: "local_correto", label: "Rastreador instalado no local correto" },
+  { id: "chicote", label: "Chicote eletrico conectado" },
+  { id: "led_status", label: "LED de status piscando (rastreador ligado)" },
+  { id: "teste_comunicacao", label: "Teste de comunicacao realizado" },
+  { id: "foto_imei", label: "Foto do IMEI tirada" },
+  { id: "foto_instalacao", label: "Foto da instalacao tirada" },
+];
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   aguardando: { label: "Aguardando", variant: "outline" },
@@ -46,6 +56,13 @@ const AcompanhamentoInstalacoes = () => {
   const [statusDialog, setStatusDialog] = useState<{ open: boolean; instalacao: DbInstalacao | null; targetStatus: string }>({ open: false, instalacao: null, targetStatus: "" });
   const [localizacao, setLocalizacao] = useState("");
 
+  // Checklist dialog for concluding installations
+  const [checklistDialog, setChecklistDialog] = useState<{ open: boolean; instalacao: DbInstalacao | null }>({ open: false, instalacao: null });
+  const [checklist, setChecklist] = useState<Record<string, boolean>>(
+    Object.fromEntries(checklistItems.map(item => [item.id, false]))
+  );
+  const [checklistLocalizacao, setChecklistLocalizacao] = useState("");
+
   // Detail sheet
   const [detalhe, setDetalhe] = useState<DbInstalacao | null>(null);
 
@@ -66,8 +83,39 @@ const AcompanhamentoInstalacoes = () => {
 
   // Status transitions
   const openStatusTransition = (inst: DbInstalacao, target: string) => {
+    // Intercept "concluida" to show checklist dialog first
+    if (target === "concluida") {
+      setChecklist(Object.fromEntries(checklistItems.map(item => [item.id, false])));
+      setChecklistLocalizacao(inst.localizacao_confirmacao || "");
+      setChecklistDialog({ open: true, instalacao: inst });
+      return;
+    }
     setLocalizacao(inst.localizacao_confirmacao || "");
     setStatusDialog({ open: true, instalacao: inst, targetStatus: target });
+  };
+
+  const allChecklistChecked = checklistItems.every(item => checklist[item.id]);
+
+  const confirmarConclusaoChecklist = async () => {
+    if (!checklistDialog.instalacao) return;
+    const { id } = checklistDialog.instalacao;
+    try {
+      const updates: Partial<DbInstalacao> & { id: string } = {
+        id,
+        status: "concluida",
+        localizacao_confirmacao: checklistLocalizacao,
+        checklist_concluido: true,
+      };
+      await updateInstalacao.mutateAsync(updates);
+      toast.success("Instalacao concluida com checklist verificado!");
+      if (detalhe?.id === id) {
+        setDetalhe(prev => prev ? { ...prev, status: "concluida", localizacao_confirmacao: checklistLocalizacao, checklist_concluido: true } : null);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setChecklistDialog({ open: false, instalacao: null });
+    setChecklistLocalizacao("");
   };
 
   const confirmarTransicao = async () => {
@@ -430,6 +478,61 @@ const AcompanhamentoInstalacoes = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Checklist Dialog for Concluding Installation */}
+      <Dialog open={checklistDialog.open} onOpenChange={(open) => { if (!open) setChecklistDialog({ open: false, instalacao: null }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListChecks className="w-5 h-5" />
+              Checklist de Conclusao
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {checklistDialog.instalacao && (
+              <p className="text-sm text-muted-foreground">
+                Placa: <span className="font-mono font-semibold text-foreground">{checklistDialog.instalacao.placa}</span>
+                {" | "}IMEI: <span className="font-mono text-foreground">{checklistDialog.instalacao.imei}</span>
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {checklistItems.map(item => (
+                <div key={item.id} className="flex items-start space-x-3">
+                  <Checkbox
+                    id={`checklist-${item.id}`}
+                    checked={checklist[item.id] || false}
+                    onCheckedChange={(checked) => setChecklist(prev => ({ ...prev, [item.id]: !!checked }))}
+                  />
+                  <label
+                    htmlFor={`checklist-${item.id}`}
+                    className="text-sm leading-tight cursor-pointer select-none"
+                  >
+                    {item.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <Label>Localizacao de confirmacao (lat, lng)</Label>
+              <Input value={checklistLocalizacao} onChange={e => setChecklistLocalizacao(e.target.value)} placeholder="-23.5505, -46.6333" />
+            </div>
+
+            {!allChecklistChecked && (
+              <p className="text-xs text-muted-foreground">
+                Todos os itens do checklist devem ser marcados para confirmar a conclusao.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChecklistDialog({ open: false, instalacao: null })}>Cancelar</Button>
+            <Button onClick={confirmarConclusaoChecklist} disabled={!allChecklistChecked}>
+              Confirmar Conclusao
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

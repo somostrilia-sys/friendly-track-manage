@@ -168,6 +168,10 @@ export interface DbServico {
   horario: string;
   status: "agendado" | "aceito" | "em_deslocamento" | "em_execucao" | "concluido" | "cancelado";
   valor_servico: number;
+  foto_imei?: string;
+  foto_chip?: string;
+  foto_instalacao?: string;
+  checklist_concluido?: boolean;
 }
 
 export interface DbManutencao {
@@ -227,6 +231,7 @@ export interface DbInstalacao {
   status: "aguardando" | "em_andamento" | "concluida" | "problema";
   data: string;
   localizacao_confirmacao: string;
+  checklist_concluido?: boolean;
 }
 
 export interface DbControleKM {
