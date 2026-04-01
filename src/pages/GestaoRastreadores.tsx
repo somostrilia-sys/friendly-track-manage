@@ -996,8 +996,11 @@ const GestaoRastreadores = () => {
           </Card>
           <Card className="card-shadow overflow-x-auto">
             <div className="p-4 border-b bg-orange-50/50">
-              <p className="text-sm font-medium text-orange-800">
-                Associados com rastreador instalado que estao INADIMPLENTES no SGA. Acao: encaminhar para cobranca ou agendar retirada do rastreador.
+              <p className="text-sm font-medium text-orange-800 mb-1">
+                Associados INADIMPLENTES no SGA que possuem rastreador instalado na plataforma.
+              </p>
+              <p className="text-xs text-orange-700">
+                Todos os {inadimplFiltrados.length} registros abaixo tem rastreador fisicamente instalado no veiculo. Encaminhe para cobranca ou agende a retirada do equipamento.
               </p>
             </div>
             <Table data-print-table>
@@ -1009,7 +1012,8 @@ const GestaoRastreadores = () => {
                   <TableHead>Placa</TableHead>
                   <TableHead>Veiculo</TableHead>
                   <TableHead>Cooperativa</TableHead>
-                  <TableHead>IMEI</TableHead>
+                  <TableHead>Rastreador (IMEI)</TableHead>
+                  <TableHead>Situacao SGA</TableHead>
                   <TableHead>Encaminhamento</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
@@ -1017,7 +1021,7 @@ const GestaoRastreadores = () => {
               <TableBody>
                 {inadimplFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <EmptyState message="Nenhum inadimplente com rastreador" />
                     </TableCell>
                   </TableRow>
@@ -1032,7 +1036,13 @@ const GestaoRastreadores = () => {
                     <TableCell className="font-mono font-medium text-sm">{r.placa || "--"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{sgaMatch?.veiculo || "--"}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="default" className="text-[9px] bg-green-600">Instalado</Badge>
+                        <span className="font-mono text-xs">{r.imei}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="destructive" className="text-xs">Inadimplente</Badge></TableCell>
                     <TableCell>
                       <Select
                         value={r.encaminhamento || "pendente"}
@@ -1135,8 +1145,11 @@ const GestaoRastreadores = () => {
           </Card>
           <Card className="card-shadow overflow-x-auto">
             <div className="p-4 border-b bg-red-50/50">
-              <p className="text-sm font-medium text-red-800">
-                Associados INATIVOS ou CANCELADOS no SGA que ainda estao com rastreador instalado. Acao: agendar retirada do rastreador e justificar se nao foi retirado.
+              <p className="text-sm font-medium text-red-800 mb-1">
+                Associados INATIVOS ou CANCELADOS no SGA que ainda possuem rastreador instalado na plataforma.
+              </p>
+              <p className="text-xs text-red-700">
+                Todos os {inativosFiltrados.length} registros abaixo tem rastreador fisicamente instalado mas o associado ja esta inativo. Agende a retirada e justifique caso nao tenha sido retirado.
               </p>
             </div>
             <Table data-print-table>
@@ -1148,7 +1161,8 @@ const GestaoRastreadores = () => {
                   <TableHead>Placa</TableHead>
                   <TableHead>Veiculo</TableHead>
                   <TableHead>Cooperativa</TableHead>
-                  <TableHead>IMEI</TableHead>
+                  <TableHead>Rastreador (IMEI)</TableHead>
+                  <TableHead>Situacao SGA</TableHead>
                   <TableHead>Motivo Nao Retirada</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
@@ -1156,7 +1170,7 @@ const GestaoRastreadores = () => {
               <TableBody>
                 {inativosFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <EmptyState message="Nenhum inativo com rastreador" />
                     </TableCell>
                   </TableRow>
@@ -1171,7 +1185,13 @@ const GestaoRastreadores = () => {
                     <TableCell className="font-mono font-medium text-sm">{r.placa || "--"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{sgaMatch?.veiculo || "--"}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="default" className="text-[9px] bg-green-600">Instalado</Badge>
+                        <span className="font-mono text-xs">{r.imei}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs bg-red-100 text-red-700">Inativo</Badge></TableCell>
                     <TableCell>
                       <Select
                         value={r.motivo_nao_retirada || ""}
