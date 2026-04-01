@@ -969,11 +969,14 @@ const GestaoRastreadores = () => {
                       inadimplFiltrados.map((r) => {
                         const match = findSGAMatch(r);
                         return {
-                          Placa: r.placa,
-                          IMEI: r.imei,
                           Associado: match?.associado || r.associado || "",
-                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          CPF: match?.cpf || "",
                           Telefone: match?.telefone || "",
+                          Placa: r.placa || "",
+                          Veiculo: match?.veiculo || "",
+                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          IMEI: r.imei || "",
+                          Status_SGA: "Inadimplente",
                           Encaminhamento: encaminhamentoMap[r.encaminhamento] || r.encaminhamento || "",
                           Observacao: r.observacao || "",
                         };
@@ -992,19 +995,21 @@ const GestaoRastreadores = () => {
             </p>
           </Card>
           <Card className="card-shadow overflow-x-auto">
-            <div className="p-4 border-b">
-              <p className="text-sm text-muted-foreground">
-                Rastreadores instalados em veiculos com status inadimplente no SGA ou marcados como cobranca.
+            <div className="p-4 border-b bg-orange-50/50">
+              <p className="text-sm font-medium text-orange-800">
+                Associados com rastreador instalado que estao INADIMPLENTES no SGA. Acao: encaminhar para cobranca ou agendar retirada do rastreador.
               </p>
             </div>
-            <Table>
+            <Table data-print-table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Placa</TableHead>
-                  <TableHead>IMEI</TableHead>
                   <TableHead>Associado</TableHead>
-                  <TableHead>Cooperativa</TableHead>
+                  <TableHead>CPF</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>Placa</TableHead>
+                  <TableHead>Veiculo</TableHead>
+                  <TableHead>Cooperativa</TableHead>
+                  <TableHead>IMEI</TableHead>
                   <TableHead>Encaminhamento</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
@@ -1012,7 +1017,7 @@ const GestaoRastreadores = () => {
               <TableBody>
                 {inadimplFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={9}>
                       <EmptyState message="Nenhum inadimplente com rastreador" />
                     </TableCell>
                   </TableRow>
@@ -1020,23 +1025,25 @@ const GestaoRastreadores = () => {
                 {inadimplFiltrados.slice(0, inadimplLimite).map((r) => {
                   const sgaMatch = findSGAMatch(r);
                   return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
-                    <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
-                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                  <TableRow key={r.id} className="hover:bg-orange-50/30">
+                    <TableCell className="font-medium text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
+                    <TableCell className="font-mono text-xs">{sgaMatch?.cpf || "--"}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.telefone || "--"}</TableCell>
+                    <TableCell className="font-mono font-medium text-sm">{r.placa || "--"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{sgaMatch?.veiculo || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
                     <TableCell>
                       <Select
                         value={r.encaminhamento || "pendente"}
                         onValueChange={(v) => updateInline(r.id, { encaminhamento: v })}
                       >
-                        <SelectTrigger className="w-[150px] h-8 text-xs">
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cobranca">Cobranca</SelectItem>
-                          <SelectItem value="retirada">Retirada</SelectItem>
+                          <SelectItem value="cobranca">Enviar p/ Cobranca</SelectItem>
+                          <SelectItem value="retirada">Agendar Retirada</SelectItem>
                           <SelectItem value="pendente">Aguardando</SelectItem>
                           <SelectItem value="resolvido">Resolvido</SelectItem>
                         </SelectContent>
@@ -1044,7 +1051,7 @@ const GestaoRastreadores = () => {
                     </TableCell>
                     <TableCell>
                       <Input
-                        className="h-8 text-xs w-[200px]"
+                        className="h-8 text-xs w-[180px]"
                         placeholder="Observacao..."
                         defaultValue={r.observacao || ""}
                         onBlur={(e) => {
@@ -1101,11 +1108,14 @@ const GestaoRastreadores = () => {
                       inativosFiltrados.map((r) => {
                         const match = findSGAMatch(r);
                         return {
-                          Placa: r.placa,
-                          IMEI: r.imei,
                           Associado: match?.associado || r.associado || "",
-                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          CPF: match?.cpf || "",
                           Telefone: match?.telefone || "",
+                          Placa: r.placa || "",
+                          Veiculo: match?.veiculo || "",
+                          Cooperativa: match?.cooperativa || r.cooperativa || "",
+                          IMEI: r.imei || "",
+                          Status_SGA: "Inativo/Cancelado",
                           Motivo_Nao_Retirada: motivoNaoRetiradaMap[r.motivo_nao_retirada] || r.motivo_nao_retirada || "",
                           Observacao: r.observacao || "",
                         };
@@ -1124,19 +1134,21 @@ const GestaoRastreadores = () => {
             </p>
           </Card>
           <Card className="card-shadow overflow-x-auto">
-            <div className="p-4 border-b">
-              <p className="text-sm text-muted-foreground">
-                Rastreadores instalados em veiculos com status inativo ou cancelado no SGA.
+            <div className="p-4 border-b bg-red-50/50">
+              <p className="text-sm font-medium text-red-800">
+                Associados INATIVOS ou CANCELADOS no SGA que ainda estao com rastreador instalado. Acao: agendar retirada do rastreador e justificar se nao foi retirado.
               </p>
             </div>
-            <Table>
+            <Table data-print-table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Placa</TableHead>
-                  <TableHead>IMEI</TableHead>
                   <TableHead>Associado</TableHead>
-                  <TableHead>Cooperativa</TableHead>
+                  <TableHead>CPF</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>Placa</TableHead>
+                  <TableHead>Veiculo</TableHead>
+                  <TableHead>Cooperativa</TableHead>
+                  <TableHead>IMEI</TableHead>
                   <TableHead>Motivo Nao Retirada</TableHead>
                   <TableHead>Observacao</TableHead>
                 </TableRow>
@@ -1144,7 +1156,7 @@ const GestaoRastreadores = () => {
               <TableBody>
                 {inativosFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={9}>
                       <EmptyState message="Nenhum inativo com rastreador" />
                     </TableCell>
                   </TableRow>
@@ -1152,12 +1164,14 @@ const GestaoRastreadores = () => {
                 {inativosFiltrados.slice(0, inativoLimite).map((r) => {
                   const sgaMatch = findSGAMatch(r);
                   return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono font-medium text-sm">{r.placa}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
-                    <TableCell className="text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
-                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                  <TableRow key={r.id} className="hover:bg-red-50/30">
+                    <TableCell className="font-medium text-sm">{sgaMatch?.associado || r.associado || "--"}</TableCell>
+                    <TableCell className="font-mono text-xs">{sgaMatch?.cpf || "--"}</TableCell>
                     <TableCell className="text-sm">{sgaMatch?.telefone || "--"}</TableCell>
+                    <TableCell className="font-mono font-medium text-sm">{r.placa || "--"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{sgaMatch?.veiculo || "--"}</TableCell>
+                    <TableCell className="text-sm">{sgaMatch?.cooperativa || r.cooperativa || "--"}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.imei}</TableCell>
                     <TableCell>
                       <Select
                         value={r.motivo_nao_retirada || ""}
