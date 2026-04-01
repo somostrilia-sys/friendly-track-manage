@@ -2,168 +2,74 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ARQIA_BASE_URL = "https://portal.api.ip101.cloud";
-const ARQIA_EMAIL = "alexander@holdingwalk.com.br";
-const ARQIA_SENHA = "Arqia123#";
+const ARQIA_BASE_URL = "https://proxy.api.ip101.cloud/gestaom2m/api";
+const ARQIA_KEY = "39d69be6f8aa40fe9615abdcc4e8f11";
 
-let cachedToken: string | null = null;
-let tokenExpiry = 0;
-
-async function getToken(): Promise<string> {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
-
-  console.log("[arqia-proxy] Authenticating...");
-  const res = await fetch(`${ARQIA_BASE_URL}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: ARQIA_EMAIL, password: ARQIA_SENHA }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[arqia-proxy] Auth failed:", text);
-    throw new Error("Falha na autenticacao Arqia");
-  }
-
-  const data = await res.json();
-  cachedToken = data.token || data.access_token;
-  // Cache token for 50 minutes
-  tokenExpiry = Date.now() + 50 * 60 * 1000;
-  return cachedToken!;
-}
-
-async function arqiaRequest(
-  path: string,
-  method: string = "GET",
-  body?: Record<string, unknown>
-) {
-  const token = await getToken();
+async function arqiaRequest(path: string, body?: Record<string, unknown>) {
   const url = `${ARQIA_BASE_URL}${path}`;
-  console.log(`[arqia-proxy] ${method} ${url}`);
-
   const res = await fetch(url, {
-    method,
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "Ocp-Apim-Subscription-Key": ARQIA_KEY,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? JSON.stringify(body) : "{}",
   });
-
   const text = await res.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    data = { raw: text };
-  }
-
-  if (!res.ok) {
-    console.error(`[arqia-proxy] Error ${res.status}:`, text);
-    return { error: true, status: res.status, data };
-  }
-
-  return { error: false, data };
+  try { return JSON.parse(text); } catch { return { raw: text, status: res.status }; }
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
-    const { action, params } = await req.json().catch(() => ({
-      action: "ping",
-      params: {},
-    }));
+    const { action, params } = await req.json().catch(() => ({ action: "ping", params: {} }));
 
-    let result;
+    let result: any;
 
     switch (action) {
-      case "consultar_linha": {
-        if (!params?.iccid) {
-          return new Response(
-            JSON.stringify({ error: "Parametro 'iccid' obrigatorio" }),
-            { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-          );
-        }
-        result = await arqiaRequest(`/api/lines/${params.iccid}`);
+      case "ping":
+        result = { success: true, message: "arqia-proxy online", base_url: ARQIA_BASE_URL };
         break;
-      }
 
-      case "enviar_sms": {
-        if (!params?.iccid || !params?.message) {
-          return new Response(
-            JSON.stringify({ error: "Parametros 'iccid' e 'message' obrigatorios" }),
-            { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-          );
-        }
-        result = await arqiaRequest("/api/sms/send", "POST", {
-          iccid: params.iccid,
-          message: params.message,
+      case "add_apn":
+        result = await arqiaRequest("/contract/add_apn", {
+          resource_type: params?.resource_type || "line",
+          iccid: params?.iccid || "",
+          apn_name: params?.apn_name || "",
         });
         break;
-      }
 
-      case "ativar_linha": {
-        if (!params?.iccid) {
-          return new Response(
-            JSON.stringify({ error: "Parametro 'iccid' obrigatorio" }),
-            { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-          );
+      case "remove_apn":
+        result = await arqiaRequest("/contract/remove_apn", {
+          resource_type: params?.resource_type || "line",
+          iccid: params?.iccid || "",
+          apn_name: params?.apn_name || "",
+        });
+        break;
+
+      // Generic passthrough for any endpoint
+      case "raw":
+        if (!params?.endpoint) {
+          return new Response(JSON.stringify({ error: "endpoint obrigatorio" }),
+            { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
         }
-        result = await arqiaRequest(`/api/lines/${params.iccid}/activate`, "POST");
+        result = await arqiaRequest(params.endpoint, params.body || {});
         break;
-      }
-
-      case "desativar_linha": {
-        if (!params?.iccid) {
-          return new Response(
-            JSON.stringify({ error: "Parametro 'iccid' obrigatorio" }),
-            { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-          );
-        }
-        result = await arqiaRequest(`/api/lines/${params.iccid}/deactivate`, "POST");
-        break;
-      }
-
-      case "listar_linhas": {
-        result = await arqiaRequest("/api/lines");
-        break;
-      }
-
-      case "ping": {
-        return new Response(
-          JSON.stringify({ success: true, message: "arqia-proxy online" }),
-          { headers: { ...cors, "Content-Type": "application/json" } }
-        );
-      }
 
       default:
-        return new Response(
-          JSON.stringify({ error: `Acao desconhecida: ${action}` }),
-          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: `Acao desconhecida: ${action}` }),
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    if (result.error) {
-      return new Response(JSON.stringify(result), {
-        status: result.status || 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true, data: result.data }), {
+    return new Response(JSON.stringify(result), {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("[arqia-proxy] Unhandled error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
