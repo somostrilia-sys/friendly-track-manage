@@ -1,11 +1,11 @@
-import { Users, DollarSign, Clock, AlertTriangle, Truck, CalendarDays, CheckCircle, ArrowRight, ShoppingCart, TrendingUp, TrendingDown, Wrench, PhoneOff, PackageMinus, Wifi, Box } from "lucide-react";
+import { Users, DollarSign, Clock, AlertTriangle, Truck, CalendarDays, CheckCircle, ArrowRight, ShoppingCart, TrendingUp, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useClientes, useManutencoes, useDespachos, useAgendamentos, useTecnicos, useFaturamentoB2B, usePedidosCompletos, useRealtimeSubscription, useServicos, useEquipamentos, useLinhasSIM, useInstalacoes, useChamadosSuporte, useRetiradas } from "@/hooks/useSupabaseData";
+import { useClientes, useManutencoes, useDespachos, useAgendamentos, useTecnicos, useFaturamentoB2B, usePedidosCompletos, useRealtimeSubscription, useServicos } from "@/hooks/useSupabaseData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
@@ -55,11 +55,6 @@ const Dashboard = () => {
   const { data: tecnicos = [] } = useTecnicos();
   const { data: faturamentoB2B = [] } = useFaturamentoB2B();
   const { data: servicos = [] } = useServicos();
-  const { data: equipamentos = [] } = useEquipamentos();
-  const { data: linhasSIM = [] } = useLinhasSIM();
-  const { data: instalacoes = [] } = useInstalacoes();
-  const { data: chamados = [] } = useChamadosSuporte();
-  const { data: retiradas = [] } = useRetiradas();
 
   // Realtime subscriptions for dashboard
   useRealtimeSubscription("clientes", ["clientes"]);
@@ -68,10 +63,6 @@ const Dashboard = () => {
   useRealtimeSubscription("tecnicos", ["tecnicos"]);
   useRealtimeSubscription("manutencoes", ["manutencoes"]);
   useRealtimeSubscription("servicos_agendados", ["servicos_agendados"]);
-  useRealtimeSubscription("equipamentos", ["equipamentos"]);
-  useRealtimeSubscription("instalacoes", ["instalacoes"]);
-  useRealtimeSubscription("chamados_suporte", ["chamados_suporte"]);
-  useRealtimeSubscription("retiradas", ["retiradas"]);
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -152,33 +143,13 @@ const Dashboard = () => {
   }, [currentMonthRecords]);
 
   // Operational
-  const manutencoesEspera = manutencoes.filter((m: any) => m.status === "espera").length;
-  const manutencoesPrioridade = manutencoes.filter((m: any) => m.status === "prioridade").length;
-  const manutencoesAbertas = manutencoes.filter((m: any) => !["resolvido", "concluido"].includes(m.status)).length;
+  const manutencoesAbertas = manutencoes.filter((m: any) => m.status === "aberto" || m.status === "espera" || m.status === "prioridade").length;
   const emTransito = despachos.filter((d: any) => d.status_entrega === "em_transito" || d.status_entrega === "postado").length;
   const pedidosPendentes = pedidos.filter((p: any) => p.status === "pendente").length;
   const agendados = agendamentos.filter((a: any) => a.status === "agendado").length;
   const realizados = agendamentos.filter((a: any) => a.status === "realizado").length;
-  const semRetorno = agendamentos.filter((a: any) => a.status === "sem_retorno").length;
   const totalTecnicos = tecnicos.length;
   const tecnicosDisponiveis = tecnicos.filter((t: any) => t.status === "disponivel").length;
-
-  // Equipment & SIM
-  const equipamentosEstoque = equipamentos.filter((e: any) => e.status === "disponivel" || e.status === "em_estoque").length;
-  const totalEquipamentos = equipamentos.length;
-  const linhasAtivas = linhasSIM.filter((l: any) => l.status === "online" || l.status === "ativa").length;
-  const totalLinhas = linhasSIM.length;
-
-  // Suporte
-  const chamadosAbertos = chamados.filter((c: any) => c.status === "aberto").length;
-  const chamadosEmAtendimento = chamados.filter((c: any) => c.status === "em_atendimento").length;
-
-  // Retiradas
-  const retiradasPendentes = retiradas.filter((r: any) => r.status === "pendente" || r.status === "retirado").length;
-
-  // Instalações
-  const instalacoesConcluidas = instalacoes.filter((i: any) => i.status === "concluida").length;
-  const instalacoesAndamento = instalacoes.filter((i: any) => i.status === "em_andamento" || i.status === "aguardando").length;
 
   // Trackit Operational KPIs (real data from Supabase)
   const instalacoesSemana = useMemo(() => {
@@ -187,7 +158,8 @@ const Dashboard = () => {
     const fromServicos = servicos.filter((s: any) => s.tipo === "instalacao" && s.status === "concluido" && new Date(s.data) >= weekAgo).length;
     return Math.max(fromAgendamentos, fromServicos);
   }, [agendamentos, servicos]);
-  const rastreadoresAtivos = clientes.reduce((sum: number, c: any) => sum + (Number(c.veiculos_ativos) || 0), 0) || totalEquipamentos - equipamentosEstoque;
+  const rastreadoresAtivos = clientes.reduce((sum: number, c: any) => sum + (Number(c.veiculos_ativos) || 0), 0);
+  const manutencoesPendentes = manutencoesAbertas;
   const tecnicosOnline = tecnicosDisponiveis;
 
   // Recent faturamentos
@@ -209,7 +181,14 @@ const Dashboard = () => {
     <div className="space-y-8">
       <PageHeader title="Dashboard Overview" subtitle="Visao consolidada do Trackit Hub" />
 
-      {/* Financeiro KPIs */}
+      {/* Trackit KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Instalações esta semana" value={instalacoesSemana} icon={CalendarDays} accent="success" />
+        <StatCard label="Rastreadores ativos" value={rastreadoresAtivos.toLocaleString("pt-BR")} icon={Truck} accent="primary" />
+        <StatCard label="Manutenções pendentes" value={manutencoesPendentes} icon={AlertTriangle} accent="warning" />
+        <StatCard label="Técnicos online" value={tecnicosOnline} icon={Users} accent="success" />
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Clientes Ativos" value={clientesAtivos} icon={Users} accent="primary" />
         <StatCard
@@ -227,23 +206,6 @@ const Dashboard = () => {
           accent="warning"
         />
         <StatCard label="Inadimplentes" value={inadimplentes} icon={AlertTriangle} accent="destructive" />
-      </div>
-
-      {/* Operacional KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Instalacoes esta Semana" value={instalacoesSemana} icon={CalendarDays} accent="success" />
-        <StatCard label="Rastreadores Ativos" value={rastreadoresAtivos.toLocaleString("pt-BR")} icon={Truck} accent="primary" />
-        <StatCard label="Equipamentos em Estoque" value={equipamentosEstoque} icon={Box} accent="muted" />
-        <StatCard label="Linhas SIM Ativas" value={`${linhasAtivas}/${totalLinhas}`} icon={Wifi} accent="success" />
-      </div>
-
-      {/* Atencao KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard label="Manutencoes (Espera)" value={manutencoesEspera} icon={Wrench} accent="warning" />
-        <StatCard label="Manutencoes (Prioridade)" value={manutencoesPrioridade} icon={AlertTriangle} accent="destructive" />
-        <StatCard label="Sem Retorno" value={semRetorno} icon={PhoneOff} accent="warning" />
-        <StatCard label="Retiradas Pendentes" value={retiradasPendentes} icon={PackageMinus} accent="muted" />
-        <StatCard label="Chamados Abertos" value={chamadosAbertos + chamadosEmAtendimento} icon={AlertTriangle} accent="warning" />
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -307,25 +269,35 @@ const Dashboard = () => {
       <div className="grid grid-cols-12 gap-4">
         <Card className="col-span-12 lg:col-span-4 p-6 card-shadow card-hover">
           <h3 className="text-sm font-semibold mb-5">Resumo Operacional</h3>
-          <div className="space-y-3">
-            {[
-              { icon: Users, label: "Clientes Ativos", value: clientesAtivos, color: "primary" },
-              { icon: Wrench, label: "Manutencoes Abertas", value: manutencoesAbertas, color: "destructive" },
-              { icon: Truck, label: "Despachos em Transito", value: emTransito, color: "warning" },
-              { icon: ShoppingCart, label: "Pedidos Pendentes", value: pedidosPendentes, color: "warning" },
-              { icon: CalendarDays, label: "Agendamentos Pendentes", value: agendados, color: "primary" },
-              { icon: PhoneOff, label: "Associados Sem Retorno", value: semRetorno, color: "destructive" },
-              { icon: PackageMinus, label: "Retiradas Pendentes", value: retiradasPendentes, color: "warning" },
-              { icon: CheckCircle, label: "Instalacoes Concluidas", value: instalacoesConcluidas, color: "success" },
-            ].map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-${color}/10`}><Icon className={`w-4 h-4 text-${color}`} /></div>
-                  <span className="text-sm">{label}</span>
-                </div>
-                <span className={`text-lg font-bold tracking-tight ${value > 0 && color === "destructive" ? "text-destructive" : ""}`}>{value}</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10"><Users className="w-4 h-4 text-primary" /></div>
+                <span className="text-sm">Clientes Ativos</span>
               </div>
-            ))}
+              <span className="text-lg font-bold tracking-tight">{clientesAtivos}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/10"><AlertTriangle className="w-4 h-4 text-destructive" /></div>
+                <span className="text-sm">Manutencoes Abertas</span>
+              </div>
+              <span className="text-lg font-bold tracking-tight">{manutencoesAbertas}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10"><Truck className="w-4 h-4 text-warning" /></div>
+                <span className="text-sm">Em Transito</span>
+              </div>
+              <span className="text-lg font-bold tracking-tight">{emTransito}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-accent/10"><ShoppingCart className="w-4 h-4 text-accent" /></div>
+                <span className="text-sm">Pedidos Pendentes</span>
+              </div>
+              <span className="text-lg font-bold tracking-tight">{pedidosPendentes}</span>
+            </div>
           </div>
         </Card>
 
