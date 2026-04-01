@@ -58,10 +58,106 @@ async function invokeHinova(action: string, params: Record<string, string> = {})
 }
 
 /**
+ * Busca dados do cache SGA (tabela sga_veiculos_cache) - leitura instantanea.
+ */
+export async function buscarCacheSGA(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("sga_veiculos_cache")
+    .select("*")
+    .limit(15000);
+  if (error) {
+    console.error("Erro ao ler cache SGA:", error);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Dispara atualizacao do cache SGA em background via edge function.
+ * A edge function busca tudo da Hinova e salva no cache automaticamente.
+ */
+export async function atualizarCacheSGA(): Promise<void> {
+  try {
+    await invokeHinova("listar_veiculos_rastreador");
+  } catch (e) {
+    console.error("Erro ao atualizar cache SGA:", e);
+  }
+}
+
+/**
  * Busca todos os associados que possuem produto RASTREADOR vinculado ao veículo.
- * Retorna associados com seus veículos, separados por status (ativo/inativo).
+ * Primeiro tenta ler do cache. Se vazio ou stale (>24h), dispara refresh em background.
+ * Retorna dados do cache imediatamente quando disponivel.
  */
 export async function buscarAssociadosComRastreador(): Promise<SyncResult> {
+  // Try cache first
+  const cached = await buscarCacheSGA();
+
+  if (cached.length > 0) {
+    // Check if cache is stale (>24h)
+    const oldestUpdate = cached.reduce((min, row) => {
+      const updated = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+      return updated < min ? updated : min;
+    }, Date.now());
+    const ageHours = (Date.now() - oldestUpdate) / (1000 * 60 * 60);
+
+    if (ageHours > 24) {
+      // Trigger background refresh (don't await)
+      atualizarCacheSGA();
+    }
+
+    // Convert cache rows to AssociadoERP format
+    const associadoMap: Record<string, AssociadoERP> = {};
+    for (const row of cached) {
+      const cpf = row.cpf || "";
+      if (!associadoMap[cpf]) {
+        associadoMap[cpf] = {
+          codigo_associado: row.codigo_associado || "",
+          nome: row.nome_associado || "",
+          cpf,
+          telefone: row.telefone || "",
+          ddd: "",
+          telefone_celular: row.telefone_celular || "",
+          ddd_celular: row.ddd_celular || "",
+          email: row.email || "",
+          veiculos: [],
+        };
+      }
+
+      let produtos: { codigo: string; descricao: string; valor: string }[] = [];
+      try {
+        produtos = typeof row.produtos === "string" ? JSON.parse(row.produtos) : (row.produtos || []);
+      } catch { produtos = []; }
+
+      associadoMap[cpf].veiculos.push({
+        codigo_veiculo: row.codigo_veiculo || "",
+        placa: row.placa || "",
+        marca: row.marca || "",
+        modelo: row.modelo || "",
+        ano: row.ano || "",
+        tipo: "",
+        categoria: "",
+        valor_fipe: row.valor_fipe || 0,
+        status: row.status_veiculo || "ativo",
+        codigo_situacao: row.status_veiculo === "ativo" ? "1" : row.status_veiculo === "inadimplente" ? "2" : row.status_veiculo === "cancelado" ? "3" : "4",
+        data_contrato: row.data_contrato || "",
+        produtos,
+      });
+    }
+
+    const associados = Object.values(associadoMap);
+    const totalVeiculos = cached.length;
+
+    return {
+      success: true,
+      total_veiculos_buscados: totalVeiculos,
+      total_veiculos_com_rastreador: cached.filter(r => r.tem_rastreador).length,
+      total_associados: associados.length,
+      associados,
+    };
+  }
+
+  // Cache empty - fetch from API (will also populate cache)
   const data = await invokeHinova("listar_veiculos_rastreador");
   return {
     success: data.success ?? false,
@@ -77,7 +173,14 @@ export async function buscarProdutosVeiculo(codigoOuPlaca: string) {
   return invokeHinova("buscar_produtos_veiculo", { codigo_veiculo: codigoOuPlaca });
 }
 
-/** Sincronizar = mesma coisa que buscar, mas força refresh */
+/** Sincronizar = força refresh do cache via API */
 export async function sincronizarAssociados(): Promise<SyncResult> {
-  return buscarAssociadosComRastreador("1");
+  const data = await invokeHinova("listar_veiculos_rastreador");
+  return {
+    success: data.success ?? false,
+    total_veiculos_buscados: data.total_veiculos_buscados ?? 0,
+    total_veiculos_com_rastreador: data.total_veiculos_com_rastreador ?? 0,
+    total_associados: data.total_associados ?? 0,
+    associados: data.associados ?? [],
+  };
 }

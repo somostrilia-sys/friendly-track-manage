@@ -572,7 +572,37 @@ export const useDeleteDespacho = () => useSupabaseDelete("despachos_rastreadores
 export const useDeleteInstalacao = () => useSupabaseDelete("instalacoes", "instalacoes");
 
 // ============ RASTREADORES INSTALADOS ============
-export const useRastreadoresInstalados = (options?: { enabled?: boolean }) => useSupabaseQuery<any>("rastreadores_instalados", "rastreadores_instalados", options);
+export const useRastreadoresInstalados = (options?: { enabled?: boolean }) => {
+  return useQuery<any[]>({
+    queryKey: ["rastreadores_instalados"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rastreadores_instalados")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10000);
+      if (error) throw error;
+      return data || [];
+    },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
+  });
+};
 export const useInsertRastreadorInstalado = () => useSupabaseInsert<any>("rastreadores_instalados", "rastreadores_instalados");
 export const useUpdateRastreadorInstalado = () => useSupabaseUpdate<any>("rastreadores_instalados", "rastreadores_instalados");
 export const useDeleteRastreadorInstalado = () => useSupabaseDelete("rastreadores_instalados", "rastreadores_instalados");
+
+// ============ SGA VEICULOS CACHE ============
+export const useSGACache = (options?: { enabled?: boolean }) => {
+  return useQuery<any[]>({
+    queryKey: ["sga_veiculos_cache"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sga_veiculos_cache")
+        .select("*")
+        .limit(15000);
+      if (error) throw error;
+      return data || [];
+    },
+    ...(options?.enabled !== undefined && { enabled: options.enabled }),
+  });
+};

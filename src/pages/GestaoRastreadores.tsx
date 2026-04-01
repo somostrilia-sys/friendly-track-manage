@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,9 @@ import {
   useUpdateRastreadorInstalado,
   useDeleteRastreadorInstalado,
   useRealtimeSubscription,
+  useSGACache,
 } from "@/hooks/useSupabaseData";
-import { buscarAssociadosComRastreador, type AssociadoERP, type VeiculoERP } from "@/lib/hinova-erp";
+import { atualizarCacheSGA, type AssociadoERP, type VeiculoERP } from "@/lib/hinova-erp";
 import {
   Radio, Plus, Inbox, Search, Download, Upload, AlertTriangle,
   CheckCircle2, XCircle, Clock, FileWarning, BarChart3, Loader2,
@@ -128,6 +130,30 @@ function flattenERP(associados: AssociadoERP[]): ERPVeiculoFlat[] {
   return result;
 }
 
+function flattenSGACache(cacheRows: any[]): ERPVeiculoFlat[] {
+  return cacheRows.map((row) => {
+    let temRastreador = row.tem_rastreador ?? false;
+    if (!temRastreador) {
+      try {
+        const produtos = typeof row.produtos === "string" ? JSON.parse(row.produtos) : (row.produtos || []);
+        temRastreador = produtos.some(
+          (p: any) => (p.descricao || "").toLowerCase().includes("rastreador") || (p.descricao || "").toLowerCase().includes("rastreamento")
+        );
+      } catch { /* ignore */ }
+    }
+    return {
+      associado: row.nome_associado || "",
+      cpf: row.cpf || "",
+      telefone: row.telefone_celular ? `(${row.ddd_celular || ""}) ${row.telefone_celular}` : "",
+      placa: (row.placa || "").toUpperCase().trim(),
+      veiculo: `${row.marca || ""} ${row.modelo || ""}`.trim(),
+      cooperativa: row.cooperativa || "",
+      status_sga: (row.status_veiculo || "").toLowerCase(),
+      tem_produto_rastreador: temRastreador,
+    };
+  });
+}
+
 function normPlaca(p: string) {
   return (p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
@@ -147,7 +173,9 @@ function exportCSV(rows: Record<string, any>[], filename: string) {
 // ---- Component ----
 
 const GestaoRastreadores = () => {
+  const queryClient = useQueryClient();
   const { data: rastreadores = [], isLoading } = useRastreadoresInstalados();
+  const { data: sgaCache = [], isLoading: sgaCacheLoading } = useSGACache();
   const insertRastreador = useInsertRastreadorInstalado();
   const updateRastreador = useUpdateRastreadorInstalado();
 
@@ -161,10 +189,10 @@ const GestaoRastreadores = () => {
   const [detailItem, setDetailItem] = useState<RastreadorInstalado | null>(null);
   const [editForm, setEditForm] = useState<Partial<RastreadorInstalado>>({});
 
-  // ERP state
-  const [erpData, setErpData] = useState<ERPVeiculoFlat[]>([]);
-  const [erpLoading, setErpLoading] = useState(false);
-  const [erpLoaded, setErpLoaded] = useState(false);
+  // ERP state - derived from SGA cache
+  const erpData = useMemo(() => flattenSGACache(sgaCache), [sgaCache]);
+  const erpLoaded = sgaCache.length > 0;
+  const [erpRefreshing, setErpRefreshing] = useState(false);
 
   // Pagination
   const [limiteExibido, setLimiteExibido] = useState(PAGE_SIZE);
@@ -175,19 +203,18 @@ const GestaoRastreadores = () => {
   const typed = rastreadores as RastreadorInstalado[];
   const placasInstaladas = useMemo(() => new Set(typed.map((r) => normPlaca(r.placa))), [typed]);
 
-  // ---- ERP import ----
+  // ---- ERP import (refresh cache in background) ----
   const importarSGA = useCallback(async () => {
-    setErpLoading(true);
+    setErpRefreshing(true);
     try {
-      const result = await buscarAssociadosComRastreador();
-      const flat = flattenERP(result.associados);
-      setErpData(flat);
-      setErpLoaded(true);
-      toast.success(`Importados ${flat.length} registros do SGA (${result.total_associados} associados)`);
+      await atualizarCacheSGA();
+      // Invalidate the cache query to refetch from Supabase
+      await queryClient.invalidateQueries({ queryKey: ["sga_veiculos_cache"] });
+      toast.success("Cache SGA atualizado com sucesso!");
     } catch (e: any) {
-      toast.error("Erro ao importar do SGA: " + (e.message || "Erro desconhecido"));
+      toast.error("Erro ao atualizar cache SGA: " + (e.message || "Erro desconhecido"));
     } finally {
-      setErpLoading(false);
+      setErpRefreshing(false);
     }
   }, []);
 
@@ -362,9 +389,9 @@ const GestaoRastreadores = () => {
     <div className="space-y-6">
       <PageHeader title="Gestao de Rastreadores" subtitle="Controle de rastreadores instalados e cruzamento com SGA">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={importarSGA} disabled={erpLoading}>
-            {erpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-            {erpLoading ? "Importando..." : "Importar do SGA"}
+          <Button variant="outline" onClick={importarSGA} disabled={erpRefreshing}>
+            {erpRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {erpRefreshing ? "Atualizando..." : "Atualizar do SGA"}
           </Button>
         </div>
       </PageHeader>
@@ -500,11 +527,11 @@ const GestaoRastreadores = () => {
             <Card className="p-12 text-center card-shadow">
               <Download className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">
-                Importe os dados do SGA para visualizar veiculos pendentes de instalacao.
+                {sgaCacheLoading ? "Carregando cache SGA..." : "Atualize os dados do SGA para visualizar veiculos pendentes de instalacao."}
               </p>
-              <Button onClick={importarSGA} disabled={erpLoading}>
-                {erpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                Importar do SGA
+              <Button onClick={importarSGA} disabled={erpRefreshing}>
+                {erpRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Atualizar do SGA
               </Button>
             </Card>
           ) : (
@@ -737,11 +764,11 @@ const GestaoRastreadores = () => {
             <Card className="p-12 text-center card-shadow">
               <FileWarning className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">
-                Importe os dados do SGA para identificar rastreadores irregulares (sem produto vinculado).
+                {sgaCacheLoading ? "Carregando cache SGA..." : "Atualize os dados do SGA para identificar rastreadores irregulares (sem produto vinculado)."}
               </p>
-              <Button onClick={importarSGA} disabled={erpLoading}>
-                {erpLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                Importar do SGA
+              <Button onClick={importarSGA} disabled={erpRefreshing}>
+                {erpRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Atualizar do SGA
               </Button>
             </Card>
           ) : (

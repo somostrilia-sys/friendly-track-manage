@@ -1,4 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabaseAdmin = createClient(
+  "https://jlrslrljvpveaeheetlm.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpscnNscmxqdnB2ZWFlaGVldGxtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDAzNDM2NSwiZXhwIjoyMDg5NjEwMzY1fQ._iwyZf5vBiMeeh_9wg3SxCT5UEWHsXBIo42xogJpTeg"
+);
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -149,6 +155,47 @@ serve(async (req) => {
 
         const associados = Object.values(associadoMap);
 
+        // Save to sga_veiculos_cache in background
+        try {
+          const cacheRows: any[] = [];
+          for (const a of associados) {
+            for (const v of (a as any).veiculos) {
+              cacheRows.push({
+                placa: (v.placa || "").toUpperCase().trim(),
+                chassi: v.chassi || "",
+                nome_associado: (a as any).nome || "",
+                cpf: (a as any).cpf || "",
+                marca: v.marca || "",
+                modelo: v.modelo || "",
+                status_veiculo: v.status || "ativo",
+                cooperativa: (a as any).cooperativa || "",
+                tem_rastreador: true,
+                codigo_associado: (a as any).codigo_associado || "",
+                codigo_veiculo: v.codigo_veiculo || "",
+                ano: v.ano || "",
+                valor_fipe: v.valor_fipe || null,
+                data_contrato: v.data_contrato || null,
+                telefone: (a as any).telefone || "",
+                telefone_celular: (a as any).telefone_celular || "",
+                ddd_celular: (a as any).ddd_celular || "",
+                email: (a as any).email || "",
+                produtos: JSON.stringify(v.produtos || []),
+                updated_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          // Upsert in batches of 500
+          for (let i = 0; i < cacheRows.length; i += 500) {
+            const batch = cacheRows.slice(i, i + 500);
+            await supabaseAdmin
+              .from("sga_veiculos_cache")
+              .upsert(batch, { onConflict: "placa" });
+          }
+        } catch (cacheErr) {
+          console.error("Erro ao salvar cache SGA:", cacheErr);
+        }
+
         result = {
           error: false,
           data: {
@@ -185,6 +232,53 @@ serve(async (req) => {
       case "listar_regionais": {
         const data = await hinovaGet("/listar/regional", token);
         result = { error: false, data: { success: true, regionais: data } };
+        break;
+      }
+
+      case "salvar_cache": {
+        const veiculos = params?.veiculos;
+        if (!Array.isArray(veiculos) || veiculos.length === 0) {
+          return new Response(JSON.stringify({ error: "veiculos array obrigatorio" }),
+            { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+
+        const rows = veiculos.map((v: any) => ({
+          placa: (v.placa || "").toUpperCase().trim(),
+          chassi: v.chassi || "",
+          nome_associado: v.nome_associado || "",
+          cpf: v.cpf || "",
+          marca: v.marca || "",
+          modelo: v.modelo || "",
+          status_veiculo: v.status_veiculo || "ativo",
+          cooperativa: v.cooperativa || "",
+          tem_rastreador: v.tem_rastreador ?? true,
+          codigo_associado: v.codigo_associado || "",
+          codigo_veiculo: v.codigo_veiculo || "",
+          ano: v.ano || "",
+          valor_fipe: v.valor_fipe || null,
+          data_contrato: v.data_contrato || null,
+          telefone: v.telefone || "",
+          telefone_celular: v.telefone_celular || "",
+          ddd_celular: v.ddd_celular || "",
+          email: v.email || "",
+          produtos: typeof v.produtos === "string" ? v.produtos : JSON.stringify(v.produtos || []),
+          updated_at: new Date().toISOString(),
+        }));
+
+        let upserted = 0;
+        for (let i = 0; i < rows.length; i += 500) {
+          const batch = rows.slice(i, i + 500);
+          const { error: upsertErr } = await supabaseAdmin
+            .from("sga_veiculos_cache")
+            .upsert(batch, { onConflict: "placa" });
+          if (upsertErr) {
+            console.error("Cache upsert error:", upsertErr);
+          } else {
+            upserted += batch.length;
+          }
+        }
+
+        result = { error: false, data: { success: true, total_upserted: upserted } };
         break;
       }
 
