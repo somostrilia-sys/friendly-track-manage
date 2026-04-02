@@ -254,6 +254,8 @@ CREATE TABLE IF NOT EXISTS public.instalacoes (
   tecnico_nome text DEFAULT '',
   status text DEFAULT 'aguardando' CHECK (status IN ('aguardando', 'em_andamento', 'concluida', 'problema')),
   data text DEFAULT '',
+  valor numeric DEFAULT 0,
+  observacao text DEFAULT '',
   localizacao_confirmacao text DEFAULT '',
   created_at timestamptz DEFAULT now()
 );

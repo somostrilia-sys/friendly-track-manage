@@ -17,9 +17,26 @@ function useSupabaseQuery<T>(key: string, table: string, options?: { enabled?: b
   return useQuery<T[]>({
     queryKey: [key],
     queryFn: async () => {
-      const { data, error } = await supabase.from(table).select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as T[];
+      const all: T[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from(table)
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          all.push(...(data as T[]));
+          from += pageSize;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      return all;
     },
     ...(options?.enabled !== undefined && { enabled: options.enabled }),
   });

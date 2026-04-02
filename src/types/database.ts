@@ -230,6 +230,8 @@ export interface DbInstalacao {
   tecnico_nome: string;
   status: "aguardando" | "em_andamento" | "concluida" | "problema";
   data: string;
+  valor: number;
+  observacao: string;
   localizacao_confirmacao: string;
   checklist_concluido?: boolean;
 }

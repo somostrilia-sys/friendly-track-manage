@@ -35,7 +35,7 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   problema: { label: "Problema", variant: "destructive" },
 };
 
-const emptyForm = { placa: "", imei: "", chip: "", filial: "", tecnico_id: "" as string | null, data: "" };
+const emptyForm = { placa: "", imei: "", chip: "", filial: "", tecnico_id: "" as string | null, data: "", valor: "", observacao: "" };
 
 const AcompanhamentoInstalacoes = () => {
   const { data: instalacoes = [], isLoading } = useInstalacoes();
@@ -142,12 +142,13 @@ const AcompanhamentoInstalacoes = () => {
 
   // Create
   const salvar = async () => {
-    if (!form.placa || !form.imei) { toast.error("Preencha placa e IMEI"); return; }
+    if (!form.placa) { toast.error("Preencha a placa"); return; }
     const tec = tecnicos.find(t => t.id === form.tecnico_id);
     try {
       await insertInstalacao.mutateAsync({
         ...form, codigo: `INST-${Date.now()}`, tecnico_nome: tec?.nome || "", status: "aguardando",
         data: form.data || new Date().toISOString().split("T")[0], localizacao_confirmacao: "",
+        valor: form.valor ? parseFloat(form.valor) : 0, observacao: form.observacao,
       });
       setModalOpen(false);
       setForm(emptyForm);
@@ -165,13 +166,15 @@ const AcompanhamentoInstalacoes = () => {
       filial: inst.filial,
       tecnico_id: inst.tecnico_id,
       data: inst.data,
+      valor: inst.valor ? String(inst.valor) : "",
+      observacao: inst.observacao || "",
     });
     setEditDialog(true);
   };
 
   const salvarEdicao = async () => {
     if (!editId) return;
-    if (!editForm.placa || !editForm.imei) { toast.error("Preencha placa e IMEI"); return; }
+    if (!editForm.placa) { toast.error("Preencha a placa"); return; }
     const tec = tecnicos.find(t => t.id === editForm.tecnico_id);
     try {
       await updateInstalacao.mutateAsync({
@@ -183,6 +186,8 @@ const AcompanhamentoInstalacoes = () => {
         tecnico_id: editForm.tecnico_id,
         tecnico_nome: tec?.nome || "",
         data: editForm.data,
+        valor: editForm.valor ? parseFloat(editForm.valor) : 0,
+        observacao: editForm.observacao,
       });
       setEditDialog(false);
       setEditId(null);
@@ -197,6 +202,8 @@ const AcompanhamentoInstalacoes = () => {
           tecnico_id: editForm.tecnico_id,
           tecnico_nome: tec?.nome || "",
           data: editForm.data,
+          valor: editForm.valor ? parseFloat(editForm.valor) : 0,
+          observacao: editForm.observacao,
         } : null);
       }
       toast.success("Instalacao atualizada!");
@@ -279,7 +286,7 @@ const AcompanhamentoInstalacoes = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Placa</TableHead><TableHead>IMEI</TableHead><TableHead>Chip</TableHead><TableHead>Filial</TableHead>
-                <TableHead>Tecnico</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead>
+                <TableHead>Tecnico</TableHead><TableHead>Data</TableHead><TableHead>Valor</TableHead><TableHead>Observacao</TableHead><TableHead>Status</TableHead>
                 <TableHead>Acoes</TableHead>
               </TableRow>
             </TableHeader>
@@ -292,6 +299,8 @@ const AcompanhamentoInstalacoes = () => {
                   <TableCell>{i.filial}</TableCell>
                   <TableCell>{i.tecnico_nome}</TableCell>
                   <TableCell>{i.data}</TableCell>
+                  <TableCell>{i.valor ? `R$ ${Number(i.valor).toFixed(2)}` : "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[200px] truncate" title={i.observacao}>{i.observacao || "—"}</TableCell>
                   <TableCell><Badge variant={statusMap[i.status]?.variant}>{statusMap[i.status]?.label}</Badge></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -353,6 +362,14 @@ const AcompanhamentoInstalacoes = () => {
                     <p className="font-medium">{detalhe.data}</p>
                   </div>
                   <div>
+                    <span className="text-muted-foreground text-xs">Valor</span>
+                    <p className="font-medium">{detalhe.valor ? `R$ ${Number(detalhe.valor).toFixed(2)}` : "—"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground text-xs">Observacao</span>
+                    <p className="font-medium">{detalhe.observacao || "—"}</p>
+                  </div>
+                  <div>
                     <span className="text-muted-foreground text-xs">Status</span>
                     <p><Badge variant={statusMap[detalhe.status]?.variant}>{statusMap[detalhe.status]?.label}</Badge></p>
                   </div>
@@ -397,6 +414,8 @@ const AcompanhamentoInstalacoes = () => {
               </Select>
             </div>
             <div><Label>Data</Label><Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} /></div>
+            <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="0.00" /></div>
+            <div className="col-span-2"><Label>Observacao</Label><Textarea value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} placeholder="Tipo de servico, detalhes..." rows={2} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
@@ -421,6 +440,8 @@ const AcompanhamentoInstalacoes = () => {
               </Select>
             </div>
             <div><Label>Data</Label><Input type="date" value={editForm.data} onChange={e => setEditForm(f => ({ ...f, data: e.target.value }))} /></div>
+            <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={editForm.valor} onChange={e => setEditForm(f => ({ ...f, valor: e.target.value }))} placeholder="0.00" /></div>
+            <div className="col-span-2"><Label>Observacao</Label><Textarea value={editForm.observacao} onChange={e => setEditForm(f => ({ ...f, observacao: e.target.value }))} placeholder="Tipo de servico, detalhes..." rows={2} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>Cancelar</Button>
