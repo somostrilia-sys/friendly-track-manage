@@ -202,7 +202,7 @@ const Dashboard = () => {
       {/* Trackit KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Instalações esta semana" value={instalacoesSemana} icon={CalendarDays} accent="success" />
-        <StatCard label="Rastreadores ativos" value={rastreadoresAtivos.toLocaleString("pt-BR")} icon={Truck} accent="primary" />
+        <StatCard label="Rastreadores ativos" value={(rastreadoresAtivos || 0).toLocaleString("pt-BR")} icon={Truck} accent="primary" />
         <StatCard label="Manutenções pendentes" value={manutencoesPendentes} icon={AlertTriangle} accent="warning" />
         <StatCard label="Técnicos online" value={tecnicosOnline} icon={Users} accent="success" />
       </div>
@@ -211,7 +211,7 @@ const Dashboard = () => {
         <StatCard label="Clientes Ativos" value={clientesAtivos} icon={Users} accent="primary" />
         <StatCard
           label={`Faturamento ${labelMesAtual}`}
-          value={`R$ ${faturamentoMesAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+          value={`R$ ${(faturamentoMesAtual || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
           icon={DollarSign}
           accent="success"
           trend={faturamentoMesAnterior > 0 ? `${Math.abs(Math.round(faturamentoVariacao))}%` : undefined}
@@ -219,7 +219,7 @@ const Dashboard = () => {
         />
         <StatCard
           label="A Receber"
-          value={`R$ ${aReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+          value={`R$ ${(aReceber || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
           icon={Clock}
           accent="warning"
         />
@@ -241,7 +241,7 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 14%)" vertical={false} />
                 <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(220, 8%, 48%)" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(220, 8%, 48%)" }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} contentStyle={chartTooltipStyle} />
+                <Tooltip formatter={(v: number) => `R$ ${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} contentStyle={chartTooltipStyle} />
                 <Bar dataKey="valor" fill="hsl(174, 55%, 40%)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -264,7 +264,7 @@ const Dashboard = () => {
                   <Pie data={faturamentoPorCliente} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={68} strokeWidth={0}>
                     {faturamentoPorCliente.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} contentStyle={chartTooltipStyle} />
+                  <Tooltip formatter={(v: number) => `R$ ${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} contentStyle={chartTooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] mt-2 max-h-[60px] overflow-y-auto">

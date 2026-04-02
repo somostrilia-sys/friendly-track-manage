@@ -142,7 +142,7 @@ const ControleUnidades = () => {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Total Chips" value={totalChips} icon={Smartphone} accent="muted" />
-        <StatCard label="Valor Mensal Total" value={`R$ ${valorTotal.toLocaleString("pt-BR")}`} icon={DollarSign} accent="success" />
+        <StatCard label="Valor Mensal Total" value={`R$ ${(valorTotal || 0).toLocaleString("pt-BR")}`} icon={DollarSign} accent="success" />
       </div>
 
       <Card className="card-shadow">
@@ -166,7 +166,7 @@ const ControleUnidades = () => {
                 <TableCell>{u.total_chips}</TableCell>
                 <TableCell><Badge variant="outline">{enviosPorUnidade[u.unidade] || 0}</Badge></TableCell>
                 <TableCell><Badge variant={u.acesso_plataforma === "ativo" ? "default" : u.acesso_plataforma === "pendente" ? "secondary" : "destructive"} className="capitalize">{u.acesso_plataforma}</Badge></TableCell>
-                <TableCell className="font-medium">R$ {u.valor_mensal.toLocaleString("pt-BR")}</TableCell>
+                <TableCell className="font-medium">R$ {u.valor_mensal?.toLocaleString("pt-BR") ?? "0"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -179,7 +179,7 @@ const ControleUnidades = () => {
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{totalRastreadores}</p><p className="text-xs text-muted-foreground">Total Rastreadores</p></div>
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{ativos}</p><p className="text-xs text-muted-foreground">Ativos/Instalados</p></div>
           <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold">{estoque}</p><p className="text-xs text-muted-foreground">Em Estoque</p></div>
-          <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold text-primary">R$ {valorTotal.toLocaleString("pt-BR")}</p><p className="text-xs text-muted-foreground">Faturamento Mensal</p></div>
+          <div className="p-4 rounded-lg bg-muted/50 text-center"><p className="text-2xl font-bold text-primary">R$ {(valorTotal || 0).toLocaleString("pt-BR")}</p><p className="text-xs text-muted-foreground">Faturamento Mensal</p></div>
         </div>
       </Card>
 
@@ -214,7 +214,7 @@ const ControleUnidades = () => {
                   <div><span className="text-muted-foreground">Responsavel</span><p className="font-medium">{detalhe.responsavel}</p></div>
                   <div><span className="text-muted-foreground">Cidade/UF</span><p className="font-medium">{detalhe.cidade}/{detalhe.estado}</p></div>
                   <div><span className="text-muted-foreground">Acesso Plataforma</span><p><Badge variant={detalhe.acesso_plataforma === "ativo" ? "default" : "secondary"} className="capitalize">{detalhe.acesso_plataforma}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Valor Mensal</span><p className="font-semibold text-primary">R$ {detalhe.valor_mensal.toLocaleString("pt-BR")}</p></div>
+                  <div><span className="text-muted-foreground">Valor Mensal</span><p className="font-semibold text-primary">R$ {detalhe.valor_mensal?.toLocaleString("pt-BR") ?? "0"}</p></div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Rastreadores ({detalhe.rastreadores.length})</h4>
@@ -251,7 +251,7 @@ const ControleUnidades = () => {
                 </div>
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground font-medium">Regra: 1 rastreador = 1 chip</p>
-                  <p className="text-sm mt-1">{detalhe.total_rastreadores} rastreador(es) + {detalhe.total_chips} chip(s) = <strong>R$ {detalhe.valor_mensal.toLocaleString("pt-BR")}/mes</strong></p>
+                  <p className="text-sm mt-1">{detalhe.total_rastreadores} rastreador(es) + {detalhe.total_chips} chip(s) = <strong>R$ {detalhe.valor_mensal?.toLocaleString("pt-BR") ?? "0"}/mes</strong></p>
                 </div>
               </div>
             </>

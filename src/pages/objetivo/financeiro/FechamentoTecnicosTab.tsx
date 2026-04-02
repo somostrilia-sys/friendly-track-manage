@@ -130,9 +130,9 @@ const FechamentoTecnicosTab = () => {
         <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Fatura</Button>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Aberto" value={`R$ ${totalAberto.toLocaleString("pt-BR")}`} icon={Clock} accent="warning" />
-        <StatCard label="Total Pago" value={`R$ ${totalPago.toLocaleString("pt-BR")}`} icon={CheckCircle} accent="success" />
-        <StatCard label="Total Geral" value={`R$ ${(totalAberto + totalPago).toLocaleString("pt-BR")}`} icon={DollarSign} accent="primary" />
+        <StatCard label="Total Aberto" value={`R$ ${totalAberto?.toLocaleString("pt-BR") ?? "0"}`} icon={Clock} accent="warning" />
+        <StatCard label="Total Pago" value={`R$ ${totalPago?.toLocaleString("pt-BR") ?? "0"}`} icon={CheckCircle} accent="success" />
+        <StatCard label="Total Geral" value={`R$ ${(totalAberto + totalPago)?.toLocaleString("pt-BR") ?? "0"}`} icon={DollarSign} accent="primary" />
       </div>
       <Card className="card-shadow">
         <Table>
@@ -150,9 +150,9 @@ const FechamentoTecnicosTab = () => {
                 <TableCell className="font-medium">{f.tecnico_nome}</TableCell>
                 <TableCell>{f.periodo}</TableCell>
                 <TableCell>{f.total_servicos}</TableCell>
-                <TableCell>R$ {f.valor_total.toLocaleString("pt-BR")}</TableCell>
+                <TableCell>R$ {f.valor_total?.toLocaleString("pt-BR") ?? "0"}</TableCell>
                 <TableCell className="text-destructive">{f.descontos > 0 ? `-R$ ${f.descontos}` : "--"}</TableCell>
-                <TableCell className="font-semibold">R$ {f.valor_final.toLocaleString("pt-BR")}</TableCell>
+                <TableCell className="font-semibold">R$ {f.valor_final?.toLocaleString("pt-BR") ?? "0"}</TableCell>
                 <TableCell>{f.nota_fiscal ? <Badge variant="outline" className="text-xs">{f.nota_fiscal}</Badge> : "--"}</TableCell>
                 <TableCell><Badge variant={statusStyles[f.status]?.variant}>{statusStyles[f.status]?.label}</Badge></TableCell>
                 <TableCell>
@@ -200,7 +200,7 @@ const FechamentoTecnicosTab = () => {
               <div><Label>Descontos (R$)</Label><Input type="number" value={form.descontos} onChange={e => setForm(f => ({ ...f, descontos: +e.target.value }))} /></div>
             </div>
             {form.valor_total > 0 && (
-              <div className="p-3 rounded-lg bg-primary/10 text-sm font-semibold">Valor Final: R$ {(form.valor_total - form.descontos).toLocaleString("pt-BR")}</div>
+              <div className="p-3 rounded-lg bg-primary/10 text-sm font-semibold">Valor Final: R$ {(form.valor_total - form.descontos)?.toLocaleString("pt-BR") ?? "0"}</div>
             )}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button><Button onClick={salvar}>Criar Fatura</Button></DialogFooter>
@@ -216,7 +216,7 @@ const FechamentoTecnicosTab = () => {
                   <div><span className="text-muted-foreground">Tecnico</span><p className="font-medium">{detalhe.tecnico_nome}</p></div>
                   <div><span className="text-muted-foreground">Periodo</span><p>{detalhe.periodo}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusStyles[detalhe.status]?.variant}>{statusStyles[detalhe.status]?.label}</Badge></p></div>
-                  <div><span className="text-muted-foreground">Valor Final</span><p className="font-semibold text-lg">R$ {detalhe.valor_final.toLocaleString("pt-BR")}</p></div>
+                  <div><span className="text-muted-foreground">Valor Final</span><p className="font-semibold text-lg">R$ {detalhe.valor_final?.toLocaleString("pt-BR") ?? "0"}</p></div>
                   {detalhe.data_pagamento && <div><span className="text-muted-foreground">Data Pagamento</span><p>{detalhe.data_pagamento}</p></div>}
                   {detalhe.nota_fiscal && <div><span className="text-muted-foreground">Nota Fiscal</span><p>{detalhe.nota_fiscal}</p></div>}
                 </div>

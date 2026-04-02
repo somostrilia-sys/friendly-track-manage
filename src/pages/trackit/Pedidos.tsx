@@ -221,7 +221,7 @@ const Pedidos = () => {
                   <TableCell className="font-mono font-medium">{p.codigo}</TableCell>
                   <TableCell>{p.cliente_nome}</TableCell>
                   <TableCell className="text-sm max-w-[200px] truncate">{p.itens.map(i => `${i.quantidade}x ${i.nome}`).join(", ")}</TableCell>
-                  <TableCell>R$ {p.valor_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>R$ {p.valor_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</TableCell>
                   <TableCell className="text-sm">{p.parcelas.length}x</TableCell>
                   <TableCell>
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[p.status]?.class}`}>{statusMap[p.status]?.label}</span>
@@ -288,9 +288,9 @@ const Pedidos = () => {
 
             {valorTotal > 0 && (
               <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
-                <p>Valor Total: <strong>R$ {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></p>
+                <p>Valor Total: <strong>R$ {valorTotal?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</strong></p>
                 {taxaAdesao > 0 && <p className="text-xs text-muted-foreground">Inclui taxa de adesao: R$ {taxaAdesao.toFixed(2)}</p>}
-                <p>Parcela: <strong>{numParcelas}x de R$ {(valorTotal / numParcelas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></p>
+                <p>Parcela: <strong>{numParcelas}x de R$ {(valorTotal / numParcelas)?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</strong></p>
               </div>
             )}
           </div>
@@ -312,7 +312,7 @@ const Pedidos = () => {
                   <div><span className="text-muted-foreground">Cliente</span><p className="font-medium">{detalhe.cliente_nome}</p></div>
                   <div><span className="text-muted-foreground">Data</span><p>{detalhe.data_pedido}</p></div>
                   <div><span className="text-muted-foreground">Status</span><p><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMap[detalhe.status]?.class}`}>{statusMap[detalhe.status]?.label}</span></p></div>
-                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-lg">R$ {detalhe.valor_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+                  <div><span className="text-muted-foreground">Valor Total</span><p className="font-semibold text-lg">R$ {detalhe.valor_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</p></div>
                 </div>
 
                 {/* Alterar Status */}
@@ -339,7 +339,7 @@ const Pedidos = () => {
                   {detalhe.itens.map((item, i) => (
                     <div key={i} className="flex justify-between p-2 rounded bg-muted/50 mb-1">
                       <span>{item.quantidade}x {item.nome}</span>
-                      <span>R$ {(item.quantidade * item.valor_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                      <span>R$ {(item.quantidade * item.valor_unitario)?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</span>
                     </div>
                   ))}
                 </div>
@@ -350,7 +350,7 @@ const Pedidos = () => {
                       <div key={p.numero} className={`flex justify-between items-center p-2.5 rounded-lg border ${parcelaStyles[p.status]}`}>
                         <span>Parcela {p.numero} - {p.vencimento}</span>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">R$ {p.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                          <span className="font-medium">R$ {p.valor?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) ?? "0,00"}</span>
                           {p.status !== "pago" ? (
                             <Button size="sm" variant="outline" className="text-xs h-6" onClick={() => marcarParcelaPaga(p.id)}>Pagar</Button>
                           ) : (

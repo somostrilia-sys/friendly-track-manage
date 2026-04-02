@@ -270,7 +270,7 @@ const Tecnicos = () => {
                   <div><span className="text-muted-foreground">Pagamento</span><p className="font-medium capitalize">{detalhe.periodo_pagamento}</p></div>
                   <div><span className="text-muted-foreground">Chave PIX</span><p className="font-medium">{detalhe.chave_pix}</p></div>
                   <div><span className="text-muted-foreground">Banco</span><p className="font-medium">{detalhe.banco}</p></div>
-                  <div><span className="text-muted-foreground">Saldo Aberto</span><p className="font-semibold text-primary">R$ {detalhe.saldo_aberto.toLocaleString("pt-BR")}</p></div>
+                  <div><span className="text-muted-foreground">Saldo Aberto</span><p className="font-semibold text-primary">R$ {detalhe.saldo_aberto?.toLocaleString("pt-BR") ?? "0"}</p></div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-muted/50">
