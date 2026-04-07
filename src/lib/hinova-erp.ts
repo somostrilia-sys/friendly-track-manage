@@ -87,7 +87,7 @@ export async function atualizarCacheSGA(): Promise<number> {
       const data = await invokeHinova("buscar_pagina", {
         situacao: sit,
         inicio: "0",
-        quantidade: "1000",
+        quantidade: "200",
       });
 
       const salvos = data?.salvos || 0;
