@@ -102,6 +102,25 @@ export async function atualizarCacheSGA(): Promise<number> {
     await new Promise(r => setTimeout(r, 3000));
   }
 
+  // Após salvar veículos, enriquecer com cooperativa/filial do sincronismo
+  try {
+    const infoPages = await invokeHinova("sync_cooperativas", { pagina: "0" });
+    const totalPaginas = infoPages?.total_paginas || 0;
+    console.log(`Sincronismo cooperativas: ${totalPaginas} páginas`);
+
+    for (let pg = 1; pg <= totalPaginas; pg++) {
+      try {
+        const res = await invokeHinova("sync_cooperativas", { pagina: String(pg) });
+        console.log(`Cooperativas página ${pg}: ${res?.atualizados || 0} atualizados`);
+      } catch (e) {
+        console.error(`Erro cooperativas página ${pg}:`, e);
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  } catch (e) {
+    console.error("Erro ao buscar cooperativas:", e);
+  }
+
   return totalSaved;
 }
 

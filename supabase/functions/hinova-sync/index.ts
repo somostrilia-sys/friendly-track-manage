@@ -139,7 +139,54 @@ serve(async (req) => {
         break;
       }
 
-      // Mantém compatibilidade com chamadas antigas — agora retorna instrução pro frontend paginar
+      // Busca cooperativa/filial/regional do sincronismo e atualiza no cache
+      case "sync_cooperativas": {
+        const pagina = parseInt(params?.pagina || "1", 10);
+
+        // Primeiro buscar total de páginas se pagina=0
+        if (pagina === 0) {
+          const pData = await hinovaGet("/sincronismo-produto/listar/pagina/quantidade-paginas", HINOVA_TOKEN_SYNC);
+          result = {
+            error: false,
+            data: { success: true, total_paginas: pData?.quantidade_paginas || 0, total_registros: pData?.total_registros || "0" },
+          };
+          break;
+        }
+
+        const pageData = await hinovaGet(`/sincronismo-produto/listar/pagina/${pagina}`, HINOVA_TOKEN_SYNC);
+
+        if (!Array.isArray(pageData)) {
+          result = { error: false, data: { success: true, atualizados: 0, total_pagina: 0 } };
+          break;
+        }
+
+        // Atualizar cooperativa no cache para veículos que existem lá
+        let atualizados = 0;
+        for (const v of pageData) {
+          const codVeiculo = v.codigo_veiculo;
+          if (!codVeiculo) continue;
+
+          const { error: updErr } = await supabaseAdmin
+            .from("sga_veiculos_cache")
+            .update({
+              cooperativa: v.nome_cooperativa || "",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("codigo_veiculo", codVeiculo);
+
+          if (!updErr) atualizados++;
+        }
+
+        console.log(`Cooperativas pagina ${pagina}: ${pageData.length} registros, ${atualizados} atualizados no cache`);
+
+        result = {
+          error: false,
+          data: { success: true, atualizados, total_pagina: pageData.length },
+        };
+        break;
+      }
+
+      // Mantém compatibilidade com chamadas antigas
       case "listar_veiculos_rastreador": {
         const situacao = params?.situacao || "1";
         const token = await getTokenUsuario();
