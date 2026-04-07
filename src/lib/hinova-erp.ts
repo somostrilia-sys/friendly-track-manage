@@ -78,8 +78,8 @@ export async function buscarCacheSGA(): Promise<any[]> {
  * A edge function retorna os dados, e salvamos no cache pelo frontend.
  */
 export async function atualizarCacheSGA(): Promise<number> {
-  // Busca paginada: 1000 veículos por request, por situação, com delay entre requests
-  const PAGE_SIZE = 1000;
+  // Busca paginada: 500 veículos por request (~26s cada), por situação, com delay
+  const PAGE_SIZE = 500;
   let totalSaved = 0;
 
   for (const sit of ["1", "2", "3", "4"]) {

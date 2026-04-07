@@ -69,7 +69,7 @@ serve(async (req) => {
       case "buscar_pagina": {
         const situacao = params?.situacao || "1";
         const inicio = params?.inicio || 0;
-        const quantidade = Math.min(params?.quantidade || 1000, 1000);
+        const quantidade = Math.min(params?.quantidade || 500, 500);
 
         const token = await getTokenUsuario();
         const data = await hinovaGet(
@@ -129,7 +129,7 @@ serve(async (req) => {
         const situacao = params?.situacao || "1";
         const token = await getTokenUsuario();
         const data = await hinovaGet(
-          `/veiculo/listar-veiculo-produto/${situacao}/0/1000`,
+          `/veiculo/listar-veiculo-produto/${situacao}/0/500`,
           token
         );
 
