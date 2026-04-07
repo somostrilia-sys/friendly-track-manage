@@ -70,7 +70,6 @@ const Agendamentos = () => {
   useRealtimeSubscription("agendamentos", ["agendamentos"]);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [view, setView] = useState<"dia" | "semana" | "mes">("semana");
   const [form, setForm] = useState({
     tipo: "instalacao" as DbAgendamento["tipo"],
     placa: "",
@@ -95,13 +94,34 @@ const Agendamentos = () => {
   const [erpExpandedRows, setErpExpandedRows] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("agendamentos");
 
+  const [buscaPlaca, setBuscaPlaca] = useState("");
+
   // Derived data
+  const filtrarPorBusca = useCallback((list: DbAgendamento[]) => {
+    if (!buscaPlaca.trim()) return list;
+    const term = buscaPlaca.toLowerCase().trim();
+    return list.filter(a =>
+      a.placa.toLowerCase().includes(term) ||
+      a.associado.toLowerCase().includes(term) ||
+      (a.unidade || "").toLowerCase().includes(term) ||
+      (a.telefone || "").toLowerCase().includes(term)
+    );
+  }, [buscaPlaca]);
+
   const semRetornoList = useMemo(
     () => agendamentos.filter(a => a.status === "sem_retorno"),
     [agendamentos]
   );
   const agendadosList = useMemo(
-    () => agendamentos.filter(a => a.status !== "sem_retorno" && a.status !== "realizado"),
+    () => agendamentos.filter(a => a.status === "agendado"),
+    [agendamentos]
+  );
+  const tentativasList = useMemo(
+    () => agendamentos.filter(a => ["tentativa_1", "tentativa_2", "tentativa_3"].includes(a.status)),
+    [agendamentos]
+  );
+  const realizadosList = useMemo(
+    () => agendamentos.filter(a => a.status === "realizado"),
     [agendamentos]
   );
 
@@ -260,11 +280,7 @@ const Agendamentos = () => {
   };
 
 
-  const porData = agendadosList.reduce((acc, a) => {
-    (acc[a.data] = acc[a.data] || []).push(a);
-    return acc;
-  }, {} as Record<string, DbAgendamento[]>);
-  const datasOrdenadas = Object.keys(porData).sort();
+  // porData not needed anymore - using table view
 
   if (isLoading) return (
     <div className="space-y-8">
@@ -276,108 +292,207 @@ const Agendamentos = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Agendamentos" subtitle="Calendario de instalacoes, manutencoes e retiradas" />
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setBuscaPlaca(""); }} className="w-full">
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="agendamentos" className="gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
+            Agendados
+            <Badge variant="outline" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]">{agendadosList.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="tentativas" className="gap-1.5">
+            <Phone className="w-3.5 h-3.5" />
+            Tentativas
+            {tentativasList.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px] bg-orange-100 text-orange-700">{tentativasList.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="sem_retorno" className="gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5" />
             Sem Retorno
             {semRetornoList.length > 0 && (
-              <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]">
-                {semRetornoList.length}
-              </Badge>
+              <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]">{semRetornoList.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="erp">Sincronismo com Sistema ERP</TabsTrigger>
+          <TabsTrigger value="realizados" className="gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Realizados
+            <Badge variant="outline" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px] border-green-500 text-green-700">{realizadosList.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="erp">Sincronismo ERP</TabsTrigger>
         </TabsList>
 
-        {/* ===================== ABA AGENDAMENTOS ===================== */}
+        {/* ===================== ABA AGENDADOS ===================== */}
         <TabsContent value="agendamentos" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {(["dia", "semana", "mes"] as const).map(v => (
-                <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${view === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>{v}</button>
-              ))}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por placa, associado, unidade..." className="pl-9" value={buscaPlaca} onChange={e => setBuscaPlaca(e.target.value)} />
             </div>
-            <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo</Button>
+            <div className="flex gap-2 items-center">
+              <Badge variant="outline">{filtrarPorBusca(agendadosList).length} registros</Badge>
+              <Button onClick={() => setModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Novo</Button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard label="Agendados" value={agendamentos.filter(a => a.status === "agendado").length} icon={Clock} accent="warning" />
-            <StatCard label="Em Tentativa" value={agendamentos.filter(a => ["tentativa_1", "tentativa_2", "tentativa_3"].includes(a.status)).length} icon={Phone} accent="warning" />
-            <StatCard label="Realizados" value={agendamentos.filter(a => a.status === "realizado").length} icon={CheckCircle} accent="success" />
-            <StatCard label="Sem Retorno" value={semRetornoList.length} icon={XCircle} accent="destructive" />
-            <StatCard label="Total" value={agendamentos.length} icon={Calendar} accent="primary" />
-          </div>
-          <div className="space-y-4">
-            {datasOrdenadas.length === 0 && (
-              <Card className="p-0">
-                <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
-                  <div className="rounded-full bg-muted/60 p-4">
-                    <Inbox className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm font-medium text-muted-foreground">Nenhum agendamento encontrado</p>
-                  <p className="text-xs text-muted-foreground/60">Crie um novo agendamento para comecar</p>
-                </div>
-              </Card>
-            )}
-            {datasOrdenadas.map(data => (
-              <Card key={data} className="p-4 card-shadow">
-                <h3 className="font-semibold mb-3 text-sm text-muted-foreground">{data}</h3>
-                <div className="space-y-2">
-                  {porData[data].map(a => (
-                    <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-                      <div className={`w-3 h-3 rounded-full ${statusColors[a.status] || "bg-gray-400"}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono font-medium text-sm">{a.placa}</span>
-                          <Badge variant="secondary" className="text-xs">{tipoLabels[a.tipo]}</Badge>
-                          <span className="text-xs text-muted-foreground">{a.horario}</span>
-                          {tentativaBadge(a.tentativas || 0)}
-                          {a.rastreador_serial && (
-                            <Badge variant={envioVariants[a.status_envio_rastreador]} className="text-xs">
-                              <Truck className="w-3 h-3 mr-1" /> {a.rastreador_serial} - {envioLabels[a.status_envio_rastreador]}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{a.associado} - {a.endereco}, {a.cidade}</p>
-                        {a.endereco_instalacao && <p className="text-xs text-primary/70">Local: {a.endereco_instalacao}</p>}
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>Tecnico: {a.tecnico_nome}</span>
-                          {a.telefone && <span>Tel: {a.telefone}</span>}
-                          {a.unidade && <span>Unidade: {a.unidade}</span>}
-                          {a.data_ultima_tentativa && (
-                            <span className="text-orange-600">Ultima tentativa: {formatarDiasSemRetorno(a.data_ultima_tentativa)}</span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant={a.status === "realizado" ? "default" : a.status === "sem_retorno" ? "destructive" : "outline"}>
-                        {statusLabels[a.status] || a.status}
-                      </Badge>
-                      {a.status !== "realizado" && a.status !== "sem_retorno" && (
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => registrarTentativa(a)} title="Registrar tentativa de contato">
+          <Card className="card-shadow">
+            {filtrarPorBusca(agendadosList).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
+                <Inbox className="h-7 w-7 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Nenhum agendamento encontrado</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Associado</TableHead>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrarPorBusca(agendadosList).map(a => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.associado}</TableCell>
+                      <TableCell className="font-mono">{a.placa || "-"}</TableCell>
+                      <TableCell className="font-mono text-sm">{a.telefone || "-"}</TableCell>
+                      <TableCell>{a.unidade || "-"}</TableCell>
+                      <TableCell className="text-sm">{a.data || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => registrarTentativa(a)} title="Registrar tentativa">
                             <Phone className="w-3.5 h-3.5 mr-1" /> Tentativa
                           </Button>
                           <Button size="sm" onClick={() => concluir(a.id)}>Concluir</Button>
                         </div>
-                      )}
-                    </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              </Card>
-            ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* ===================== ABA TENTATIVAS ===================== */}
+        <TabsContent value="tentativas" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por placa, associado, unidade..." className="pl-9" value={buscaPlaca} onChange={e => setBuscaPlaca(e.target.value)} />
+            </div>
+            <Badge variant="outline">{filtrarPorBusca(tentativasList).length} registros</Badge>
           </div>
+          <Card className="card-shadow">
+            {filtrarPorBusca(tentativasList).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
+                <CheckCircle className="h-7 w-7 text-green-600" />
+                <p className="text-sm text-muted-foreground">Nenhum associado com problemas</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Associado</TableHead>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tentativas</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrarPorBusca(tentativasList).map(a => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.associado}</TableCell>
+                      <TableCell className="font-mono">{a.placa || "-"}</TableCell>
+                      <TableCell className="font-mono text-sm">{a.telefone || "-"}</TableCell>
+                      <TableCell>{a.unidade || "-"}</TableCell>
+                      <TableCell className="text-sm">{a.data || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="border-orange-500 text-orange-700 bg-orange-50">
+                          {a.tentativas || 0}/3
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => registrarTentativa(a)}>
+                            <Phone className="w-3.5 h-3.5 mr-1" /> +Tentativa
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => marcarComoAgendado(a)}>
+                            <Calendar className="w-3.5 h-3.5 mr-1" /> Agendar
+                          </Button>
+                          <Button size="sm" onClick={() => concluir(a.id)}>Concluir</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* ===================== ABA REALIZADOS ===================== */}
+        <TabsContent value="realizados" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por placa, associado, unidade..." className="pl-9" value={buscaPlaca} onChange={e => setBuscaPlaca(e.target.value)} />
+            </div>
+            <Badge variant="outline" className="border-green-500 text-green-700">{filtrarPorBusca(realizadosList).length} de {realizadosList.length} registros</Badge>
+          </div>
+          <Card className="card-shadow">
+            {filtrarPorBusca(realizadosList).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
+                <Inbox className="h-7 w-7 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">{buscaPlaca ? "Nenhum resultado encontrado" : "Nenhuma instalacao realizada"}</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Associado</TableHead>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Data</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrarPorBusca(realizadosList).slice(0, 100).map(a => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.associado}</TableCell>
+                      <TableCell className="font-mono">{a.placa || "-"}</TableCell>
+                      <TableCell className="font-mono text-sm">{a.telefone || "-"}</TableCell>
+                      <TableCell>{a.unidade || "-"}</TableCell>
+                      <TableCell className="text-sm">{a.data || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {filtrarPorBusca(realizadosList).length > 100 && !buscaPlaca && (
+              <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                Mostrando 100 de {realizadosList.length} registros. Use a busca para filtrar.
+              </div>
+            )}
+          </Card>
         </TabsContent>
 
         {/* ===================== ABA SEM RETORNO ===================== */}
         <TabsContent value="sem_retorno" className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <StatCard label="Sem Retorno" value={semRetornoList.length} icon={XCircle} accent="destructive" />
-            <StatCard label="Gestor Notificado" value={semRetornoList.filter(a => a.gestor_notificado).length} icon={Bell} accent="success" />
-            <StatCard label="Aguardando Notificacao" value={semRetornoList.filter(a => !a.gestor_notificado).length} icon={AlertTriangle} accent="warning" />
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por placa, associado, unidade..." className="pl-9" value={buscaPlaca} onChange={e => setBuscaPlaca(e.target.value)} />
+            </div>
+            <Badge variant="destructive">{filtrarPorBusca(semRetornoList).length} registros</Badge>
           </div>
 
-          {semRetornoList.length === 0 ? (
+          {filtrarPorBusca(semRetornoList).length === 0 ? (
             <Card className="p-0">
               <div className="flex flex-col items-center justify-center py-14 space-y-3 text-center">
                 <div className="rounded-full bg-green-100 p-4">
@@ -404,7 +519,7 @@ const Agendamentos = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {semRetornoList.map(a => {
+                  {filtrarPorBusca(semRetornoList).map(a => {
                     const dias = diasDesde(a.data_ultima_tentativa);
                     return (
                       <TableRow key={a.id}>
