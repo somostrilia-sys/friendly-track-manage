@@ -78,59 +78,71 @@ export async function buscarCacheSGA(): Promise<any[]> {
  * A edge function retorna os dados, e salvamos no cache pelo frontend.
  */
 export async function atualizarCacheSGA(): Promise<number> {
-  // Fetch each situacao separately to avoid edge function timeout
-  let allAssociados: any[] = [];
+  // Busca paginada: 1000 veículos por request, por situação, com delay entre requests
+  const PAGE_SIZE = 1000;
+  let totalSaved = 0;
+
   for (const sit of ["1", "2", "3", "4"]) {
-    try {
-      const data = await invokeHinova("listar_veiculos_rastreador", { situacao: sit });
-      if (data?.associados) {
-        allAssociados = allAssociados.concat(data.associados);
+    let inicio = 0;
+    let temMais = true;
+
+    while (temMais) {
+      try {
+        const data = await invokeHinova("buscar_pagina", {
+          situacao: sit,
+          inicio: String(inicio),
+          quantidade: String(PAGE_SIZE),
+        });
+
+        const veiculos = data?.veiculos || [];
+        temMais = data?.tem_mais ?? false;
+
+        if (veiculos.length === 0) break;
+
+        // Converter pra formato do cache e salvar direto
+        const rows = veiculos.map((v: any) => ({
+          codigo_veiculo: v.codigo_veiculo || `${v.codigo_associado}_${v.placa}`,
+          placa: (v.placa || "").toUpperCase().trim() || null,
+          chassi: v.chassi || null,
+          nome_associado: v.nome_associado || "",
+          cpf: v.cpf || "",
+          codigo_associado: v.codigo_associado || "",
+          marca: v.marca || "",
+          modelo: v.modelo || "",
+          ano: v.ano || "",
+          valor_fipe: v.valor_fipe || null,
+          status_veiculo: v.status_veiculo || "ativo",
+          cooperativa: v.cooperativa || "",
+          tem_rastreador: true,
+          telefone: v.telefone || "",
+          telefone_celular: v.telefone_celular || "",
+          ddd_celular: v.ddd_celular || "",
+          email: v.email || "",
+          produtos: JSON.stringify(v.produtos || []),
+          updated_at: new Date().toISOString(),
+        }));
+
+        // Salvar no cache em lotes de 500
+        for (let i = 0; i < rows.length; i += 500) {
+          const batch = rows.slice(i, i + 500);
+          const { error } = await supabase.from("sga_veiculos_cache").upsert(batch, { onConflict: "codigo_veiculo" });
+          if (!error) totalSaved += batch.length;
+          else console.error("Cache save error:", error);
+        }
+
+        console.log(`Situacao ${sit}, inicio ${inicio}: ${veiculos.length} com rastreador (total salvo: ${totalSaved})`);
+        inicio += PAGE_SIZE;
+
+        // Delay entre requests pra evitar rate limit
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (e) {
+        console.error(`Erro situacao ${sit} inicio ${inicio}:`, e);
+        temMais = false;
       }
-    } catch (e) {
-      console.error(`Erro situacao ${sit}:`, e);
-    }
-  }
-  if (allAssociados.length === 0) return 0;
-  const data = { associados: allAssociados };
-
-  // Flatten associados into cache rows
-  const rows: any[] = [];
-  for (const a of data.associados) {
-    for (const v of a.veiculos || []) {
-      rows.push({
-        codigo_veiculo: v.codigo_veiculo || `${a.codigo_associado}_${v.placa}`,
-        placa: (v.placa || "").toUpperCase().trim() || null,
-        chassi: v.chassi || null,
-        nome_associado: a.nome || "",
-        cpf: a.cpf || "",
-        codigo_associado: a.codigo_associado || "",
-        marca: v.marca || "",
-        modelo: v.modelo || "",
-        ano: v.ano || "",
-        valor_fipe: v.valor_fipe || null,
-        status_veiculo: v.status || "ativo",
-        cooperativa: v.cooperativa || a.cooperativa || "",
-        tem_rastreador: true,
-        telefone: a.telefone || "",
-        telefone_celular: a.telefone_celular || "",
-        ddd_celular: a.ddd_celular || "",
-        email: a.email || "",
-        produtos: JSON.stringify(v.produtos || []),
-        updated_at: new Date().toISOString(),
-      });
     }
   }
 
-  // Save in batches of 500 directly via Supabase client
-  let saved = 0;
-  for (let i = 0; i < rows.length; i += 500) {
-    const batch = rows.slice(i, i + 500);
-    const { error } = await supabase.from("sga_veiculos_cache").upsert(batch, { onConflict: "codigo_veiculo" });
-    if (!error) saved += batch.length;
-    else console.error("Cache save error:", error);
-  }
-
-  return saved;
+  return totalSaved;
 }
 
 /**

@@ -12,11 +12,11 @@ const cors = {
 };
 
 const HINOVA_BASE_URL = "https://api.hinova.com.br/api/sga/v2";
-const HINOVA_TOKEN_FORNECEDOR = "c63a188780b2c3c950aa431950130cca20d4fdbfc71d51f320830f8d4678b955953ee6dd0f95bfc1c44855e9dc684926c851a9e845d957d1e3b994da76a6a5256d4db0c0f82f5198af4c62b20fd5dd50a69e459be55c908e49c794450036ed2a";
+const HINOVA_TOKEN_SGA = "c63a188780b2c3c950aa431950130cca20d4fdbfc71d51f320830f8d4678b955953ee6dd0f95bfc1c44855e9dc684926c851a9e845d957d1e3b994da76a6a5256d4db0c0f82f5198af4c62b20fd5dd50a69e459be55c908e49c794450036ed2a";
+const HINOVA_TOKEN_SYNC = "0991beea9f5da288bb3d6bdf73467fa442960228167f8097e43f5b227ba15cfb02575f04b2a40563e1570ed7f71009a40aa631d494b87cf2999f8296ed5daaafedb67b58bc6d8f805f91bb510b57231b012a704bc6069d30a328834d4629758ac5200d0f266825acde0dc394e7b35411";
 const HINOVA_USUARIO = "Alex";
 const HINOVA_SENHA = "Walk2026";
 
-// Rastreador product codes (classificacao 24)
 const RASTREADOR_KEYWORDS = ["rastreador", "rastreamento", "tracker", "bloqueio rastreador", "ratreador"];
 
 function temRastreador(produtos: any[]): boolean {
@@ -29,10 +29,7 @@ function temRastreador(produtos: any[]): boolean {
 async function getTokenUsuario(): Promise<string> {
   const res = await fetch(`${HINOVA_BASE_URL}/usuario/autenticar`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${HINOVA_TOKEN_FORNECEDOR}`,
-    },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${HINOVA_TOKEN_SGA}` },
     body: JSON.stringify({ usuario: HINOVA_USUARIO, senha: HINOVA_SENHA }),
   });
   const data = await res.json();
@@ -45,10 +42,7 @@ async function getTokenUsuario(): Promise<string> {
 async function hinovaGet(endpoint: string, token: string) {
   const res = await fetch(`${HINOVA_BASE_URL}${endpoint}`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
   });
   return res.json();
 }
@@ -56,10 +50,7 @@ async function hinovaGet(endpoint: string, token: string) {
 async function hinovaPost(endpoint: string, token: string, body: any) {
   const res = await fetch(`${HINOVA_BASE_URL}${endpoint}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify(body),
   });
   return res.json();
@@ -69,108 +60,164 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
-    const { action, params } = await req.json().catch(() => ({ action: "listar_veiculos_rastreador", params: {} }));
-    const token = await getTokenUsuario();
+    const { action, params } = await req.json().catch(() => ({ action: "buscar_pagina", params: {} }));
 
     let result: any;
 
     switch (action) {
-      case "listar_veiculos_rastreador": {
-        // Fetch ALL vehicles across ALL situacoes (1=ativo, 2=inadimplente, 3=cancelado, 4=inativo)
-        const situacoes = params?.situacao ? [params.situacao] : ["1", "2", "3", "4"];
-        const pageSize = 15000; // API supports large pages
-        let allVehicles: any[] = [];
+      // Busca UMA página de veículos de UMA situação — leve e rápido
+      case "buscar_pagina": {
+        const situacao = params?.situacao || "1";
+        const inicio = params?.inicio || 0;
+        const quantidade = Math.min(params?.quantidade || 1000, 1000);
+
+        const token = await getTokenUsuario();
+        const data = await hinovaGet(
+          `/veiculo/listar-veiculo-produto/${situacao}/${inicio}/${quantidade}`,
+          token
+        );
 
         const sitLabels: Record<string, string> = { "1": "ativo", "2": "inadimplente", "3": "cancelado", "4": "inativo" };
 
-        for (const sit of situacoes) {
-          const freshToken = await getTokenUsuario();
-          const data = await hinovaGet(
-            `/veiculo/listar-veiculo-produto/${sit}/0/${pageSize}`,
-            freshToken
-          );
-
-          if (Array.isArray(data)) {
-            // Tag each vehicle with the situacao from the request
-            for (const v of data) {
-              v._situacao_veiculo = sit;
-              v._status_label = sitLabels[sit] || `status_${sit}`;
-            }
-            allVehicles = allVehicles.concat(data);
-          }
+        if (!Array.isArray(data)) {
+          result = { error: false, data: { success: true, veiculos: [], total: 0, tem_mais: false } };
+          break;
         }
 
-        // Filter: only vehicles that have RASTREADOR in produtos_vinculados
-        const veiculosComRastreador = allVehicles.filter((v: any) =>
-          temRastreador(v.produtos_vinculados || [])
-        );
-
-        // Group by associado (codigo_associado)
-        const associadoMap: Record<string, any> = {};
-        for (const v of veiculosComRastreador) {
-          const codAssoc = v.codigo_associado;
-          if (!associadoMap[codAssoc]) {
-            associadoMap[codAssoc] = {
-              codigo_associado: codAssoc,
-              nome: v.nome,
-              cpf: v.cpf,
-              rg: v.rg,
-              telefone: v.telefone,
-              ddd: v.ddd,
-              telefone_celular: v.telefone_celular,
-              ddd_celular: v.ddd_celular,
-              email: v.email,
-              cidade: v.cidade,
-              estado: v.estado,
-              cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
-              status_associado: v.descricao_situacao_associado || v.codigo_situacao_associado || "",
-              veiculos: [],
-            };
-          }
-
-          // Use status from the request situacao tag
-          const statusVeiculo = v._status_label || "ativo";
-          const codSit = v._situacao_veiculo || "1";
-
-          associadoMap[codAssoc].veiculos.push({
+        // Filtrar apenas com rastreador e formatar
+        const veiculos = data
+          .filter((v: any) => temRastreador(v.produtos_vinculados || []))
+          .map((v: any) => ({
             codigo_veiculo: v.codigo_veiculo,
             placa: v.placa,
             chassi: v.chassi,
+            nome_associado: v.nome,
+            cpf: v.cpf,
+            codigo_associado: v.codigo_associado,
             marca: v.descricao_marca,
             modelo: v.descricao_modelo,
             ano: `${v.ano_fabricacao}/${v.ano_modelo}`,
-            tipo: v.descricao_tipo,
-            categoria: v.descricao_categoria,
             valor_fipe: v.valor_fipe,
-            status: statusVeiculo,
-            codigo_situacao: codSit,
-            data_contrato: v.data_contrato_veiculo,
+            status_veiculo: sitLabels[situacao] || "ativo",
+            cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
+            telefone: v.telefone || "",
+            telefone_celular: v.telefone_celular || "",
+            ddd_celular: v.ddd_celular || "",
+            email: v.email || "",
             produtos: (v.produtos_vinculados || []).map((p: any) => ({
               codigo: p.codigo_produto,
               descricao: p.descricao_produto,
               valor: p.valor_produto,
             })),
+          }));
+
+        result = {
+          error: false,
+          data: {
+            success: true,
+            veiculos,
+            total_pagina: data.length,
+            com_rastreador: veiculos.length,
+            tem_mais: data.length >= quantidade,
+          },
+        };
+        break;
+      }
+
+      // Mantém compatibilidade com chamadas antigas — agora retorna instrução pro frontend paginar
+      case "listar_veiculos_rastreador": {
+        const situacao = params?.situacao || "1";
+        const token = await getTokenUsuario();
+        const data = await hinovaGet(
+          `/veiculo/listar-veiculo-produto/${situacao}/0/1000`,
+          token
+        );
+
+        const sitLabels: Record<string, string> = { "1": "ativo", "2": "inadimplente", "3": "cancelado", "4": "inativo" };
+
+        if (!Array.isArray(data)) {
+          result = {
+            error: false,
+            data: { success: true, total_veiculos_buscados: 0, total_veiculos_com_rastreador: 0, total_associados: 0, associados: [] },
+          };
+          break;
+        }
+
+        const veiculosComRastreador = data.filter((v: any) => temRastreador(v.produtos_vinculados || []));
+
+        const associadoMap: Record<string, any> = {};
+        for (const v of veiculosComRastreador) {
+          const codAssoc = v.codigo_associado;
+          if (!associadoMap[codAssoc]) {
+            associadoMap[codAssoc] = {
+              codigo_associado: codAssoc, nome: v.nome, cpf: v.cpf, rg: v.rg,
+              telefone: v.telefone, ddd: v.ddd, telefone_celular: v.telefone_celular,
+              ddd_celular: v.ddd_celular, email: v.email, cidade: v.cidade, estado: v.estado,
+              cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
+              status_associado: v.descricao_situacao_associado || "",
+              veiculos: [],
+            };
+          }
+          associadoMap[codAssoc].veiculos.push({
+            codigo_veiculo: v.codigo_veiculo, placa: v.placa, chassi: v.chassi,
+            marca: v.descricao_marca, modelo: v.descricao_modelo,
+            ano: `${v.ano_fabricacao}/${v.ano_modelo}`, tipo: v.descricao_tipo,
+            categoria: v.descricao_categoria, valor_fipe: v.valor_fipe,
+            status: sitLabels[situacao] || "ativo", codigo_situacao: situacao,
+            data_contrato: v.data_contrato_veiculo,
+            produtos: (v.produtos_vinculados || []).map((p: any) => ({
+              codigo: p.codigo_produto, descricao: p.descricao_produto, valor: p.valor_produto,
+            })),
           });
         }
 
         const associados = Object.values(associadoMap);
-
-        // Cache is saved by the frontend after receiving data (edge function has 60s timeout)
-
         result = {
           error: false,
           data: {
             success: true,
             total_veiculos_com_rastreador: veiculosComRastreador.length,
             total_associados: associados.length,
-            total_veiculos_buscados: allVehicles.length,
+            total_veiculos_buscados: data.length,
+            tem_mais: data.length >= 1000,
             associados,
           },
         };
         break;
       }
 
+      case "buscar_por_placa": {
+        if (!params?.placa) {
+          return new Response(JSON.stringify({ error: "placa obrigatoria" }),
+            { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        const data = await hinovaGet(`/sincronismo-produto-fornecedor/buscar/placa/${params.placa}`, HINOVA_TOKEN_SYNC);
+        result = { error: false, data: { success: true, veiculo: data } };
+        break;
+      }
+
+      case "buscar_por_chassi": {
+        if (!params?.chassi) {
+          return new Response(JSON.stringify({ error: "chassi obrigatorio" }),
+            { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        const data = await hinovaGet(`/sincronismo-produto-fornecedor/buscar/chassi/${params.chassi}`, HINOVA_TOKEN_SYNC);
+        result = { error: false, data: { success: true, veiculo: data } };
+        break;
+      }
+
+      case "buscar_por_cpf": {
+        if (!params?.cpf) {
+          return new Response(JSON.stringify({ error: "cpf obrigatorio" }),
+            { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        const data = await hinovaGet(`/sincronismo-produto-fornecedor/buscar/cpf/${params.cpf}`, HINOVA_TOKEN_SYNC);
+        result = { error: false, data: { success: true, veiculos: data } };
+        break;
+      }
+
       case "buscar_produtos_veiculo": {
+        const token = await getTokenUsuario();
         if (!params?.codigo_veiculo && !params?.placa) {
           return new Response(JSON.stringify({ error: "codigo_veiculo ou placa obrigatorio" }),
             { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
@@ -182,6 +229,7 @@ serve(async (req) => {
       }
 
       case "listar_associados": {
+        const token = await getTokenUsuario();
         const body: Record<string, unknown> = { pagina: 1, registros: 5000, codigo_situacao: params?.codigo_situacao || "1" };
         if (params?.pagina) body.pagina = params.pagina;
         if (params?.registros) body.registros = params.registros;
@@ -191,6 +239,7 @@ serve(async (req) => {
       }
 
       case "listar_regionais": {
+        const token = await getTokenUsuario();
         const data = await hinovaGet("/listar/regional", token);
         result = { error: false, data: { success: true, regionais: data } };
         break;
@@ -248,9 +297,9 @@ serve(async (req) => {
           { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    const responseData = result.error ? result.data : result.data;
+    const responseData = result.data;
     return new Response(JSON.stringify(responseData), {
-      status: result.error ? 500 : 200,
+      status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error) {
