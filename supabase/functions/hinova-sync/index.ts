@@ -69,7 +69,7 @@ serve(async (req) => {
       case "buscar_pagina": {
         const situacao = params?.situacao || "1";
         const inicio = parseInt(params?.inicio || "0", 10);
-        const quantidade = Math.min(parseInt(params?.quantidade || "500", 10), 500);
+        const quantidade = Math.min(parseInt(params?.quantidade || "200", 10), 500);
 
         const token = await getTokenUsuario();
         const data = await hinovaGet(

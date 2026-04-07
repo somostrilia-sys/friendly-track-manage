@@ -80,7 +80,7 @@ export async function buscarCacheSGA(): Promise<any[]> {
 export async function atualizarCacheSGA(): Promise<number> {
   // Edge function busca da Hinova, filtra rastreador e salva no cache direto
   // Frontend só orquestra a paginação
-  const PAGE_SIZE = 500;
+  const PAGE_SIZE = 200;
   let totalSaved = 0;
 
   for (const sit of ["1", "2", "3", "4"]) {
