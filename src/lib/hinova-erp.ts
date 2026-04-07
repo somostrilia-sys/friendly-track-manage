@@ -79,39 +79,27 @@ export async function buscarCacheSGA(): Promise<any[]> {
  */
 export async function atualizarCacheSGA(): Promise<number> {
   // Edge function busca da Hinova, filtra rastreador e salva no cache direto
-  // Frontend só orquestra a paginação
-  const PAGE_SIZE = 200;
+  // Uma chamada por situação — sem paginação (API Hinova não suporta offset)
   let totalSaved = 0;
 
   for (const sit of ["1", "2", "3", "4"]) {
-    let inicio = 0;
-    let temMais = true;
+    try {
+      const data = await invokeHinova("buscar_pagina", {
+        situacao: sit,
+        inicio: "0",
+        quantidade: "1000",
+      });
 
-    while (temMais) {
-      try {
-        const data = await invokeHinova("buscar_pagina", {
-          situacao: sit,
-          inicio: String(inicio),
-          quantidade: String(PAGE_SIZE),
-        });
-
-        const salvos = data?.salvos || 0;
-        temMais = data?.tem_mais ?? false;
-        totalSaved += salvos;
-
-        console.log(`Situacao ${sit}, inicio ${inicio}: ${data?.com_rastreador || 0} rastreador, ${salvos} salvos (total: ${totalSaved})`);
-
-        if ((data?.total_pagina || 0) === 0) break;
-
-        inicio += PAGE_SIZE;
-
-        // Delay entre requests pra evitar rate limit
-        await new Promise(r => setTimeout(r, 2000));
-      } catch (e) {
-        console.error(`Erro situacao ${sit} inicio ${inicio}:`, e);
-        temMais = false;
-      }
+      const salvos = data?.salvos || 0;
+      totalSaved += salvos;
+      console.log(`Situacao ${sit}: ${data?.com_rastreador || 0} rastreador, ${salvos} salvos`);
+    } catch (e) {
+      console.error(`Erro situacao ${sit}:`, e);
+      // Continua com a próxima situação
     }
+
+    // Delay entre situações
+    await new Promise(r => setTimeout(r, 3000));
   }
 
   return totalSaved;
