@@ -68,8 +68,8 @@ serve(async (req) => {
       // Busca UMA página de veículos de UMA situação — leve e rápido
       case "buscar_pagina": {
         const situacao = params?.situacao || "1";
-        const inicio = params?.inicio || 0;
-        const quantidade = Math.min(params?.quantidade || 500, 500);
+        const inicio = parseInt(params?.inicio || "0", 10);
+        const quantidade = Math.min(parseInt(params?.quantidade || "500", 10), 500);
 
         const token = await getTokenUsuario();
         const data = await hinovaGet(
@@ -80,44 +80,59 @@ serve(async (req) => {
         const sitLabels: Record<string, string> = { "1": "ativo", "2": "inadimplente", "3": "cancelado", "4": "inativo" };
 
         if (!Array.isArray(data)) {
-          result = { error: false, data: { success: true, veiculos: [], total: 0, tem_mais: false } };
+          result = { error: false, data: { success: true, salvos: 0, total_pagina: 0, tem_mais: false } };
           break;
         }
 
-        // Filtrar apenas com rastreador e formatar
-        const veiculos = data
-          .filter((v: any) => temRastreador(v.produtos_vinculados || []))
-          .map((v: any) => ({
-            codigo_veiculo: v.codigo_veiculo,
-            placa: v.placa,
-            chassi: v.chassi,
-            nome_associado: v.nome,
-            cpf: v.cpf,
-            codigo_associado: v.codigo_associado,
-            marca: v.descricao_marca,
-            modelo: v.descricao_modelo,
-            ano: `${v.ano_fabricacao}/${v.ano_modelo}`,
-            valor_fipe: v.valor_fipe,
-            status_veiculo: sitLabels[situacao] || "ativo",
-            cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
-            telefone: v.telefone || "",
-            telefone_celular: v.telefone_celular || "",
-            ddd_celular: v.ddd_celular || "",
-            email: v.email || "",
-            produtos: (v.produtos_vinculados || []).map((p: any) => ({
-              codigo: p.codigo_produto,
-              descricao: p.descricao_produto,
-              valor: p.valor_produto,
-            })),
-          }));
+        // Filtrar apenas com rastreador
+        const comRastreador = data.filter((v: any) => temRastreador(v.produtos_vinculados || []));
+
+        // Formatar e salvar direto no cache do Supabase
+        const rows = comRastreador.map((v: any) => ({
+          codigo_veiculo: v.codigo_veiculo || `${v.codigo_associado}_${v.placa}`,
+          placa: (v.placa || "").toUpperCase().trim() || null,
+          chassi: v.chassi || null,
+          nome_associado: v.nome || "",
+          cpf: v.cpf || "",
+          codigo_associado: v.codigo_associado || "",
+          marca: v.descricao_marca || "",
+          modelo: v.descricao_modelo || "",
+          ano: v.ano_fabricacao && v.ano_modelo ? `${v.ano_fabricacao}/${v.ano_modelo}` : "",
+          valor_fipe: v.valor_fipe || null,
+          status_veiculo: sitLabels[situacao] || "ativo",
+          cooperativa: v.nome_cooperativa || v.descricao_cooperativa || "",
+          tem_rastreador: true,
+          telefone: v.telefone || "",
+          telefone_celular: v.telefone_celular || "",
+          ddd_celular: v.ddd_celular || "",
+          email: v.email || "",
+          produtos: JSON.stringify((v.produtos_vinculados || []).map((p: any) => ({
+            codigo: p.codigo_produto, descricao: p.descricao_produto, valor: p.valor_produto,
+          }))),
+          updated_at: new Date().toISOString(),
+        }));
+
+        let salvos = 0;
+        if (rows.length > 0) {
+          for (let i = 0; i < rows.length; i += 500) {
+            const batch = rows.slice(i, i + 500);
+            const { error: upsertErr } = await supabaseAdmin
+              .from("sga_veiculos_cache")
+              .upsert(batch, { onConflict: "codigo_veiculo" });
+            if (!upsertErr) salvos += batch.length;
+            else console.error("Cache upsert error:", upsertErr);
+          }
+        }
+
+        console.log(`Pagina sit=${situacao} inicio=${inicio}: ${data.length} total, ${comRastreador.length} rastreador, ${salvos} salvos`);
 
         result = {
           error: false,
           data: {
             success: true,
-            veiculos,
+            salvos,
             total_pagina: data.length,
-            com_rastreador: veiculos.length,
+            com_rastreador: comRastreador.length,
             tem_mais: data.length >= quantidade,
           },
         };
