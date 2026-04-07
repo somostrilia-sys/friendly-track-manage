@@ -160,21 +160,38 @@ serve(async (req) => {
           break;
         }
 
-        // Atualizar cooperativa no cache para veículos que existem lá
+        // Atualizar cooperativa no cache via upsert em batch
+        const now = new Date().toISOString();
+        const rows = pageData
+          .filter((v: any) => v.codigo_veiculo)
+          .map((v: any) => ({
+            codigo_veiculo: v.codigo_veiculo,
+            cooperativa: v.nome_cooperativa || "",
+            placa: (v.placa || "").toUpperCase().trim() || null,
+            nome_associado: v.nome_associado || "",
+            cpf: v.cpf || "",
+            codigo_associado: v.codigo_associado || "",
+            marca: v.descricao_marca || "",
+            modelo: v.descricao_modelo || "",
+            ano: v.ano_fabricacao && v.ano_modelo ? `${v.ano_fabricacao}/${v.ano_modelo}` : "",
+            valor_fipe: v.valor_fipe || null,
+            status_veiculo: (v.descricao_situacao || "ativo").toLowerCase(),
+            tem_rastreador: true,
+            telefone: v.telefone || "",
+            telefone_celular: v.telefone_celular || "",
+            ddd_celular: v.ddd_celular || "",
+            email: v.email || "",
+            updated_at: now,
+          }));
+
         let atualizados = 0;
-        for (const v of pageData) {
-          const codVeiculo = v.codigo_veiculo;
-          if (!codVeiculo) continue;
-
-          const { error: updErr } = await supabaseAdmin
+        for (let i = 0; i < rows.length; i += 500) {
+          const batch = rows.slice(i, i + 500);
+          const { error: upsErr } = await supabaseAdmin
             .from("sga_veiculos_cache")
-            .update({
-              cooperativa: v.nome_cooperativa || "",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("codigo_veiculo", codVeiculo);
-
-          if (!updErr) atualizados++;
+            .upsert(batch, { onConflict: "codigo_veiculo" });
+          if (!upsErr) atualizados += batch.length;
+          else console.error("Cooperativas upsert error:", upsErr);
         }
 
         console.log(`Cooperativas pagina ${pagina}: ${pageData.length} registros, ${atualizados} atualizados no cache`);
