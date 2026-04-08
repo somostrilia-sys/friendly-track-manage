@@ -11,7 +11,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useClientesCompletos, useInsertCliente, useUpdateCliente, useDeleteCliente, useInsertHistoricoContato, useRealtimeSubscription } from "@/hooks/useSupabaseData";
 import { Plus, Search, Eye, Pencil, Trash2, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { FilialSelect } from "@/components/FilialSelect";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { DbCliente } from "@/types/database";
@@ -260,7 +259,7 @@ const Clientes = () => {
             <div><Label>Email</Label><Input value={form.email} onChange={e => setField("email", e.target.value)} /></div>
             <div><Label>CPF Associado</Label><Input value={form.cpf_associado} onChange={e => setField("cpf_associado", e.target.value)} /></div>
             <div><Label>Email Associado</Label><Input value={form.email_associado} onChange={e => setField("email_associado", e.target.value)} /></div>
-            <div><Label>Filial</Label><FilialSelect value={form.filial} onValueChange={v => setField("filial", v)} /></div>
+            <div><Label>Filial</Label><Input value={form.filial} onChange={e => setField("filial", e.target.value)} /></div>
             <div><Label>Status Acesso</Label>
               <Select value={form.status_acesso} onValueChange={v => setField("status_acesso", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
