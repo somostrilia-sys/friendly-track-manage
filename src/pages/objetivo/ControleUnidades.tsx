@@ -46,25 +46,30 @@ const ControleUnidades = () => {
 
   const uns = unidades as UnidadeCompleta[];
 
-  // Calcular totais por unidade a partir das sub-tabelas (quantidade)
-  const getRastTotal = (u: UnidadeCompleta) => u.rastreadores.reduce((a, r) => a + ((r as any).quantidade || 0), 0);
-  const getChipTotal = (u: UnidadeCompleta) => u.chips.reduce((a, c) => a + ((c as any).quantidade || 0), 0);
+  // Total acumulado = registros SEM data_envio (modelo "Acumulado")
+  const getRastTotal = (u: UnidadeCompleta) => u.rastreadores
+    .filter((r: any) => !r.data_envio)
+    .reduce((a, r) => a + ((r as any).quantidade || 0), 0);
+  const getChipTotal = (u: UnidadeCompleta) => u.chips
+    .filter((c: any) => !c.data_envio)
+    .reduce((a, c) => a + ((c as any).quantidade || 0), 0);
 
-  // Envios no mês selecionado (por unidade)
+  // Envios no mês = registros COM data_envio no mês selecionado
+  const getEnviosMes = (u: UnidadeCompleta) => u.rastreadores
+    .filter((r: any) => {
+      const de = r.data_envio || "";
+      if (!de) return false;
+      const mes = de.substring(5, 7) + "/" + de.substring(0, 4);
+      return mes === mesSelecionado;
+    })
+    .reduce((a, r) => a + ((r as any).quantidade || 0), 0);
+
   const enviosPorUnidade = useMemo(() => {
     const map: Record<string, number> = {};
-    // Contar a partir de unidade_rastreadores por data_envio no mês
     for (const u of uns) {
-      let qtdMes = 0;
-      for (const r of u.rastreadores) {
-        const de = (r as any).data_envio || "";
-        if (!de) continue;
-        const mes = de.substring(5, 7) + "/" + de.substring(0, 4);
-        if (mes === mesSelecionado) qtdMes += (r as any).quantidade || 0;
-      }
-      if (qtdMes > 0) map[u.unidade] = qtdMes;
+      const qtd = getEnviosMes(u);
+      if (qtd > 0) map[u.unidade] = qtd;
     }
-    // Também contar despachos
     allDespachos.forEach((d: DbDespacho) => {
       if (!d.data_envio) return;
       const mes = d.data_envio.substring(5, 7) + "/" + d.data_envio.substring(0, 4);
@@ -77,10 +82,10 @@ const ControleUnidades = () => {
 
   const totalRastreadores = uns.reduce((a, u) => a + getRastTotal(u), 0);
   const totalChips = uns.reduce((a, u) => a + getChipTotal(u), 0);
-  const valorTotal = totalRastreadores * 7; // R$ 7 por placa
+  const valorTotal = totalRastreadores * 7;
   const rastreadoresEnviados = Object.values(enviosPorUnidade).reduce((a, b) => a + b, 0);
-  const estoque = 0; // Será calculado quando tiver dados de estoque separados
-  const ativos = totalRastreadores; // Por enquanto total = ativos
+  const estoque = 0;
+  const ativos = totalRastreadores;
 
   const criarUnidade = async () => {
     if (!novaForm.unidade || !novaForm.cidade) { toast.error("Preencha unidade e cidade"); return; }
