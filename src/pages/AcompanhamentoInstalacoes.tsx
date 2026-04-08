@@ -16,6 +16,7 @@ import type { DbInstalacao } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle, Inbox, Eye, Pencil, Trash2, Play, XCircle, ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { FilialSelect } from "@/components/FilialSelect";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -406,7 +407,7 @@ const AcompanhamentoInstalacoes = () => {
             <div><Label>Placa</Label><Input value={form.placa} onChange={e => setForm(f => ({ ...f, placa: e.target.value }))} placeholder="ABC-1234" /></div>
             <div><Label>IMEI</Label><Input value={form.imei} onChange={e => setForm(f => ({ ...f, imei: e.target.value }))} /></div>
             <div><Label>Chip (ICCID)</Label><Input value={form.chip} onChange={e => setForm(f => ({ ...f, chip: e.target.value }))} /></div>
-            <div><Label>Filial</Label><Input value={form.filial} onChange={e => setForm(f => ({ ...f, filial: e.target.value }))} /></div>
+            <div><Label>Filial</Label><FilialSelect value={form.filial} onValueChange={v => setForm(f => ({ ...f, filial: v }))} /></div>
             <div><Label>Tecnico</Label>
               <Select value={form.tecnico_id || ""} onValueChange={v => setForm(f => ({ ...f, tecnico_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -432,7 +433,7 @@ const AcompanhamentoInstalacoes = () => {
             <div><Label>Placa</Label><Input value={editForm.placa} onChange={e => setEditForm(f => ({ ...f, placa: e.target.value }))} placeholder="ABC-1234" /></div>
             <div><Label>IMEI</Label><Input value={editForm.imei} onChange={e => setEditForm(f => ({ ...f, imei: e.target.value }))} /></div>
             <div><Label>Chip (ICCID)</Label><Input value={editForm.chip} onChange={e => setEditForm(f => ({ ...f, chip: e.target.value }))} /></div>
-            <div><Label>Filial</Label><Input value={editForm.filial} onChange={e => setEditForm(f => ({ ...f, filial: e.target.value }))} /></div>
+            <div><Label>Filial</Label><FilialSelect value={editForm.filial} onValueChange={v => setEditForm(f => ({ ...f, filial: v }))} /></div>
             <div><Label>Tecnico</Label>
               <Select value={editForm.tecnico_id || ""} onValueChange={v => setEditForm(f => ({ ...f, tecnico_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>

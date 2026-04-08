@@ -13,6 +13,7 @@ import { useEquipamentosCompletos, useInsertEquipamento, useUpdateEquipamento, u
 import type { DbEquipamento, DbMovimentacao, DbComodato } from "@/types/database";
 import { Plus, Package, CheckCircle, AlertTriangle, XCircle, Eye, Search, Upload, Download, Inbox } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { FilialSelect } from "@/components/FilialSelect";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -284,7 +285,7 @@ const Estoque = () => {
                   <SelectContent>{tecnicos.map(t => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
                 </Select>
               ) : (
-                <Input value={comodatoForm.destino_nome} onChange={e => setComodatoForm(f => ({ ...f, destino_nome: e.target.value }))} placeholder="Nome da filial" />
+                <FilialSelect value={comodatoForm.destino_nome} onValueChange={v => setComodatoForm(f => ({ ...f, destino_nome: v }))} placeholder="Selecione a filial" />
               )}
             </div>
             <div><Label>Quantidade</Label><Input type="number" value={comodatoForm.quantidade} onChange={e => setComodatoForm(f => ({ ...f, quantidade: +e.target.value }))} /></div>

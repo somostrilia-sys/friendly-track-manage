@@ -9,7 +9,7 @@ import type {
   DbInstalacao, DbControleKM, DbFechamentoTecnico, DbFechamentoInstalacao,
   DbChamadoSuporte, DbAgendamento, DbDespacho, DbControleUnidade,
   DbUnidadeRastreador, DbUnidadeChip, DbConfiguracaoDispositivo, DbConfigChecklist,
-  DbEscalonamento, DbFornecedor, DbFaturamentoB2B,
+  DbEscalonamento, DbFornecedor, DbFaturamentoB2B, DbFilial,
 } from "@/types/database";
 
 // Generic helper
@@ -619,6 +619,23 @@ export const useRastreadoresInstalados = (options?: { enabled?: boolean }) => {
 export const useInsertRastreadorInstalado = () => useSupabaseInsert<any>("rastreadores_instalados", "rastreadores_instalados");
 export const useUpdateRastreadorInstalado = () => useSupabaseUpdate<any>("rastreadores_instalados", "rastreadores_instalados");
 export const useDeleteRastreadorInstalado = () => useSupabaseDelete("rastreadores_instalados", "rastreadores_instalados");
+
+// ============ FILIAIS ============
+export const useFiliais = () => {
+  return useQuery<DbFilial[]>({
+    queryKey: ["filiais"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("filiais")
+        .select("*")
+        .eq("status", "ativa")
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data || []) as DbFilial[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
 
 // ============ SGA VEICULOS CACHE ============
 export const useSGACache = (options?: { enabled?: boolean }) => {

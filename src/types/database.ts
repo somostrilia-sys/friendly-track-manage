@@ -434,3 +434,13 @@ export interface DbEscalonamento {
   responsavel_gestor: string;
   resolucao: string;
 }
+
+export interface DbFilial {
+  id: string;
+  codigo_sga: string;
+  nome: string;
+  cidade: string;
+  estado: string;
+  status: "ativa" | "inativa";
+  created_at: string;
+}

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
+import { FilialSelect } from "@/components/FilialSelect";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -1659,10 +1660,10 @@ const GestaoRastreadores = () => {
             </div>
             <div>
               <Label>Cooperativa</Label>
-              <Input
+              <FilialSelect
                 value={novoForm.cooperativa || ""}
-                onChange={(e) => setNovoForm((f) => ({ ...f, cooperativa: e.target.value }))}
-                placeholder="Nome da cooperativa"
+                onValueChange={(v) => setNovoForm((f) => ({ ...f, cooperativa: v }))}
+                placeholder="Selecione a cooperativa"
               />
             </div>
             <div>
