@@ -148,7 +148,7 @@ const Servicos = () => {
   const uploadFotosAndConcluir = async () => {
     if (!fotoServico) return;
 
-    // Validate all photos present
+    // Validar fotos obrigatórias
     const missing: string[] = [];
     (["imei", "chip", "instalacao"] as FotoTipo[]).forEach(tipo => {
       if (!fotos[tipo]) missing.push(fotoLabels[tipo]);
