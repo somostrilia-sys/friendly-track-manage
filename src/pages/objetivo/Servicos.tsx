@@ -105,9 +105,9 @@ const Servicos = () => {
     const tec = tecnicos.find(t => t.id === form.tecnico_id);
     const codigo = `OS-${String(servicos.length + 1).padStart(3, "0")}`;
     try {
-      const { chip: _chip, imei: _imei, ...formData } = form;
       await insertServico.mutateAsync({
-        ...formData,
+        ...form,
+        codigo,
         tecnico_nome: tec?.nome || "",
         status: "agendado",
       });
