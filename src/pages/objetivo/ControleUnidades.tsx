@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { DbControleUnidade, DbUnidadeRastreador, DbUnidadeChip, DbDespacho } from "@/types/database";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
-import { Building2, Cpu, Smartphone, DollarSign, Truck, Package, Plus, Download, RefreshCw } from "lucide-react";
+import { Building2, Cpu, Smartphone, DollarSign, Truck, Package, Plus, Download } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -131,64 +131,55 @@ const ControleUnidades = () => {
     toast.success("Planilha exportada!");
   };
 
-  const [syncing, setSyncing] = useState(false);
-  const syncFinanceiro = async () => {
-    if (totalRastreadores === 0 && rastreadoresEnviados === 0) {
-      toast.error("Sem dados para sincronizar neste mês");
-      return;
-    }
-    setSyncing(true);
-    try {
-      const [mesNum, ano] = mesSelecionado.split("/");
-      const mesesNome: Record<string, string> = { "01": "JANEIRO", "02": "FEVEREIRO", "03": "MARÇO", "04": "ABRIL", "05": "MAIO", "06": "JUNHO", "07": "JULHO", "08": "AGOSTO", "09": "SETEMBRO", "10": "OUTUBRO", "11": "NOVEMBRO", "12": "DEZEMBRO" };
-      const mesRef = `${mesesNome[mesNum]} ${ano}`;
-      const dataFech = `${ano}-${mesNum}-25`;
+  // Sincronismo automático com Faturamento B2B
+  const lastSync = useRef("");
+  useEffect(() => {
+    const key = `${mesSelecionado}-${totalRastreadores}-${rastreadoresEnviados}`;
+    if (key === lastSync.current || isLoading) return;
+    if (totalRastreadores === 0 && rastreadoresEnviados === 0) return;
+    lastSync.current = key;
 
-      // Objetivo Auto Benefícios (placas × R$7)
-      if (totalRastreadores > 0) {
-        const { data: existing } = await supabase.from("faturamento_b2b")
-          .select("id").eq("mes_referencia", mesRef).eq("empresa", "Objetivo Auto Beneficios").limit(1);
-        const record = {
-          mes_referencia: mesRef, data_fechamento: dataFech, empresa: "Objetivo Auto Beneficios",
-          qtd_placas: totalRastreadores, valor_por_placa: 7, total_plataforma: totalRastreadores * 7,
-          qtd_linhas_smartsim: 0, valor_smartsim: 0, total_smartsim: 0,
-          qtd_linhas_linkfield: 0, valor_linkfield: 0, total_linkfield: 0,
-          qtd_linhas_arqia: 0, valor_arqia: 0, total_arqia: 0,
-          total_linhas: 0, total_geral: totalRastreadores * 7, situacao: "aberto",
-        };
-        if (existing?.length) {
-          await supabase.from("faturamento_b2b").update(record).eq("id", existing[0].id);
-        } else {
-          await supabase.from("faturamento_b2b").insert(record);
+    const [mesNum, ano] = mesSelecionado.split("/");
+    const mesesNome: Record<string, string> = { "01": "JANEIRO", "02": "FEVEREIRO", "03": "MARÇO", "04": "ABRIL", "05": "MAIO", "06": "JUNHO", "07": "JULHO", "08": "AGOSTO", "09": "SETEMBRO", "10": "OUTUBRO", "11": "NOVEMBRO", "12": "DEZEMBRO" };
+    const mesRef = `${mesesNome[mesNum]} ${ano}`;
+    const dataFech = `${ano}-${mesNum}-25`;
+
+    (async () => {
+      try {
+        if (totalRastreadores > 0) {
+          const { data: existing } = await supabase.from("faturamento_b2b")
+            .select("id").eq("mes_referencia", mesRef).eq("empresa", "Objetivo Auto Beneficios").limit(1);
+          const record = {
+            mes_referencia: mesRef, data_fechamento: dataFech, empresa: "Objetivo Auto Beneficios",
+            qtd_placas: totalRastreadores, valor_por_placa: 7, total_plataforma: totalRastreadores * 7,
+            qtd_linhas_smartsim: 0, valor_smartsim: 0, total_smartsim: 0,
+            qtd_linhas_linkfield: 0, valor_linkfield: 0, total_linkfield: 0,
+            qtd_linhas_arqia: 0, valor_arqia: 0, total_arqia: 0,
+            total_linhas: 0, total_geral: totalRastreadores * 7,
+          };
+          if (existing?.length) await supabase.from("faturamento_b2b").update(record).eq("id", existing[0].id);
+          else await supabase.from("faturamento_b2b").insert({ ...record, situacao: "aberto" });
         }
-      }
 
-      // Objetivo Equipamentos (envios × R$120)
-      if (rastreadoresEnviados > 0) {
-        const { data: existing2 } = await supabase.from("faturamento_b2b")
-          .select("id").eq("mes_referencia", mesRef).eq("empresa", "Objetivo Equipamentos").limit(1);
-        const record2 = {
-          mes_referencia: mesRef, data_fechamento: dataFech, empresa: "Objetivo Equipamentos",
-          qtd_placas: rastreadoresEnviados, valor_por_placa: 120, total_plataforma: rastreadoresEnviados * 120,
-          qtd_linhas_smartsim: 0, valor_smartsim: 0, total_smartsim: 0,
-          qtd_linhas_linkfield: 0, valor_linkfield: 0, total_linkfield: 0,
-          qtd_linhas_arqia: 0, valor_arqia: 0, total_arqia: 0,
-          total_linhas: 0, total_geral: rastreadoresEnviados * 120, situacao: "aberto",
-        };
-        if (existing2?.length) {
-          await supabase.from("faturamento_b2b").update(record2).eq("id", existing2[0].id);
-        } else {
-          await supabase.from("faturamento_b2b").insert(record2);
+        if (rastreadoresEnviados > 0) {
+          const { data: existing2 } = await supabase.from("faturamento_b2b")
+            .select("id").eq("mes_referencia", mesRef).eq("empresa", "Objetivo Equipamentos").limit(1);
+          const record2 = {
+            mes_referencia: mesRef, data_fechamento: dataFech, empresa: "Objetivo Equipamentos",
+            qtd_placas: rastreadoresEnviados, valor_por_placa: 120, total_plataforma: rastreadoresEnviados * 120,
+            qtd_linhas_smartsim: 0, valor_smartsim: 0, total_smartsim: 0,
+            qtd_linhas_linkfield: 0, valor_linkfield: 0, total_linkfield: 0,
+            qtd_linhas_arqia: 0, valor_arqia: 0, total_arqia: 0,
+            total_linhas: 0, total_geral: rastreadoresEnviados * 120,
+          };
+          if (existing2?.length) await supabase.from("faturamento_b2b").update(record2).eq("id", existing2[0].id);
+          else await supabase.from("faturamento_b2b").insert({ ...record2, situacao: "aberto" });
         }
+      } catch (e) {
+        console.error("Erro sync financeiro:", e);
       }
-
-      toast.success(`Financeiro sincronizado! Plataforma: R$ ${(totalRastreadores * 7).toLocaleString("pt-BR")} | Equipamentos: R$ ${(rastreadoresEnviados * 120).toLocaleString("pt-BR")}`);
-    } catch (e: any) {
-      toast.error("Erro ao sincronizar: " + e.message);
-    } finally {
-      setSyncing(false);
-    }
-  };
+    })();
+  }, [mesSelecionado, totalRastreadores, rastreadoresEnviados, isLoading]);
 
   if (isLoading) return (
     <div className="space-y-8">
@@ -206,7 +197,6 @@ const ControleUnidades = () => {
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>{meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
           </Select>
-          <Button variant="outline" onClick={syncFinanceiro} disabled={syncing}><RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} /> {syncing ? "Sincronizando..." : "Sync Financeiro"}</Button>
           <Button variant="outline" onClick={exportarXLSX}><Download className="w-4 h-4 mr-2" /> Exportar XLSX</Button>
           <Button onClick={() => setNovaOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nova Unidade</Button>
         </div>
