@@ -66,7 +66,7 @@ const Clientes = () => {
   const [form, setForm] = useState(emptyForm);
   const [novoContato, setNovoContato] = useState({ tipo: "", descricao: "" });
   const filtrado = (clientes as ClienteComHistorico[]).filter(c => {
-    const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase()) || c.cnpj.includes(busca);
+    const matchBusca = (c.nome || "").toLowerCase().includes(busca.toLowerCase()) || (c.cnpj || "").includes(busca);
     const matchStatus = filtroStatus === "all" || c.status === filtroStatus;
     const matchTipo = filtroTipo === "all" || c.tipo === filtroTipo;
     return matchBusca && matchStatus && matchTipo;
