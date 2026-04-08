@@ -45,12 +45,26 @@ const ControleUnidades = () => {
   const [novaForm, setNovaForm] = useState({ unidade: "", responsavel: "", cidade: "", estado: "", valor_mensal: 0 });
 
   const uns = unidades as UnidadeCompleta[];
-  const totalRastreadores = uns.reduce((a, u) => a + (u.total_rastreadores || 0), 0);
-  const totalChips = uns.reduce((a, u) => a + (u.total_chips || 0), 0);
-  const valorTotal = uns.reduce((a, u) => a + (u.valor_mensal || 0), 0);
 
+  // Calcular totais por unidade a partir das sub-tabelas (quantidade)
+  const getRastTotal = (u: UnidadeCompleta) => u.rastreadores.reduce((a, r) => a + ((r as any).quantidade || 0), 0);
+  const getChipTotal = (u: UnidadeCompleta) => u.chips.reduce((a, c) => a + ((c as any).quantidade || 0), 0);
+
+  // Envios no mês selecionado (por unidade)
   const enviosPorUnidade = useMemo(() => {
     const map: Record<string, number> = {};
+    // Contar a partir de unidade_rastreadores por data_envio no mês
+    for (const u of uns) {
+      let qtdMes = 0;
+      for (const r of u.rastreadores) {
+        const de = (r as any).data_envio || "";
+        if (!de) continue;
+        const mes = de.substring(5, 7) + "/" + de.substring(0, 4);
+        if (mes === mesSelecionado) qtdMes += (r as any).quantidade || 0;
+      }
+      if (qtdMes > 0) map[u.unidade] = qtdMes;
+    }
+    // Também contar despachos
     allDespachos.forEach((d: DbDespacho) => {
       if (!d.data_envio) return;
       const mes = d.data_envio.substring(5, 7) + "/" + d.data_envio.substring(0, 4);
@@ -59,21 +73,19 @@ const ControleUnidades = () => {
       }
     });
     return map;
-  }, [mesSelecionado, allDespachos]);
+  }, [mesSelecionado, allDespachos, uns]);
 
+  const totalRastreadores = uns.reduce((a, u) => a + getRastTotal(u), 0);
+  const totalChips = uns.reduce((a, u) => a + getChipTotal(u), 0);
+  const valorTotal = totalRastreadores * 7; // R$ 7 por placa
   const rastreadoresEnviados = Object.values(enviosPorUnidade).reduce((a, b) => a + b, 0);
-  const estoque = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "estoque").length, 0);
-  const ativos = uns.reduce((a, u) => a + u.rastreadores.filter(r => r.status === "instalado").length, 0);
+  const estoque = 0; // Será calculado quando tiver dados de estoque separados
+  const ativos = totalRastreadores; // Por enquanto total = ativos
 
   const criarUnidade = async () => {
     if (!novaForm.unidade || !novaForm.cidade) { toast.error("Preencha unidade e cidade"); return; }
     try {
-      await insertUnidade.mutateAsync({
-        ...novaForm,
-        total_rastreadores: 0,
-        total_chips: 0,
-        acesso_plataforma: "pendente",
-      });
+      await insertUnidade.mutateAsync(novaForm as any);
       setNovaOpen(false);
       setNovaForm({ unidade: "", responsavel: "", cidade: "", estado: "", valor_mensal: 0 });
       toast.success("Unidade criada!");
@@ -85,13 +97,11 @@ const ControleUnidades = () => {
       Unidade: u.unidade,
       Responsavel: u.responsavel,
       "Cidade/UF": `${u.cidade}/${u.estado}`,
-      Rastreadores: u.total_rastreadores,
-      "Em Estoque": u.rastreadores.filter(r => r.status === "estoque").length,
-      Ativos: u.rastreadores.filter(r => r.status === "instalado").length,
-      Chips: u.total_chips,
+      Rastreadores: getRastTotal(u),
+      Ativos: getRastTotal(u),
+      Chips: getChipTotal(u),
       "Envios no Mes": enviosPorUnidade[u.unidade] || 0,
-      Acesso: u.acesso_plataforma,
-      "Valor Mensal": u.valor_mensal,
+      "Valor Mensal": getRastTotal(u) * 7,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -160,13 +170,13 @@ const ControleUnidades = () => {
                 <TableCell className="font-medium">{u.unidade}</TableCell>
                 <TableCell>{u.responsavel}</TableCell>
                 <TableCell>{u.cidade}/{u.estado}</TableCell>
-                <TableCell>{u.total_rastreadores}</TableCell>
-                <TableCell>{u.rastreadores.filter(r => r.status === "estoque").length}</TableCell>
-                <TableCell>{u.rastreadores.filter(r => r.status === "instalado").length}</TableCell>
-                <TableCell>{u.total_chips}</TableCell>
+                <TableCell>{getRastTotal(u)}</TableCell>
+                <TableCell>--</TableCell>
+                <TableCell>{getRastTotal(u)}</TableCell>
+                <TableCell>{getChipTotal(u)}</TableCell>
                 <TableCell><Badge variant="outline">{enviosPorUnidade[u.unidade] || 0}</Badge></TableCell>
-                <TableCell><Badge variant={u.acesso_plataforma === "ativo" ? "default" : u.acesso_plataforma === "pendente" ? "secondary" : "destructive"} className="capitalize">{u.acesso_plataforma}</Badge></TableCell>
-                <TableCell className="font-medium">R$ {u.valor_mensal?.toLocaleString("pt-BR") ?? "0"}</TableCell>
+                <TableCell>--</TableCell>
+                <TableCell className="font-medium">R$ {(getRastTotal(u) * 7).toLocaleString("pt-BR")}</TableCell>
               </TableRow>
             ))}
           </TableBody>
