@@ -46,22 +46,24 @@ const ControleUnidades = () => {
 
   const uns = unidades as UnidadeCompleta[];
 
-  // Total acumulado = registros SEM data_envio (modelo "Acumulado")
+  // Filtrar registros pelo mês selecionado
+  const isNoMes = (dataEnvio: string | null) => {
+    if (!dataEnvio) return false;
+    const mes = dataEnvio.substring(5, 7) + "/" + dataEnvio.substring(0, 4);
+    return mes === mesSelecionado;
+  };
+
+  // Total do mês = acumulados (modelo "Acumulado") do mês selecionado
   const getRastTotal = (u: UnidadeCompleta) => u.rastreadores
-    .filter((r: any) => !r.data_envio)
+    .filter((r: any) => r.modelo === "Acumulado" && isNoMes(r.data_envio))
     .reduce((a, r) => a + ((r as any).quantidade || 0), 0);
   const getChipTotal = (u: UnidadeCompleta) => u.chips
-    .filter((c: any) => !c.data_envio)
+    .filter((c: any) => isNoMes(c.data_envio))
     .reduce((a, c) => a + ((c as any).quantidade || 0), 0);
 
-  // Envios no mês = registros COM data_envio no mês selecionado
+  // Envios do mês = registros que NÃO são acumulados, no mês selecionado
   const getEnviosMes = (u: UnidadeCompleta) => u.rastreadores
-    .filter((r: any) => {
-      const de = r.data_envio || "";
-      if (!de) return false;
-      const mes = de.substring(5, 7) + "/" + de.substring(0, 4);
-      return mes === mesSelecionado;
-    })
+    .filter((r: any) => r.modelo !== "Acumulado" && isNoMes(r.data_envio))
     .reduce((a, r) => a + ((r as any).quantidade || 0), 0);
 
   const enviosPorUnidade = useMemo(() => {
