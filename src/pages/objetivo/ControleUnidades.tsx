@@ -45,9 +45,9 @@ const ControleUnidades = () => {
   const [novaForm, setNovaForm] = useState({ unidade: "", responsavel: "", cidade: "", estado: "", valor_mensal: 0 });
 
   const uns = unidades as UnidadeCompleta[];
-  const totalRastreadores = uns.reduce((a, u) => a + u.total_rastreadores, 0);
-  const totalChips = uns.reduce((a, u) => a + u.total_chips, 0);
-  const valorTotal = uns.reduce((a, u) => a + u.valor_mensal, 0);
+  const totalRastreadores = uns.reduce((a, u) => a + (u.total_rastreadores || 0), 0);
+  const totalChips = uns.reduce((a, u) => a + (u.total_chips || 0), 0);
+  const valorTotal = uns.reduce((a, u) => a + (u.valor_mensal || 0), 0);
 
   const enviosPorUnidade = useMemo(() => {
     const map: Record<string, number> = {};
